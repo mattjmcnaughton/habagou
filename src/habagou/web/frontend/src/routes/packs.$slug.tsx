@@ -15,18 +15,21 @@ const activities = [
     title: "Trace",
     subtitle: "Write each character stroke by stroke",
     icon: "✎",
+    to: "/packs/$slug/trace",
   },
   {
     key: "match",
     title: "Match",
     subtitle: "Pair characters with their meanings",
     icon: "⌘",
+    to: "/packs/$slug/match",
   },
   {
     key: "sentence",
     title: "Sentences",
     subtitle: "Write full sentences from the pack",
     icon: "☰",
+    to: "/packs/$slug/sentence",
   },
 ] as const;
 
@@ -133,28 +136,16 @@ function PackScreen() {
                       </span>
                     </>
                   );
-                  if (activity.key === "trace" || activity.key === "match") {
-                    return (
-                      <Link
-                        aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
-                        className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
-                        key={activity.key}
-                        params={{ slug }}
-                        to={activity.key === "trace" ? "/packs/$slug/trace" : "/packs/$slug/match"}
-                      >
-                        {content}
-                      </Link>
-                    );
-                  }
                   return (
-                    <button
+                    <Link
                       aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
                       className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
                       key={activity.key}
-                      type="button"
+                      params={{ slug }}
+                      to={activity.to}
                     >
                       {content}
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
