@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { routeTree } from "../routeTree.gen";
 
 export function makeQueryClient() {
@@ -14,7 +15,6 @@ export function makeQueryClient() {
 }
 
 export const router = createRouter({ routeTree });
-const queryClient = makeQueryClient();
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -23,9 +23,12 @@ declare module "@tanstack/react-router" {
 }
 
 export function App() {
+  const [queryClient] = useState(makeQueryClient);
+  const [appRouter] = useState(() => createRouter({ routeTree }));
+
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <RouterProvider router={appRouter} />
     </QueryClientProvider>
   );
 }
