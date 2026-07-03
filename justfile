@@ -98,10 +98,12 @@ test-external:
 # Export the committed OpenAPI artifact
 openapi-export:
     uv run python scripts/export_openapi.py
+    uv run python scripts/generate_openapi_types.py
 
 # Check the committed OpenAPI artifact for drift
 openapi-check:
     uv run python scripts/export_openapi.py --check
+    uv run python scripts/generate_openapi_types.py --check
 
 # Placeholder until HAB-051 activates workflow traceability enforcement
 verify-traceability:
