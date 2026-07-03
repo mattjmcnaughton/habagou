@@ -95,6 +95,18 @@ test-e2e:
 test-external:
     uv run pytest -m external
 
+# Export the committed OpenAPI artifact
+openapi-export:
+    uv run python scripts/export_openapi.py
+
+# Check the committed OpenAPI artifact for drift
+openapi-check:
+    uv run python scripts/export_openapi.py --check
+
+# Placeholder until HAB-051 activates workflow traceability enforcement
+verify-traceability:
+    @echo "verify-traceability placeholder: HAB-051 will enforce workflow coverage"
+
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
 
