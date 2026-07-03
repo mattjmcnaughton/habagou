@@ -39,6 +39,7 @@ exclude-newer = "1 week"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28",
     "pytest>=8.0",
     "pytest-xdist>=3.6",
     "ruff>=0.8",
@@ -56,4 +57,5 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM", "TCH"]
 testpaths = ["tests"]
 markers = [
     "external: tests that hit external services",
+    "workflow(id): marks tests that prove a named workflow",
 ]

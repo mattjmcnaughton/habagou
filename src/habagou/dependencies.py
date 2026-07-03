@@ -1,18 +1,16 @@
 """FastAPI dependencies shared by API routers."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotations.
+    AsyncSession,
+)
 
 from habagou.db import get_session
-from habagou.models import User
+from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
 from habagou.repositories import UserRepository
 from habagou.seed_data import GUEST_USER_ID
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 _guest_user_seeded = False
 
