@@ -42,7 +42,7 @@ Then add `hanzi-writer`, `@fontsource/hanken-grotesk`, `@fontsource/noto-sans-sc
 | D-3 | **User-centric schema with a seeded guest user**; a `get_current_user` dependency resolves every request to the guest user in v1 | Progress is user-scoped from day one; adding auth later swaps only the resolver, not schemas or API shapes | Anonymous session cookies — would require a progress migration when accounts arrive |
 | D-4 | **No AI/generation code in v1** — not even stubs | Smaller surface, faster ship; the only v1 obligation to v2 is the corpus-in-Postgres decision (D-1) and `packs.status` | Building generation scaffolding now — dead code until v2 is actually designed |
 | D-5 | **Progress = append-only completion events**, aggregated at read time | Simple writes, natural history/audit; per-activity "completed?" and "best duration" are cheap aggregates at v1 scale | Mutable per-(user,pack,activity) state row — loses history; premature optimization |
-| D-6 | **Local dev = devenv with a per-checkout Postgres over Unix sockets**; Docker only for deployment | N independent instances with zero coordination; hermetic toolchain; see [DEVEX](../devex.md) | Shared local Postgres with database-per-instance; Docker-based dev — both add coordination or weight |
+| D-6 | **Human local dev = devenv with a per-checkout Postgres over Unix sockets**; agent dev runs that same devenv path inside Docker | N independent instances with zero coordination; hermetic toolchain; see [DEVEX](../devex.md) | Shared local Postgres with database-per-instance; full-stack Docker as the primary human loop — both add coordination or weight |
 | D-8 | **URL-path API versioning** (`/api/v1`), additive-only within a version | Explicit compatibility contract for the frontend, the OpenAPI artifact, and any future clients; new major version mounts side-by-side | Header/content-negotiation versioning — harder to see in logs, caches, and curl; unversioned API — silent breakage |
 | D-7 | **Workflow-keyed verification**: named workflow catalog with tagged tests, CI traceability matrix, and prod events/metrics sharing the same IDs | One vocabulary from PRD to prod dashboard; see [VERIFICATION](../verification.md) | Untagged test suite + ad-hoc logging — cannot answer "is workflow X proven and working?" mechanically |
 
@@ -182,7 +182,7 @@ Superseded by [VERIFICATION.md](../verification.md), which defines the workflow 
 
 ## 8. Deployment & ops
 
-Local development never uses Docker — see [DEVEX.md](../devex.md) (devenv, per-checkout Postgres, N instances). Docker Compose is the deployment packaging only.
+Human local development does not require Docker — see [DEVEX.md](../devex.md) (devenv, per-checkout Postgres, N instances). Agents use a Docker dev image that installs Nix/devenv inside the image, and Docker Compose remains the deployment packaging.
 
 - **Dockerfile** (from template): multi-stage — pnpm build of frontend → uv-installed backend serving `web/frontend/dist` via `serve.py`.
 - **docker-compose.yml**: `app` + `db` (postgres:16, named volume). App entrypoint: `alembic upgrade head` → `import_stroke_data.py` → `seed.py` → uvicorn.

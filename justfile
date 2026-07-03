@@ -1,4 +1,12 @@
 fe_dir := "src/habagou/web/frontend"
+dev_image := "habagou-dev"
+
+_python := "python3"
+_env := "eval \"$({{_python}} scripts/dev_env.py env)\""
+
+# Show this checkout's derived ports and database settings
+info:
+    {{_python}} scripts/dev_env.py info
 
 # Check formatting (backend + frontend)
 fmt: fmt-be fmt-fe
@@ -98,11 +106,11 @@ gate-external: gate-expensive test-external
 
 # Start backend dev server
 dev-be:
-    uv run uvicorn habagou.app:app --reload
+    {{_env}} && uv run uvicorn habagou.app:app --reload --host 127.0.0.1 --port "$HABAGOU_PORT"
 
 # Start frontend dev server
 dev-fe:
-    cd {{fe_dir}} && pnpm run dev
+    {{_env}} && cd {{fe_dir}} && pnpm run dev -- --host 127.0.0.1 --port "$VITE_PORT"
 
 # Start both dev servers
 dev:
@@ -110,3 +118,23 @@ dev:
     just dev-be &
     just dev-fe &
     wait
+
+# Build the Docker-based agent development image
+dev-image:
+    docker build -f Dockerfile.dev -t {{dev_image}} .
+
+# Enter the Docker-based development shell
+dev-shell-docker: dev-image
+    #!/usr/bin/env bash
+    set -euo pipefail
+    eval "$({{_python}} scripts/dev_env.py env)"
+    docker run --rm -it \
+        -v "$PWD:/workspace" \
+        -w /workspace \
+        -e HABAGOU_INSTANCE \
+        -e HABAGOU_PORT \
+        -e VITE_PORT \
+        -e DEVENV_STATE=/workspace/.devenv/state \
+        -p "$HABAGOU_PORT:$HABAGOU_PORT" \
+        -p "$VITE_PORT:$VITE_PORT" \
+        {{dev_image}}

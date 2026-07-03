@@ -50,13 +50,19 @@ docs/
 
 ## Getting started
 
-The primary dev environment is [devenv](https://devenv.sh/) — it pins the entire toolchain (Python, uv, Node, pnpm, just, Postgres) and gives every checkout its own isolated Postgres over a Unix socket, so you can run any number of independent instances (e.g. one per git worktree) with no Docker and no port coordination. See [docs/devex.md](docs/devex.md).
+The primary human dev environment is [devenv](https://devenv.sh/) — it pins the entire toolchain (Python, uv, Node, pnpm, just, Postgres) and gives every checkout its own isolated Postgres over a Unix socket, so you can run any number of independent instances (e.g. one per git worktree) with no port coordination. Agent development uses the checked-in `Dockerfile.dev`, which installs Nix and devenv inside the image rather than on the host. See [docs/devex.md](docs/devex.md).
 
 ```sh
 devenv up -d       # postgres for this checkout (devenv owns only the database)
 just bootstrap     # migrate + corpus import + seed (idempotent)
 just dev           # backend + frontend
 just info          # this instance's ports, socket path, DATABASE_URL
+```
+
+Agent/container path:
+
+```sh
+just dev-shell-docker   # builds Dockerfile.dev, then enters devenv shell
 ```
 
 Prefer Docker for the database? Same targets, different `DATABASE_URL`:
@@ -90,13 +96,14 @@ uv run python scripts/seed.py
 just dev
 ```
 
-Backend runs at `http://localhost:8000`, frontend dev server at `http://localhost:5173` (proxies `/api` to the backend). The API is versioned under `/api/v1`; the contract is checked in at `docs/api/openapi-v1.json` (see TDD §4.1).
+By default, backend runs at `http://localhost:8000`, frontend dev server at `http://localhost:5173`, and the frontend proxies `/api` to the backend. Per-checkout dev ports are derived from the checkout name; run `just info` for the exact URLs. The API is versioned under `/api/v1`; the contract is checked in at `docs/api/openapi-v1.json` (see TDD §4.1).
 
 ## Common commands
 
 | Command | Purpose |
 | ------- | ------- |
 | `just dev` | Backend + frontend dev servers |
+| `just dev-shell-docker` | Docker-based devenv shell for agents |
 | `just gate` | Fast pre-push check (fmt + lint + typecheck + unit tests) |
 | `just gate-expensive` | gate + integration + e2e tests |
 | `just info` | Show this instance's ports and database |
