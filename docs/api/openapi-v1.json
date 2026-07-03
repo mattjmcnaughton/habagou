@@ -1,4 +1,269 @@
 {
+  "components": {
+    "schemas": {
+      "ActivityProgressDTO": {
+        "properties": {
+          "best_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Duration Ms"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "completion_count": {
+            "title": "Completion Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "completion_count",
+          "best_duration_ms"
+        ],
+        "title": "ActivityProgressDTO",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "PackCharacterDTO": {
+        "properties": {
+          "hanzi": {
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "meaning"
+        ],
+        "title": "PackCharacterDTO",
+        "type": "object"
+      },
+      "PackDetailDTO": {
+        "properties": {
+          "char_count": {
+            "title": "Char Count",
+            "type": "integer"
+          },
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/PackCharacterDTO"
+            },
+            "title": "Characters",
+            "type": "array"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "glyph": {
+            "title": "Glyph",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PackProgressDTO"
+          },
+          "sentence_count": {
+            "title": "Sentence Count",
+            "type": "integer"
+          },
+          "sentences": {
+            "items": {
+              "$ref": "#/components/schemas/PackSentenceDTO"
+            },
+            "title": "Sentences",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "glyph",
+          "color",
+          "char_count",
+          "sentence_count",
+          "progress",
+          "characters",
+          "sentences"
+        ],
+        "title": "PackDetailDTO",
+        "type": "object"
+      },
+      "PackProgressDTO": {
+        "properties": {
+          "match": {
+            "$ref": "#/components/schemas/ActivityProgressDTO"
+          },
+          "sentence": {
+            "$ref": "#/components/schemas/ActivityProgressDTO"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/ActivityProgressDTO"
+          }
+        },
+        "required": [
+          "trace",
+          "match",
+          "sentence"
+        ],
+        "title": "PackProgressDTO",
+        "type": "object"
+      },
+      "PackSentenceDTO": {
+        "properties": {
+          "hanzi": {
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "translation": {
+            "title": "Translation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "translation"
+        ],
+        "title": "PackSentenceDTO",
+        "type": "object"
+      },
+      "PackSummaryDTO": {
+        "properties": {
+          "char_count": {
+            "title": "Char Count",
+            "type": "integer"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "glyph": {
+            "title": "Glyph",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PackProgressDTO"
+          },
+          "sentence_count": {
+            "title": "Sentence Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "glyph",
+          "color",
+          "char_count",
+          "sentence_count",
+          "progress"
+        ],
+        "title": "PackSummaryDTO",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
   "info": {
     "description": "Learn to write Chinese characters by tracing them, stroke by stroke.",
     "title": "habagou",
@@ -6,6 +271,76 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/packs": {
+      "get": {
+        "operationId": "list_packs_api_v1_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackSummaryDTO"
+                  },
+                  "title": "Response List Packs Api V1 Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Packs",
+        "tags": [
+          "packs"
+        ]
+      }
+    },
+    "/api/v1/packs/{slug}": {
+      "get": {
+        "operationId": "get_pack_api_v1_packs__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pack",
+        "tags": [
+          "packs"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "description": "Liveness probe.",
