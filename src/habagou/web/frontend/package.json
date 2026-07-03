@@ -1,0 +1,49 @@
+{
+  "name": "habagou",
+  "version": "0.1.0",
+  "description": "Learn to write Chinese characters by tracing them, stroke by stroke.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "fmt": "biome check . --linter-enabled=false --organize-imports-enabled=false",
+    "fmt-fix": "biome format --write .",
+    "lint": "biome lint .",
+    "lint-fix": "biome lint . --write",
+    "typecheck": "tsr generate && tsc -b --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^19.0",
+    "react-dom": "^19.0",
+    "@tanstack/react-router": "^1.120",
+    "@tanstack/react-query": "^5.75",
+    "@tanstack/react-query-devtools": "^5.75",
+    "zustand": "^5.0",
+    "hanzi-writer": "^3.7.2",
+    "@fontsource/hanken-grotesk": "^5.2.6",
+    "@fontsource/noto-sans-sc": "^5.2.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9",
+    "@types/react": "^19.0",
+    "@types/react-dom": "^19.0",
+    "@vitejs/plugin-react": "^4.3",
+    "@tanstack/router-devtools": "^1.120",
+    "@tanstack/router-cli": "^1.167",
+    "@tanstack/router-plugin": "^1.120",
+    "typescript": "^5.7",
+    "vite": "^6.3",
+    "vitest": "^3.0",
+    "@testing-library/react": "^16.0",
+    "@testing-library/jest-dom": "^6.6",
+    "jsdom": "^26.0",
+    "@playwright/test": "^1.49",
+    "msw": "^2.7",
+    "tailwindcss": "^3.4",
+    "postcss": "^8.4",
+    "autoprefixer": "^10.4"
+  }
+}

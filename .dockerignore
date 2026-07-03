@@ -1,3 +1,7 @@
+# Git
+.git/
+.gitignore
+
 # Python
 __pycache__/
 *.py[cod]
@@ -14,7 +18,7 @@ venv/
 # Type checkers
 .mypy_cache/
 .ty_cache/
-*.tsbuildinfo
+.ruff_cache/
 
 # Testing
 .pytest_cache/
@@ -33,24 +37,20 @@ Thumbs.db
 
 # Environment
 .env
-.env.local
-
-# Alembic
-alembic/versions/*.py
-!alembic/versions/.gitkeep
+.env.*
+!.env.example
 
 # SQLite
 *.db
 *.sqlite3
 
 # Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
 docker-compose.override.yml
 
-# Agent coordination scratch
-.agentic/
-
-# Generated frontend routes
-src/habagou/web/frontend/src/routeTree.gen.ts
-
-# Frontend dependencies
-src/habagou/web/frontend/node_modules/
+# Excluded from production image
+tests/
+docs/
+.github/
