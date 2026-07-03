@@ -133,14 +133,14 @@ function PackScreen() {
                       </span>
                     </>
                   );
-                  if (activity.key === "trace") {
+                  if (activity.key === "trace" || activity.key === "match") {
                     return (
                       <Link
                         aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
                         className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
                         key={activity.key}
                         params={{ slug }}
-                        to="/packs/$slug/trace"
+                        to={activity.key === "trace" ? "/packs/$slug/trace" : "/packs/$slug/match"}
                       >
                         {content}
                       </Link>

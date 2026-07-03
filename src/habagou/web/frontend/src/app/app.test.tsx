@@ -77,7 +77,7 @@ describe("App", () => {
       }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Match. Pair characters with their meanings" }),
+      screen.getByRole("link", { name: "Match. Pair characters with their meanings" }),
     ).toBeTruthy();
   });
 
