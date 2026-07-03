@@ -41,7 +41,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y just
 
       - name: Run gate
-        run: just gate
+        env:
+          PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/unit.xml
+        run: mkdir -p .artifacts/test-results && just gate
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-unit
+          path: .artifacts/test-results/unit.xml
+          if-no-files-found: error
 
   integration:
     runs-on: ubuntu-latest
@@ -77,7 +87,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y just
 
       - name: Run integration tests
-        run: just bootstrap && just test-integration
+        env:
+          PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/integration.xml
+        run: mkdir -p .artifacts/test-results && just bootstrap && just test-integration
+
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-integration
+          path: .artifacts/test-results/integration.xml
+          if-no-files-found: error
 
       - name: Verify migration downgrade
         run: uv run alembic downgrade base
@@ -100,7 +120,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y just
 
       - name: Run e2e scaffold
-        run: just test-e2e
+        env:
+          PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/e2e.xml
+        run: mkdir -p .artifacts/test-results && just test-e2e
+
+      - name: Upload e2e test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-e2e
+          path: .artifacts/test-results/e2e.xml
+          if-no-files-found: error
 
   openapi-drift:
     runs-on: ubuntu-latest
@@ -124,11 +154,37 @@ jobs:
 
   traceability:
     runs-on: ubuntu-latest
+    needs: [gate, integration, e2e]
+    if: always()
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev --frozen
 
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
 
-      - name: Run traceability placeholder
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: .artifacts/test-results
+          merge-multiple: true
+
+      - name: Run traceability verification
         run: just verify-traceability
+
+      - name: Upload traceability matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-traceability-matrix
+          path: .artifacts/traceability/workflow-matrix.md
+          if-no-files-found: error

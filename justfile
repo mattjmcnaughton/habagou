@@ -105,9 +105,9 @@ openapi-check:
     uv run python scripts/export_openapi.py --check
     uv run python scripts/generate_openapi_types.py --check
 
-# Placeholder until HAB-051 activates workflow traceability enforcement
+# Verify workflow test coverage from JUnit/Playwright report artifacts
 verify-traceability:
-    @echo "verify-traceability placeholder: HAB-051 will enforce workflow coverage"
+    uv run python scripts/verify_traceability.py
 
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
