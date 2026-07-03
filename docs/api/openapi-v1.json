@@ -104,6 +104,39 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "PackAdminDTO": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PackStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "status",
+          "sort_order"
+        ],
+        "title": "PackAdminDTO",
+        "type": "object"
+      },
       "PackCharacterDTO": {
         "properties": {
           "hanzi": {
@@ -251,6 +284,30 @@
         "title": "PackSentenceDTO",
         "type": "object"
       },
+      "PackSortOrderPatchDTO": {
+        "properties": {
+          "sort_order": {
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sort_order"
+        ],
+        "title": "PackSortOrderPatchDTO",
+        "type": "object"
+      },
+      "PackStatus": {
+        "description": "Lifecycle status for a pack.",
+        "enum": [
+          "draft",
+          "published",
+          "retired"
+        ],
+        "title": "PackStatus",
+        "type": "string"
+      },
       "PackSummaryDTO": {
         "properties": {
           "char_count": {
@@ -370,6 +427,217 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/packs/{slug}": {
+      "patch": {
+        "operationId": "patch_pack_api_v1_admin_packs__slug__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "ADMIN_TOKEN",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Admin Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackSortOrderPatchDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackAdminDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid admin token"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "Admin endpoints disabled"
+          }
+        },
+        "summary": "Patch Pack",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/packs/{slug}/publish": {
+      "post": {
+        "operationId": "publish_pack_api_v1_admin_packs__slug__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "ADMIN_TOKEN",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Admin Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackAdminDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid admin token"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "Admin endpoints disabled"
+          }
+        },
+        "summary": "Publish Pack",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/packs/{slug}/retire": {
+      "post": {
+        "operationId": "retire_pack_api_v1_admin_packs__slug__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "ADMIN_TOKEN",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Admin Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackAdminDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid admin token"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "Admin endpoints disabled"
+          }
+        },
+        "summary": "Retire Pack",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/characters/{hanzi}/strokes": {
       "get": {
         "operationId": "get_character_strokes_api_v1_characters__hanzi__strokes_get",
