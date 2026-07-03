@@ -31,6 +31,66 @@
         "title": "ActivityProgressDTO",
         "type": "object"
       },
+      "ActivityType": {
+        "description": "Activity variants that can create completion events.",
+        "enum": [
+          "trace",
+          "match",
+          "sentence"
+        ],
+        "title": "ActivityType",
+        "type": "string"
+      },
+      "CompletionCreateDTO": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityType"
+          },
+          "duration_ms": {
+            "minimum": 0.0,
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "pack_slug": {
+            "minLength": 1,
+            "title": "Pack Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack_slug",
+          "activity",
+          "duration_ms"
+        ],
+        "title": "CompletionCreateDTO",
+        "type": "object"
+      },
+      "CompletionResponseDTO": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityType"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "pack_slug": {
+            "title": "Pack Slug",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PackProgressDTO"
+          }
+        },
+        "required": [
+          "pack_slug",
+          "progress",
+          "activity",
+          "duration_ms"
+        ],
+        "title": "CompletionResponseDTO",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -151,6 +211,23 @@
         "title": "PackProgressDTO",
         "type": "object"
       },
+      "PackProgressResponseDTO": {
+        "properties": {
+          "pack_slug": {
+            "title": "Pack Slug",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PackProgressDTO"
+          }
+        },
+        "required": [
+          "pack_slug",
+          "progress"
+        ],
+        "title": "PackProgressResponseDTO",
+        "type": "object"
+      },
       "PackSentenceDTO": {
         "properties": {
           "hanzi": {
@@ -220,6 +297,28 @@
           "progress"
         ],
         "title": "PackSummaryDTO",
+        "type": "object"
+      },
+      "ProgressResetDTO": {
+        "properties": {
+          "deleted_count": {
+            "title": "Deleted Count",
+            "type": "integer"
+          },
+          "pack_slug": {
+            "title": "Pack Slug",
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/PackProgressDTO"
+          }
+        },
+        "required": [
+          "pack_slug",
+          "progress",
+          "deleted_count"
+        ],
+        "title": "ProgressResetDTO",
         "type": "object"
       },
       "ValidationError": {
@@ -378,6 +477,138 @@
         "summary": "Get Pack",
         "tags": [
           "packs"
+        ]
+      }
+    },
+    "/api/v1/progress/completions": {
+      "post": {
+        "operationId": "create_completion_api_v1_progress_completions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionCreateDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Completion",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
+    "/api/v1/progress/packs/{slug}": {
+      "delete": {
+        "operationId": "reset_pack_progress_api_v1_progress_packs__slug__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressResetDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Pack Progress",
+        "tags": [
+          "progress"
+        ]
+      },
+      "get": {
+        "operationId": "get_pack_progress_api_v1_progress_packs__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackProgressResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pack Progress",
+        "tags": [
+          "progress"
         ]
       }
     },
