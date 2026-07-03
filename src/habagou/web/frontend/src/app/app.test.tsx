@@ -38,6 +38,33 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: "‹ All packs" })).toBeTruthy();
   });
 
+  it("[WF-06] prefetches pack and sentence-only stroke data", async () => {
+    window.history.pushState({}, "", "/packs/greetings");
+    const strokeRequests: string[] = [];
+    server.use(
+      http.get(`${API_V1_BASE}/characters/:hanzi/strokes`, ({ params }) => {
+        strokeRequests.push(String(params.hanzi));
+        return HttpResponse.json({
+          strokes: ["M 0 0 L 10 10"],
+          medians: [
+            [
+              [0, 0],
+              [10, 10],
+            ],
+          ],
+        });
+      }),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Greetings" })).toBeTruthy();
+    await waitFor(() => {
+      expect(strokeRequests).toContain("你");
+      expect(strokeRequests).toContain("很");
+    });
+  });
+
   it("[WF-07] shows per-activity progress on the pack screen", async () => {
     window.history.pushState({}, "", "/packs/numbers");
 

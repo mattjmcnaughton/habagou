@@ -78,6 +78,17 @@ export const handlers = [
     }
     return HttpResponse.json<PackDetail>(pack);
   }),
+  http.get(`${API_V1}/characters/:hanzi/strokes`, () => {
+    return HttpResponse.json({
+      strokes: ["M 0 0 L 10 10"],
+      medians: [
+        [
+          [0, 0],
+          [10, 10],
+        ],
+      ],
+    });
+  }),
   http.delete(`${API_V1}/progress/packs/:slug`, ({ params }) => {
     const slug = String(params.slug);
     const pack = packDetails[slug];
