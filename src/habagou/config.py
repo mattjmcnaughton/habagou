@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     admin_token: str = ""
     otel_exporter_otlp_endpoint: str = ""
+    require_frontend: bool = False
 
     database_url: str = "postgresql+asyncpg://localhost:5432/habagou"
 

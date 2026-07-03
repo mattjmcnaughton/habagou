@@ -24,6 +24,7 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+test-results/
 
 # IDE
 .idea/
@@ -45,12 +46,14 @@ Thumbs.db
 *.sqlite3
 
 # Docker
-Dockerfile
-.dockerignore
-docker-compose.yml
 docker-compose.override.yml
 
 # Excluded from production image
 tests/
 docs/
 .github/
+
+# Frontend
+**/node_modules/
+**/.vite/
+**/*.tsbuildinfo

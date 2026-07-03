@@ -152,6 +152,40 @@ compose-db-up:
 compose-up:
     docker compose up --build
 
+# Run the production-like Compose stack until it is healthy, then verify HTTP serving
+compose-smoke:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose down -v --remove-orphans
+    docker compose up --build -d
+    cleanup() {
+        docker compose down
+    }
+    trap cleanup EXIT
+    for _ in {1..90}; do
+        if curl -fsS http://127.0.0.1:8000/readyz >/dev/null; then
+            break
+        fi
+        sleep 2
+    done
+    curl -fsS http://127.0.0.1:8000/readyz | grep -q '"status":"ready"'
+    curl -fsS http://127.0.0.1:8000/ | grep -q '<div id="root">'
+    curl -fsS http://127.0.0.1:8000/packs/greetings/trace | grep -q '<div id="root">'
+    curl -fsS http://127.0.0.1:8000/api/v1/packs | grep -q '"slug":"greetings"'
+    curl -fsS http://127.0.0.1:8000/api/v1/characters/%E4%BD%A0/strokes | grep -q '"strokes"'
+    curl -fsS \
+        -H 'content-type: application/json' \
+        -d '{"pack_slug":"greetings","activity":"trace","duration_ms":1000}' \
+        http://127.0.0.1:8000/api/v1/progress/completions | grep -q '"completed":true'
+    docker compose restart app
+    for _ in {1..90}; do
+        if curl -fsS http://127.0.0.1:8000/readyz >/dev/null; then
+            break
+        fi
+        sleep 2
+    done
+    curl -fsS http://127.0.0.1:8000/api/v1/packs/greetings | grep -q '"trace":{"completed":true'
+
 # Stop Compose services
 compose-down:
     docker compose down

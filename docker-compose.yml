@@ -1,17 +1,32 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: production
     environment:
       DATABASE_URL: postgresql+asyncpg://habagou:habagou@db:5432/habagou
       HOST: 0.0.0.0
       PORT: 8000
       LOG_LEVEL: INFO
       LOG_FORMAT: console
+      REQUIRE_FRONTEND: "true"
+      XDG_CACHE_HOME: /home/app/.cache
     ports:
       - "8000:8000"
+    volumes:
+      - corpus-cache:/home/app/.cache/habagou
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import json, urllib.request; print(json.load(urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=5))['status'])\"",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 30
 
   db:
     image: postgres:16
@@ -31,3 +46,4 @@ services:
 
 volumes:
   pgdata:
+  corpus-cache:
