@@ -3,6 +3,7 @@ import HanziWriter from "hanzi-writer";
 import type { QuizOptions } from "hanzi-writer";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { characterStrokesQueryOptions } from "../lib/strokes";
+import { SCRIPTED_STROKE_COMPLETE_EVENT } from "./trace-events";
 
 export type TraceCanvasHandle = {
   hint(strokeNum?: number): void;
@@ -82,17 +83,20 @@ export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(funct
     writerRef.current = writer;
     onTotal?.(strokeData.data.strokes.length);
 
+    const completeStroke = () => {
+      void writer.showCharacter({ duration: COMPLETE_REVEAL_MS });
+      onComplete?.();
+    };
     const quizOptions: Partial<QuizOptions> = {
       onCorrectStroke: (stroke) => onStroke?.(stroke.strokeNum + 1),
-      onComplete: () => {
-        void writer.showCharacter({ duration: COMPLETE_REVEAL_MS });
-        onComplete?.();
-      },
+      onComplete: completeStroke,
     };
     quizOptionsRef.current = quizOptions;
+    target.addEventListener(SCRIPTED_STROKE_COMPLETE_EVENT, completeStroke);
     void writer.quiz(quizOptions);
 
     return () => {
+      target.removeEventListener(SCRIPTED_STROKE_COMPLETE_EVENT, completeStroke);
       writer.cancelQuiz();
       if (writerRef.current === writer) {
         writerRef.current = null;

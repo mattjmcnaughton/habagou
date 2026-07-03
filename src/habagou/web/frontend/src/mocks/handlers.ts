@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw";
-import type { PackDetail, PackSummary, ProgressReset } from "../lib/api";
+import type { CompletionResponse, PackDetail, PackSummary, ProgressReset } from "../lib/api";
 
 const API_V1 = "/api/v1";
 
@@ -88,6 +88,32 @@ export const handlers = [
         ],
       ],
     });
+  }),
+  http.post(`${API_V1}/progress/completions`, async ({ request }) => {
+    const completion = (await request.json()) as {
+      activity: "match" | "sentence" | "trace";
+      duration_ms: number;
+      pack_slug: string;
+    };
+    const pack = packDetails[completion.pack_slug];
+    if (!pack) {
+      return HttpResponse.json({ detail: "pack not found" }, { status: 404 });
+    }
+    const progress = {
+      ...pack.progress,
+      [completion.activity]: {
+        completed: true,
+        completion_count: pack.progress[completion.activity].completion_count + 1,
+        best_duration_ms: completion.duration_ms,
+      },
+    };
+    pack.progress = progress;
+    const summary = packSummaries.find((item) => item.slug === completion.pack_slug);
+    if (summary) {
+      summary.progress = progress;
+    }
+    const response: CompletionResponse = { ...completion, progress };
+    return HttpResponse.json<CompletionResponse>(response);
   }),
   http.delete(`${API_V1}/progress/packs/:slug`, ({ params }) => {
     const slug = String(params.slug);

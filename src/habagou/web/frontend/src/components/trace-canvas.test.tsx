@@ -4,6 +4,7 @@ import type { QuizOptions } from "hanzi-writer";
 import { createRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraceCanvas, type TraceCanvasHandle } from "./trace-canvas";
+import { SCRIPTED_STROKE_COMPLETE_EVENT } from "./trace-events";
 
 const { createWriter, writer } = vi.hoisted(() => {
   const writer = {
@@ -112,5 +113,18 @@ describe("TraceCanvas", () => {
     expect(writer.cancelQuiz).toHaveBeenCalled();
     await waitFor(() => expect(writer.setCharacter).toHaveBeenCalledWith("你"));
     await waitFor(() => expect(writer.quiz).toHaveBeenCalledTimes(2));
+  });
+
+  it("exposes a deterministic scripted stroke completion hook", async () => {
+    const onComplete = vi.fn();
+
+    renderTraceCanvas(<TraceCanvas hanzi="你" onComplete={onComplete} size={300} />);
+    const canvas = await screen.findByTestId("trace-canvas");
+    await waitFor(() => expect(writer.quiz).toHaveBeenCalled());
+
+    canvas.dispatchEvent(new CustomEvent(SCRIPTED_STROKE_COMPLETE_EVENT));
+
+    expect(writer.showCharacter).toHaveBeenCalledWith({ duration: 380 });
+    expect(onComplete).toHaveBeenCalled();
   });
 });
