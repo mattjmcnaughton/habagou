@@ -17,10 +17,10 @@ async def readyz() -> dict[str, str] | JSONResponse:
     """Readiness probe."""
     from sqlalchemy import text
 
-    from habagou.db import async_session
+    from habagou import db
 
     try:
-        async with async_session() as session:
+        async with db.async_session() as session:
             await session.execute(text("SELECT 1"))
     except Exception:
         return JSONResponse(

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from habagou.db import async_session, engine
+from habagou import db
 from habagou.models import (
     ActivityCompletion,
     ActivityType,
@@ -35,25 +35,9 @@ from scripts.seed import (
 )
 
 
-@pytest.fixture(autouse=True)
-async def dispose_engine_after_test():
-    yield
-    await engine.dispose()
-
-
-async def import_seed_fixture_or_skip() -> None:
-    cached_archive = archive_path()
-    if not cached_archive.exists():
-        pytest.skip("stroke corpus archive is not cached; run `just bootstrap` first")
-    await import_corpus(
-        archive=cached_archive,
-        subset_path=Path("tests/fixtures/stroke_subset.txt"),
-    )
-
-
 @pytest.mark.anyio
 async def test_database_round_trips_pack_and_completion() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         user = User(username="schema-test", display_name="Schema Test", is_guest=False)
         ni = Character(
             hanzi="☀",
@@ -138,7 +122,7 @@ async def test_stroke_import_matches_fixture_subset() -> None:
         for record in iter_records(ensure_archive(cached_archive), subset)
     }
 
-    async with async_session() as session:
+    async with db.async_session() as session:
         result = await session.execute(
             select(Character).where(Character.hanzi.in_(source_records))
         )
@@ -152,13 +136,11 @@ async def test_stroke_import_matches_fixture_subset() -> None:
 
 @pytest.mark.anyio
 async def test_seed_database_is_idempotent() -> None:
-    await import_seed_fixture_or_skip()
-
     await seed_database()
     await seed_database()
 
     seed_slugs = [pack.slug for pack in SEED_PACKS]
-    async with async_session() as session:
+    async with db.async_session() as session:
         guest_count = await session.scalar(
             select(func.count()).select_from(User).where(User.username == "guest")
         )
@@ -229,7 +211,7 @@ async def test_seed_validation_aborts_when_referenced_character_is_missing() -> 
         sentences=(SeedSentence("☂", "fake", "fake"),),
     )
 
-    async with async_session() as session:
+    async with db.async_session() as session:
         guest_count_before = await session.scalar(
             select(func.count()).select_from(User).where(User.username == "guest")
         )
@@ -240,7 +222,7 @@ async def test_seed_validation_aborts_when_referenced_character_is_missing() -> 
     with pytest.raises(MissingCharactersError, match="☂") as error:
         await seed_database((broken_pack,))
 
-    async with async_session() as session:
+    async with db.async_session() as session:
         guest_count_after = await session.scalar(
             select(func.count()).select_from(User).where(User.username == "guest")
         )

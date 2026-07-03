@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from habagou.db import async_session, engine
+from habagou import db
 from habagou.models import ActivityType, Pack, PackStatus
 from habagou.repositories import (
     CharacterRepository,
@@ -13,15 +13,9 @@ from habagou.repositories import (
 from habagou.seed_data import GUEST_USER_ID
 
 
-@pytest.fixture(autouse=True)
-async def dispose_engine_after_test():
-    yield
-    await engine.dispose()
-
-
 @pytest.mark.anyio
 async def test_pack_repository_lists_published_packs_with_counts() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         session.add(
             Pack(
                 slug="repository-draft",
@@ -52,7 +46,7 @@ async def test_pack_repository_lists_published_packs_with_counts() -> None:
 
 @pytest.mark.anyio
 async def test_pack_repository_gets_pack_by_slug_eager_loaded() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         repository = PackRepository(session)
         pack = await repository.get_by_slug("greetings")
 
@@ -74,7 +68,7 @@ async def test_pack_repository_gets_pack_by_slug_eager_loaded() -> None:
 
 @pytest.mark.anyio
 async def test_character_repository_reads_strokes_and_missing_set() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         repository = CharacterRepository(session)
         strokes = await repository.strokes_by_hanzi("你")
         missing = await repository.missing_hanzi({"你", "好", "☂"})
@@ -88,7 +82,7 @@ async def test_character_repository_reads_strokes_and_missing_set() -> None:
 
 @pytest.mark.anyio
 async def test_user_repository_gets_guest_user() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         user = await UserRepository(session).get_guest()
 
     assert user is not None
@@ -99,7 +93,7 @@ async def test_user_repository_gets_guest_user() -> None:
 
 @pytest.mark.anyio
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
-    async with async_session() as session:
+    async with db.async_session() as session:
         user = await UserRepository(session).get_guest()
         pack = await PackRepository(session).get_by_slug("greetings")
         assert user is not None

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, or_, select
 
-from habagou.db import async_session
+from habagou import db
 from habagou.models import (
     Character,
     Pack,
@@ -248,7 +248,7 @@ async def upsert_pack(
 
 
 async def seed_database(packs: Sequence[SeedPack] = SEED_PACKS) -> SeedResult:
-    async with async_session() as session:
+    async with db.async_session() as session:
         required = required_hanzi(packs)
         characters = await validate_required_characters(session, required)
         await upsert_guest(session)

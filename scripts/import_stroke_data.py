@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy.dialects.postgresql import insert
 
-from habagou.db import async_session
+from habagou import db
 from habagou.models import Character
 
 if TYPE_CHECKING:
@@ -148,7 +148,7 @@ def _chunks(records: Iterable[StrokeRecord], size: int) -> Iterator[list[StrokeR
 
 async def import_records(records: Iterable[StrokeRecord]) -> int:
     changed = 0
-    async with async_session() as session:
+    async with db.async_session() as session:
         for batch in _chunks(records, CHUNK_SIZE):
             rows = [
                 {
