@@ -1,49 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { PackSummary } from "../lib/api";
+import { Link } from "@tanstack/react-router";
+import { listPacks } from "../lib/api";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const packs: Pick<
-  PackSummary,
-  "slug" | "title" | "glyph" | "color" | "char_count" | "sentence_count"
->[] = [
-  {
-    slug: "greetings",
-    title: "Greetings",
-    glyph: "你",
-    color: "#c4633f",
-    char_count: 5,
-    sentence_count: 3,
-  },
-  {
-    slug: "numbers",
-    title: "Numbers",
-    glyph: "三",
-    color: "#3f8a86",
-    char_count: 5,
-    sentence_count: 2,
-  },
-  {
-    slug: "family",
-    title: "Family",
-    glyph: "妈",
-    color: "#5b5fa8",
-    char_count: 5,
-    sentence_count: 2,
-  },
-  {
-    slug: "food-drink",
-    title: "Food & drink",
-    glyph: "茶",
-    color: "#b5852e",
-    char_count: 5,
-    sentence_count: 2,
-  },
-];
-
 function Index() {
+  const packs = useQuery({ queryKey: ["packs"], queryFn: listPacks });
+
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[440px] flex-col">
@@ -75,13 +41,20 @@ function Index() {
           </div>
 
           <div className="divide-y divide-white/10">
-            {packs.map((pack) => (
-              <button
+            {packs.isPending ? <p className="p-5 text-sm text-mist">Loading packs...</p> : null}
+            {packs.isError ? (
+              <p className="p-5 text-sm text-clay">Packs could not be loaded.</p>
+            ) : null}
+            {packs.data?.map((pack) => (
+              <Link
+                aria-label={`${pack.title} pack, ${pack.char_count} characters, ${pack.sentence_count} sentences`}
                 className="grid w-full grid-cols-[3.5rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
                 key={pack.slug}
-                type="button"
+                params={{ slug: pack.slug }}
+                to="/packs/$slug"
               >
                 <span
+                  aria-hidden="true"
                   className="flex h-14 w-14 items-center justify-center rounded-md font-hanzi text-3xl"
                   style={{ backgroundColor: `${pack.color}22`, color: pack.color }}
                 >
@@ -93,21 +66,15 @@ function Index() {
                     {pack.char_count} characters · {pack.sentence_count} sentences
                   </span>
                   <span className="mt-2 flex flex-wrap gap-1.5">
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-mist">
-                      trace
-                    </span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-mist">
-                      match
-                    </span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-mist">
-                      sentence
-                    </span>
+                    <ProgressBadge label="trace" completed={pack.progress.trace.completed} />
+                    <ProgressBadge label="match" completed={pack.progress.match.completed} />
+                    <ProgressBadge label="sentence" completed={pack.progress.sentence.completed} />
                   </span>
                 </span>
                 <span className="text-2xl text-mist" aria-hidden="true">
                   ›
                 </span>
-              </button>
+              </Link>
             ))}
           </div>
         </section>
@@ -117,5 +84,20 @@ function Index() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function ProgressBadge({ completed, label }: { completed: boolean; label: string }) {
+  return (
+    <span
+      className={
+        completed
+          ? "rounded-full border border-jade/30 bg-jade/10 px-2 py-0.5 text-xs text-jade"
+          : "rounded-full border border-white/10 px-2 py-0.5 text-xs text-mist"
+      }
+    >
+      {completed ? "✓ " : ""}
+      {label}
+    </span>
   );
 }

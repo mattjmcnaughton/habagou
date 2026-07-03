@@ -53,3 +53,7 @@ src/habagou/web/frontend/src/routeTree.gen.ts
 
 # Frontend dependencies
 src/habagou/web/frontend/node_modules/
+
+# Frontend browser test artifacts
+src/habagou/web/frontend/test-results/
+src/habagou/web/frontend/playwright-report/

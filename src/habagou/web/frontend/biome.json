@@ -16,6 +16,13 @@
     }
   },
   "files": {
-    "ignore": ["node_modules", "dist", "src/routeTree.gen.ts", "src/lib/api-types.ts"]
+    "ignore": [
+      "node_modules",
+      "dist",
+      "src/routeTree.gen.ts",
+      "src/lib/api-types.ts",
+      "test-results",
+      "playwright-report"
+    ]
   }
 }
