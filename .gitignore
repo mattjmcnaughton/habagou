@@ -34,6 +34,8 @@ Thumbs.db
 # Environment
 .env
 .env.local
+.devenv/
+devenv.local.nix
 
 # Alembic
 alembic/versions/*.py

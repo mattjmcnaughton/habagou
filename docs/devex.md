@@ -4,12 +4,12 @@
 |---|---|
 | Status | **Final v1.0** — approved for implementation |
 | Depends on | [TDD](technical/tdd.md) |
-| Goal | Run N independent copies of Habagou on one laptop; devenv owns the database, the justfile owns everything else; Docker Compose remains a supported full-stack alternative |
+| Goal | Run N independent copies of Habagou on one laptop; devenv owns the database, the justfile owns everything else; Docker remains the agent shell and deployment packaging |
 
 ## 1. Requirements
 
 - **N independent instances**: different branches/worktrees (or different agents) running simultaneously, no shared state, no port fights, no coordination step.
-- **Docker not required locally**: the default loop is Docker-free; Docker Compose stays supported as a full-stack alternative and is the deployment packaging.
+- **Docker not required for humans**: the default loop is Docker-free; agents use a Docker dev image so host Nix installs are optional and explicit.
 - **Hermetic toolchain**: Python, Node, Postgres, just — pinned and identical across machines and CI.
 - **Disposable**: destroying an instance is `rm -rf` of one directory; creating one is one command.
 - **Same mechanism reused by tests**: the e2e harness provisions instances the same way a developer does.
@@ -90,6 +90,14 @@ export DATABASE_URL=postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
 just bootstrap && just dev
 ```
 
+Agents enter the devenv environment through Docker, keeping Nix off the host:
+
+```sh
+just dev-shell-docker    # builds Dockerfile.dev, then opens devenv shell
+devenv up -d             # inside the container: Postgres only
+just dev                 # inside the container: backend + frontend
+```
+
 And the full prod-like stack (built image + db):
 
 ```sh
@@ -109,7 +117,8 @@ Compose is a **supported peer**, not just deploy packaging. Three sanctioned mod
 
 | Mode | Database | App processes | Use |
 |---|---|---|---|
-| devenv (default) | devenv per-checkout cluster, Unix socket | native, `just dev` | day-to-day dev, N instances |
+| devenv (default) | devenv per-checkout cluster, Unix socket | native, `just dev` | day-to-day human dev, N instances |
+| Docker dev shell | devenv per-checkout cluster, Unix socket | container shell, `just dev` | agent dev without host Nix |
 | Compose db + native app | `docker compose up -d db` (TCP :5432) | native, `just dev` | devs who prefer Docker over Nix; one instance at a time unless the port is remapped |
 | Full Compose | Compose | Compose (built image) | prod-like verification (WF-10), staging/prod deployment |
 
@@ -119,5 +128,5 @@ Nothing in the devenv setup leaks into the image; the app only ever reads `DATAB
 
 | # | Question | Default |
 |---|---|---|
-| DX-1 | Is Nix/devenv acceptable tooling for everyone (and every agent) touching this repo? | Yes for the default path; the Compose-db mode is the sanctioned non-Nix fallback |
+| DX-1 | Is Nix/devenv acceptable tooling for everyone touching this repo? | Yes for the default human path; agents use Docker, and host Nix installs require explicit approval |
 | DX-2 | Should CI run inside devenv (slower cold start, perfect parity) or plain uv/pnpm + service container (faster, near-parity)? | Plain toolchain in CI for v1; revisit if drift bites |
