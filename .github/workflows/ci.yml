@@ -152,9 +152,20 @@ jobs:
       - name: Check OpenAPI drift
         run: just openapi-check
 
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install just
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - name: Run Compose smoke
+        run: just compose-smoke
+
   traceability:
     runs-on: ubuntu-latest
-    needs: [gate, integration, e2e]
+    needs: [gate, integration, e2e, compose-smoke]
     if: always()
     steps:
       - uses: actions/checkout@v4
