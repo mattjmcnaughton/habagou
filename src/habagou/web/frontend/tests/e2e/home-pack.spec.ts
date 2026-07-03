@@ -52,8 +52,15 @@ const numbersDetail = {
 };
 
 test.beforeEach(async ({ page }) => {
+  let sentenceCompleted = false;
   let traceCompleted = false;
   let matchCompleted = false;
+  const greetingsProgress = () => ({
+    ...blankProgress,
+    sentence: sentenceCompleted
+      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
+      : blankProgress.sentence,
+  });
   const numbersProgress = () => ({
     ...blankProgress,
     trace: traceCompleted
@@ -66,7 +73,7 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/v1/packs", async (route) => {
     await route.fulfill({
       json: [
-        packSummary,
+        { ...packSummary, progress: greetingsProgress() },
         {
           ...numbersSummary,
           progress: numbersProgress(),
@@ -75,7 +82,7 @@ test.beforeEach(async ({ page }) => {
     });
   });
   await page.route("**/api/v1/packs/greetings", async (route) => {
-    await route.fulfill({ json: packDetail });
+    await route.fulfill({ json: { ...packDetail, progress: greetingsProgress() } });
   });
   await page.route("**/api/v1/packs/numbers", async (route) => {
     await route.fulfill({
@@ -106,10 +113,13 @@ test.beforeEach(async ({ page }) => {
     if (body.pack_slug === "numbers" && body.activity === "match") {
       matchCompleted = true;
     }
+    if (body.pack_slug === "greetings" && body.activity === "sentence") {
+      sentenceCompleted = true;
+    }
     await route.fulfill({
       json: {
         ...body,
-        progress: numbersProgress(),
+        progress: body.pack_slug === "greetings" ? greetingsProgress() : numbersProgress(),
       },
     });
   });
@@ -178,3 +188,61 @@ test("[WF-04] completes a full match and records progress", async ({ page }) => 
     page.getByRole("link", { name: "Match, completed. Pair characters with their meanings" }),
   ).toBeVisible();
 });
+
+test("[WF-05] traces a sentence with a sentence-only character", async ({ page }) => {
+  const strokeRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    const parts = url.pathname.split("/");
+    if (parts[1] === "api" && parts[3] === "characters" && parts[5] === "strokes") {
+      strokeRequests.push(decodeURIComponent(parts[4]));
+    }
+  });
+
+  await page.goto("/packs/greetings");
+
+  await page.getByRole("link", { name: "Sentences. Write full sentences from the pack" }).click();
+  await expect(page).toHaveURL("/packs/greetings/sentence");
+  await expect(page.getByRole("heading", { name: "Hello" })).toBeVisible();
+
+  await completeSentenceCharacter(page, "你");
+  await page.getByRole("button", { name: "Next character" }).click();
+  await completeSentenceCharacter(page, "好", "你好 done.");
+  await page.getByRole("button", { name: "Next sentence" }).click();
+
+  await expect(page.getByRole("heading", { name: "I am well" })).toBeVisible();
+  await completeSentenceCharacter(page, "我");
+  await page.getByRole("button", { name: "Next character" }).click();
+  await completeSentenceCharacter(page, "很");
+  await page.getByRole("button", { name: "Next character" }).click();
+  await completeSentenceCharacter(page, "好", "我很好 done.");
+  await page.getByRole("button", { name: "Next sentence" }).click();
+
+  await completeSentenceCharacter(page, "谢");
+  await page.getByRole("button", { name: "Next character" }).click();
+  await completeSentenceCharacter(page, "谢");
+  await page.getByRole("button", { name: "Next character" }).click();
+  await completeSentenceCharacter(page, "你", "谢谢你 done.");
+  await page.getByRole("button", { name: "Finish" }).click();
+
+  await expect(page.getByRole("heading", { name: "Sentences complete!" })).toBeVisible();
+  await expect(page.getByText("Completion recorded.")).toBeVisible();
+  await expect.poll(() => strokeRequests).toContain("很");
+
+  await page.getByRole("link", { name: "Back to Greetings" }).click();
+  await expect(
+    page.getByRole("link", { name: "Sentences, completed. Write full sentences from the pack" }),
+  ).toBeVisible();
+});
+
+async function completeSentenceCharacter(
+  page: import("@playwright/test").Page,
+  hanzi: string,
+  doneText?: string,
+) {
+  const canvas = page.getByTestId("trace-canvas");
+  await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
+  await expect(page.getByText("Stroke 1 of 1")).toBeVisible();
+  await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
+  await expect(page.getByText(doneText ?? `Nice. That is ${hanzi}.`)).toBeVisible();
+}

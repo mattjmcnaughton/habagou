@@ -79,6 +79,9 @@ describe("App", () => {
     expect(
       screen.getByRole("link", { name: "Match. Pair characters with their meanings" }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Sentences. Write full sentences from the pack" }),
+    ).toBeTruthy();
   });
 
   it("[WF-08] confirms and clears pack progress", async () => {
