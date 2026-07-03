@@ -134,6 +134,7 @@ async def test_stroke_import_matches_fixture_subset() -> None:
         assert rows[hanzi].stroke_count == source.stroke_count
 
 
+@pytest.mark.workflow("WF-01")
 @pytest.mark.anyio
 async def test_seed_database_is_idempotent() -> None:
     await seed_database()
@@ -199,6 +200,7 @@ async def test_seed_database_is_idempotent() -> None:
         ]
 
 
+@pytest.mark.workflow("WF-01")
 @pytest.mark.anyio
 async def test_seed_validation_aborts_when_referenced_character_is_missing() -> None:
     broken_pack = SeedPack(

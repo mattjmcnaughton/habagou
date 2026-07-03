@@ -126,6 +126,42 @@ async def test_completion_rejects_invalid_activity(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize(
+    ("activity", "workflow"),
+    [
+        pytest.param("trace", "WF-03", marks=pytest.mark.workflow("WF-03")),
+        pytest.param("match", "WF-04", marks=pytest.mark.workflow("WF-04")),
+        pytest.param("sentence", "WF-05", marks=pytest.mark.workflow("WF-05")),
+    ],
+)
+@pytest.mark.anyio
+async def test_completion_emits_activity_workflow_events(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    activity: str,
+    workflow: str,
+) -> None:
+    events: list[tuple[str, dict[str, object]]] = []
+    monkeypatch.setattr(
+        "habagou.routers.v1.progress.emit_workflow_event",
+        lambda event, **fields: events.append((event, fields)),
+    )
+
+    response = await client.post(
+        "/api/v1/progress/completions",
+        json={
+            "pack_slug": "greetings",
+            "activity": activity,
+            "duration_ms": 1000,
+        },
+    )
+
+    assert response.status_code == 201
+    assert events[0][0] == "activity_completed"
+    assert events[0][1]["workflow"] == workflow
+    assert events[0][1]["activity"] == activity
+
+
 async def _record_other_user_completion(
     slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
