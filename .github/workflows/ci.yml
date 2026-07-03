@@ -77,7 +77,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y just
 
       - name: Run integration tests
-        run: just test-integration
+        run: just bootstrap && just test-integration
+
+      - name: Verify migration downgrade
+        run: uv run alembic downgrade base
 
   e2e:
     runs-on: ubuntu-latest

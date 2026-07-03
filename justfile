@@ -2,7 +2,7 @@ fe_dir := "src/habagou/web/frontend"
 dev_image := "habagou-dev"
 
 _python := "python3"
-_env := "eval \"$({{_python}} scripts/dev_env.py env)\""
+_env := "eval \"$(python3 scripts/dev_env.py env)\""
 
 # Show this checkout's derived ports and database settings
 info:
