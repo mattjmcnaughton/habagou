@@ -18,12 +18,6 @@ const packSummary = {
   progress: blankProgress,
 };
 
-const traceProgress = {
-  trace: { completed: true, completion_count: 1, best_duration_ms: 1000 },
-  match: { completed: false, completion_count: 0, best_duration_ms: null },
-  sentence: { completed: false, completion_count: 0, best_duration_ms: null },
-};
-
 const numbersSummary = {
   id: "22222222-2222-4222-8222-222222222222",
   slug: "numbers",
@@ -58,14 +52,24 @@ const numbersDetail = {
 };
 
 test.beforeEach(async ({ page }) => {
-  let numbersCompleted = false;
+  let traceCompleted = false;
+  let matchCompleted = false;
+  const numbersProgress = () => ({
+    ...blankProgress,
+    trace: traceCompleted
+      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
+      : blankProgress.trace,
+    match: matchCompleted
+      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
+      : blankProgress.match,
+  });
   await page.route("**/api/v1/packs", async (route) => {
     await route.fulfill({
       json: [
         packSummary,
         {
           ...numbersSummary,
-          progress: numbersCompleted ? traceProgress : blankProgress,
+          progress: numbersProgress(),
         },
       ],
     });
@@ -77,7 +81,7 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       json: {
         ...numbersDetail,
-        progress: numbersCompleted ? traceProgress : blankProgress,
+        progress: numbersProgress(),
       },
     });
   });
@@ -96,11 +100,16 @@ test.beforeEach(async ({ page }) => {
   });
   await page.route("**/api/v1/progress/completions", async (route) => {
     const body = await route.request().postDataJSON();
-    numbersCompleted = body.pack_slug === "numbers" && body.activity === "trace";
+    if (body.pack_slug === "numbers" && body.activity === "trace") {
+      traceCompleted = true;
+    }
+    if (body.pack_slug === "numbers" && body.activity === "match") {
+      matchCompleted = true;
+    }
     await route.fulfill({
       json: {
         ...body,
-        progress: numbersCompleted ? traceProgress : blankProgress,
+        progress: numbersProgress(),
       },
     });
   });
@@ -146,5 +155,26 @@ test("[WF-03] completes a one-stroke trace and records progress", async ({ page 
   await page.getByRole("link", { name: "Back to Numbers" }).click();
   await expect(
     page.getByRole("link", { name: "Trace, completed. Write each character stroke by stroke" }),
+  ).toBeVisible();
+});
+
+test("[WF-04] completes a full match and records progress", async ({ page }) => {
+  await page.goto("/packs/numbers");
+
+  await page.getByRole("link", { name: "Match. Pair characters with their meanings" }).click();
+  await expect(page).toHaveURL("/packs/numbers/match");
+  await expect(page.getByRole("heading", { name: "Match characters" })).toBeVisible();
+  await expect(page.getByText("0 / 1")).toBeVisible();
+
+  await page.getByRole("button", { name: "一 character" }).click();
+  await page.getByRole("button", { name: "one, yī" }).click();
+
+  await expect(page.getByRole("heading", { name: "All matched!" })).toBeVisible();
+  await expect(page.getByText(/Finished in \d+s\./)).toBeVisible();
+  await expect(page.getByText("Completion recorded.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to Numbers" }).click();
+  await expect(
+    page.getByRole("link", { name: "Match, completed. Pair characters with their meanings" }),
   ).toBeVisible();
 });
