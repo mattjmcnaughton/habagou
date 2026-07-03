@@ -40,6 +40,19 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/v1/packs/greetings", async (route) => {
     await route.fulfill({ json: packDetail });
   });
+  await page.route("**/api/v1/characters/*/strokes", async (route) => {
+    await route.fulfill({
+      json: {
+        strokes: ["M 0 0 L 10 10"],
+        medians: [
+          [
+            [0, 0],
+            [10, 10],
+          ],
+        ],
+      },
+    });
+  });
 });
 
 test("[WF-02] navigates from home to pack detail", async ({ page }) => {

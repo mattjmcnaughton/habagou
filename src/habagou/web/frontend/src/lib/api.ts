@@ -1,4 +1,5 @@
 import type { Components } from "./api-types";
+import type { CharacterJson } from "hanzi-writer";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 export const API_V1_BASE = "/api/v1";
@@ -9,7 +10,7 @@ export type PackProgress = Components["schemas"]["PackProgressResponseDTO"];
 export type CompletionCreate = Components["schemas"]["CompletionCreateDTO"];
 export type CompletionResponse = Components["schemas"]["CompletionResponseDTO"];
 export type ProgressReset = Components["schemas"]["ProgressResetDTO"];
-export type StrokeData = Record<string, unknown>;
+export type StrokeData = CharacterJson;
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init);

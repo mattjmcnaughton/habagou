@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import type { PackDetail } from "../lib/api";
 import { getPack, resetPackProgress } from "../lib/api";
+import { prefetchPackStrokeData } from "../lib/strokes";
 
 export const Route = createFileRoute("/packs/$slug")({
   component: PackScreen,
@@ -32,6 +34,12 @@ function PackScreen() {
   const { slug } = Route.useParams();
   const queryClient = useQueryClient();
   const pack = useQuery({ queryKey: ["pack", slug], queryFn: () => getPack(slug) });
+  useEffect(() => {
+    if (pack.data) {
+      void prefetchPackStrokeData(queryClient, pack.data);
+    }
+  }, [pack.data, queryClient]);
+
   const reset = useMutation({
     mutationFn: () => resetPackProgress(slug),
     onSuccess: (result) => {
