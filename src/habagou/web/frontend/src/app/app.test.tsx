@@ -33,7 +33,7 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Greetings" })).toBeTruthy();
     expect(screen.getByTitle("nǐ · you")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Trace. Write each character stroke by stroke" }),
+      screen.getByRole("link", { name: "Trace. Write each character stroke by stroke" }),
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: "‹ All packs" })).toBeTruthy();
   });
@@ -72,7 +72,7 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "Numbers" })).toBeTruthy();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("link", {
         name: "Trace, completed. Write each character stroke by stroke",
       }),
     ).toBeTruthy();
@@ -104,7 +104,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("button", {
+      await screen.findByRole("link", {
         name: "Trace, completed. Write each character stroke by stroke",
       }),
     ).toBeTruthy();
@@ -114,7 +114,7 @@ describe("App", () => {
     expect(resetRequest).toHaveBeenCalledWith("numbers");
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", {
+        screen.queryByRole("link", {
           name: "Trace, completed. Write each character stroke by stroke",
         }),
       ).toBeNull();

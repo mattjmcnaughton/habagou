@@ -106,13 +106,8 @@ function PackScreen() {
               <div className="divide-y divide-white/10">
                 {activities.map((activity) => {
                   const progress = pack.data.progress[activity.key];
-                  return (
-                    <button
-                      aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
-                      className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
-                      key={activity.key}
-                      type="button"
-                    >
+                  const content = (
+                    <>
                       <span
                         aria-hidden="true"
                         className="flex h-11 w-11 items-center justify-center rounded-md text-xl"
@@ -136,6 +131,29 @@ function PackScreen() {
                       <span className="text-2xl text-mist" aria-hidden="true">
                         ›
                       </span>
+                    </>
+                  );
+                  if (activity.key === "trace") {
+                    return (
+                      <Link
+                        aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
+                        className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
+                        key={activity.key}
+                        params={{ slug }}
+                        to="/packs/$slug/trace"
+                      >
+                        {content}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <button
+                      aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
+                      className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
+                      key={activity.key}
+                      type="button"
+                    >
+                      {content}
                     </button>
                   );
                 })}
