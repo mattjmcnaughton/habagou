@@ -271,6 +271,46 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/characters/{hanzi}/strokes": {
+      "get": {
+        "operationId": "get_character_strokes_api_v1_characters__hanzi__strokes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hanzi",
+            "required": true,
+            "schema": {
+              "title": "Hanzi",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Character Strokes Api V1 Characters  Hanzi  Strokes Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Hanzi Writer stroke JSON"
+          },
+          "404": {
+            "description": "Character stroke data not found"
+          },
+          "422": {
+            "description": "Path parameter must be exactly one grapheme"
+          }
+        },
+        "summary": "Get Character Strokes",
+        "tags": [
+          "characters"
+        ]
+      }
+    },
     "/api/v1/packs": {
       "get": {
         "operationId": "list_packs_api_v1_packs_get",

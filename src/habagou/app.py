@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from habagou.logging import configure_logging
 from habagou.routers import health
-from habagou.routers.v1 import packs
+from habagou.routers.v1 import characters, packs
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     setup_telemetry(app)
 
     app.include_router(health.router)
+    app.include_router(characters.router)
     app.include_router(packs.router)
 
     # Mount frontend static files (only serves if dist/ exists)
