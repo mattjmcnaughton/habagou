@@ -22,9 +22,10 @@ RUN groupadd --gid 1000 app && useradd --uid 1000 --gid 1000 --create-home app
 
 WORKDIR /app
 COPY --from=build --chown=app:app /app /app
+ENV PATH="/app/.venv/bin:${PATH}"
 
 USER app
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "habagou.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "habagou.app:app", "--host", "0.0.0.0", "--port", "8000"]

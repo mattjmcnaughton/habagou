@@ -85,7 +85,7 @@ git worktree remove ../habagou-featx   # code
 The same app targets against a Docker database instead (no devenv):
 
 ```sh
-docker compose up -d db     # Compose-managed Postgres on localhost:5432
+just compose-db-up          # Compose-managed Postgres on localhost:5432
 export DATABASE_URL=postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
 just bootstrap && just dev
 ```
@@ -107,7 +107,7 @@ just compose-up             # wraps docker compose up --build
 Details that make this pleasant:
 
 - **Corpus import caching**: the ~25 MB `hanzi-writer-data` download is cached in a shared, content-addressed location (`$XDG_CACHE_HOME/habagou/`), so instance #2..N import from disk in seconds. Import into Postgres itself is idempotent and fast (bulk upsert).
-- **`just bootstrap`** is the one idempotent entry point for `migrate → import → seed`, identical against a devenv socket, a Compose Postgres, CI's service container, or staging.
+- **`just bootstrap`** is the one idempotent entry point for `migrate → import → seed`, identical against a devenv socket, a Compose Postgres, CI's service container, or staging. The import and seed commands are placeholders until HAB-012 and HAB-013 add the real corpus and pack data.
 - **`just dev`** runs backend + frontend natively (separate `-be`/`-fe` variants per template convention) against whatever `DATABASE_URL` points at.
 - **CI parity**: CI runs plain uv/pnpm with a Postgres service container (DEVEX DX-2), but through the same justfile targets — the justfile is the single interface everywhere.
 
@@ -120,7 +120,7 @@ Compose is a **supported peer**, not just deploy packaging. Three sanctioned mod
 | devenv (default) | devenv per-checkout cluster, Unix socket | native, `just dev` | day-to-day human dev, N instances |
 | Docker dev shell | devenv per-checkout cluster, Unix socket | container shell, `just dev` | agent dev without host Nix |
 | Compose db + native app | `docker compose up -d db` (TCP :5432) | native, `just dev` | devs who prefer Docker over Nix; one instance at a time unless the port is remapped |
-| Full Compose | Compose | Compose (built image) | prod-like verification (WF-10), staging/prod deployment |
+| Full Compose | Compose | Compose (built backend image) | prod-like verification scaffold; frontend bundling and startup import/seed land in HAB-040 |
 
 Nothing in the devenv setup leaks into the image; the app only ever reads `DATABASE_URL`.
 

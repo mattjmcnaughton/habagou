@@ -1,14 +1,33 @@
 services:
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://habagou:habagou@db:5432/habagou
+      HOST: 0.0.0.0
+      PORT: 8000
+      LOG_LEVEL: INFO
+      LOG_FORMAT: console
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16
     environment:
       POSTGRES_DB: habagou
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: habagou
+      POSTGRES_PASSWORD: habagou
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U habagou -d habagou"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
 volumes:
   pgdata:
