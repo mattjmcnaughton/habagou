@@ -5,7 +5,7 @@
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
 - [just](https://just.systems/)
-- [Docker](https://www.docker.com/) (for dependencies)
+- [Docker](https://www.docker.com/) (optional: Compose database and production-like stack)
 - [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/) (for frontend)
 
 ## Setup
@@ -32,8 +32,8 @@ copier copy --trust path/to/templates/frontend-react src/habagou/web/frontend
 ## Database
 
 ```sh
-# Start Postgres
-docker compose up -d
+# Start Postgres through Compose
+just compose-db-up
 
 # Run migrations
 uv run alembic upgrade head
@@ -43,14 +43,15 @@ uv run alembic upgrade head
 
 ```sh
 # Start both dev servers
+just bootstrap
 just dev
 
 # Or start separately
-just dev-be   # Backend at http://localhost:8000
+just dev-be   # Backend at the port shown by just info
 just dev-fe   # Frontend dev server
 ```
 
-The API will be available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+Run `just info` for this checkout's exact backend/frontend URLs. Interactive docs are available at `/docs` on the backend URL.
 
 ## Common Tasks
 
@@ -99,4 +100,7 @@ docker build -t habagou .
 
 # Run container
 docker run -p 8000:8000 habagou
+
+# Or use the project wrapper
+just compose-up
 ```

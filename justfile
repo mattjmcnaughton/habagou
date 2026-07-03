@@ -8,6 +8,12 @@ _env := "eval \"$({{_python}} scripts/dev_env.py env)\""
 info:
     {{_python}} scripts/dev_env.py info
 
+# Migrate, import corpus data, and seed the local database
+bootstrap:
+    {{_env}} && uv run alembic upgrade head
+    {{_env}} && uv run python scripts/import_stroke_data.py
+    {{_env}} && uv run python scripts/seed.py
+
 # Check formatting (backend + frontend)
 fmt: fmt-be fmt-fe
 
@@ -118,6 +124,23 @@ dev:
     just dev-be &
     just dev-fe &
     wait
+
+# Start the Compose-managed database for native app development
+compose-db-up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose up -d db
+    until docker compose exec -T db pg_isready -U habagou -d habagou; do
+        sleep 1
+    done
+
+# Start the production-like Compose stack
+compose-up:
+    docker compose up --build
+
+# Stop Compose services
+compose-down:
+    docker compose down
 
 # Build the Docker-based agent development image
 dev-image:

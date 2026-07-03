@@ -68,7 +68,7 @@ just dev-shell-docker   # builds Dockerfile.dev, then enters devenv shell
 Prefer Docker for the database? Same targets, different `DATABASE_URL`:
 
 ```sh
-docker compose up -d db
+just compose-db-up
 export DATABASE_URL=postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
 just bootstrap && just dev
 ```
@@ -102,14 +102,16 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 
 | Command | Purpose |
 | ------- | ------- |
+| `just bootstrap` | Migrate, import corpus data, and seed |
 | `just dev` | Backend + frontend dev servers |
 | `just dev-shell-docker` | Docker-based devenv shell for agents |
+| `just compose-db-up` | Compose Postgres for native app development |
+| `just compose-up` | Full prod-like stack via Docker Compose |
 | `just gate` | Fast pre-push check (fmt + lint + typecheck + unit tests) |
 | `just gate-expensive` | gate + integration + e2e tests |
 | `just info` | Show this instance's ports and database |
 | `just e2e BASE_URL=…` | Full e2e suite against staging |
 | `just smoke BASE_URL=…` | Read-only smoke against production |
-| `just compose-up` | Full prod-like stack via Docker Compose |
 
 ## Deployment
 
