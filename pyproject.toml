@@ -30,6 +30,10 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/mattjmcnaughton/habagou"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/habagou"]
+artifacts = ["src/habagou/workflows.yml"]
+
 [tool.uv]
 exclude-newer = "1 week"
 
