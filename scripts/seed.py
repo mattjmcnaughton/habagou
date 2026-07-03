@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -18,14 +17,12 @@ from habagou.models import (
     PackStatus,
     User,
 )
+from habagou.seed_data import GUEST_USER_ID
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from sqlalchemy.ext.asyncio import AsyncSession
-
-
-GUEST_USER_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
 
 
 @dataclass(frozen=True)

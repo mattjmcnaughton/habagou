@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+import pytest
+
+from habagou.db import async_session, engine
+from habagou.models import ActivityType, Pack, PackStatus
+from habagou.repositories import (
+    CharacterRepository,
+    PackRepository,
+    ProgressRepository,
+    UserRepository,
+)
+from habagou.seed_data import GUEST_USER_ID
+
+
+@pytest.fixture(autouse=True)
+async def dispose_engine_after_test():
+    yield
+    await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_pack_repository_lists_published_packs_with_counts() -> None:
+    async with async_session() as session:
+        session.add(
+            Pack(
+                slug="repository-draft",
+                title="Repository Draft",
+                glyph="草",
+                color="#444444",
+                status=PackStatus.DRAFT,
+                sort_order=0,
+            )
+        )
+        await session.flush()
+
+        repository = PackRepository(session)
+        packs = await repository.list_published()
+
+    seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
+
+    assert "repository-draft" not in {item.pack.slug for item in packs}
+    assert [item.pack.slug for item in seeded] == [
+        "greetings",
+        "numbers",
+        "family",
+        "food-drink",
+    ]
+    assert [item.character_count for item in seeded] == [5, 5, 5, 5]
+    assert [item.sentence_count for item in seeded] == [3, 2, 2, 2]
+
+
+@pytest.mark.anyio
+async def test_pack_repository_gets_pack_by_slug_eager_loaded() -> None:
+    async with async_session() as session:
+        repository = PackRepository(session)
+        pack = await repository.get_by_slug("greetings")
+
+    assert pack is not None
+    assert pack.title == "Greetings"
+    assert [link.character.hanzi for link in pack.characters] == [
+        "你",
+        "好",
+        "我",
+        "他",
+        "谢",
+    ]
+    assert [sentence.hanzi for sentence in pack.sentences] == [
+        "你好",
+        "我很好",
+        "谢谢你",
+    ]
+
+
+@pytest.mark.anyio
+async def test_character_repository_reads_strokes_and_missing_set() -> None:
+    async with async_session() as session:
+        repository = CharacterRepository(session)
+        strokes = await repository.strokes_by_hanzi("你")
+        missing = await repository.missing_hanzi({"你", "好", "☂"})
+        empty_missing = await repository.missing_hanzi(set())
+
+    assert strokes is not None
+    assert isinstance(strokes["strokes"], list)
+    assert missing == {"☂"}
+    assert empty_missing == set()
+
+
+@pytest.mark.anyio
+async def test_user_repository_gets_guest_user() -> None:
+    async with async_session() as session:
+        user = await UserRepository(session).get_guest()
+
+    assert user is not None
+    assert user.id == GUEST_USER_ID
+    assert user.username == "guest"
+    assert user.is_guest is True
+
+
+@pytest.mark.anyio
+async def test_progress_repository_records_aggregates_and_deletes() -> None:
+    async with async_session() as session:
+        user = await UserRepository(session).get_guest()
+        pack = await PackRepository(session).get_by_slug("greetings")
+        assert user is not None
+        assert pack is not None
+
+        repository = ProgressRepository(session)
+        await repository.delete_by_user_pack(user_id=user.id, pack_id=pack.id)
+        await session.flush()
+
+        empty = await repository.per_pack_aggregate(user_id=user.id, pack_id=pack.id)
+        assert empty[ActivityType.TRACE].completed is False
+        assert empty[ActivityType.TRACE].completion_count == 0
+        assert empty[ActivityType.TRACE].best_duration_ms is None
+
+        first = await repository.record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.TRACE,
+            duration_ms=1200,
+        )
+        second = await repository.record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.TRACE,
+            duration_ms=800,
+        )
+        await repository.record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.MATCH,
+            duration_ms=1500,
+        )
+        assert first.id != second.id
+
+        aggregate = await repository.per_pack_aggregate(
+            user_id=user.id, pack_id=pack.id
+        )
+        assert aggregate[ActivityType.TRACE].completed is True
+        assert aggregate[ActivityType.TRACE].completion_count == 2
+        assert aggregate[ActivityType.TRACE].best_duration_ms == 800
+        assert aggregate[ActivityType.MATCH].completed is True
+        assert aggregate[ActivityType.MATCH].completion_count == 1
+        assert aggregate[ActivityType.SENTENCE].completed is False
+
+        deleted = await repository.delete_by_user_pack(user_id=user.id, pack_id=pack.id)
+        await session.flush()
+
+        reset = await repository.per_pack_aggregate(user_id=user.id, pack_id=pack.id)
+
+    assert deleted == 3
+    assert all(not progress.completed for progress in reset.values())
+
+
+def _seed_slugs() -> set[str]:
+    return {"greetings", "numbers", "family", "food-drink"}
