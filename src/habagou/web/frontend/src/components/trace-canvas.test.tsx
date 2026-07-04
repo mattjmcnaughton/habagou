@@ -39,6 +39,7 @@ function renderTraceCanvas(ui: React.ReactElement) {
 
 describe("TraceCanvas", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     createWriter.mockReturnValue(writer);
     writer.cancelQuiz.mockReturnValue(undefined);
     writer.highlightStroke.mockResolvedValue(undefined);
@@ -115,6 +116,59 @@ describe("TraceCanvas", () => {
     expect(writer.cancelQuiz).toHaveBeenCalled();
     await waitFor(() => expect(writer.setCharacter).toHaveBeenCalledWith("你"));
     await waitFor(() => expect(writer.quiz).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps the writer alive when parent callbacks change", async () => {
+    const onComplete = vi.fn();
+    const onStroke = vi.fn();
+    const onTotal = vi.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    const view = render(
+      <QueryClientProvider client={queryClient}>
+        <TraceCanvas
+          hanzi="你"
+          onComplete={vi.fn()}
+          onStroke={vi.fn()}
+          onTotal={vi.fn()}
+          size={300}
+        />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(createWriter).toHaveBeenCalledTimes(1));
+
+    view.rerender(
+      <QueryClientProvider client={queryClient}>
+        <TraceCanvas
+          hanzi="你"
+          onComplete={onComplete}
+          onStroke={onStroke}
+          onTotal={onTotal}
+          size={300}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(createWriter).toHaveBeenCalledTimes(1);
+
+    const quizOptions = writer.quiz.mock.calls[0][0] as Partial<QuizOptions>;
+    quizOptions.onCorrectStroke?.({
+      strokeNum: 0,
+      character: "你",
+      drawnPath: { pathString: "", points: [] },
+      isBackwards: false,
+      mistakesOnStroke: 0,
+      totalMistakes: 0,
+      strokesRemaining: 0,
+    });
+    quizOptions.onComplete?.({ character: "你", totalMistakes: 0 });
+
+    expect(onStroke).toHaveBeenCalledWith(1);
+    expect(onComplete).toHaveBeenCalled();
   });
 
   it("exposes a deterministic scripted stroke completion hook", async () => {

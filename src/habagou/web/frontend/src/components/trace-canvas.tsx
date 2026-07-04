@@ -30,7 +30,12 @@ export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(funct
   const targetRef = useRef<HTMLDivElement | null>(null);
   const writerRef = useRef<HanziWriterInstance | null>(null);
   const quizOptionsRef = useRef<Partial<QuizOptions> | null>(null);
+  const callbacksRef = useRef({ onComplete, onStroke, onTotal });
   const strokeData = useQuery(characterStrokesQueryOptions(hanzi));
+
+  useEffect(() => {
+    callbacksRef.current = { onComplete, onStroke, onTotal };
+  }, [onComplete, onStroke, onTotal]);
 
   const writerOptions = useMemo(
     () => ({
@@ -81,14 +86,14 @@ export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(funct
     target.innerHTML = "";
     const writer = HanziWriter.create(target, hanzi, writerOptions);
     writerRef.current = writer;
-    onTotal?.(strokeData.data.strokes.length);
+    callbacksRef.current.onTotal?.(strokeData.data.strokes.length);
 
     const completeStroke = () => {
       void writer.showCharacter({ duration: COMPLETE_REVEAL_MS });
-      onComplete?.();
+      callbacksRef.current.onComplete?.();
     };
     const quizOptions: Partial<QuizOptions> = {
-      onCorrectStroke: (stroke) => onStroke?.(stroke.strokeNum + 1),
+      onCorrectStroke: (stroke) => callbacksRef.current.onStroke?.(stroke.strokeNum + 1),
       onComplete: completeStroke,
     };
     quizOptionsRef.current = quizOptions;
@@ -103,7 +108,7 @@ export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(funct
       }
       target.innerHTML = "";
     };
-  }, [hanzi, onComplete, onStroke, onTotal, strokeData.data, writerOptions]);
+  }, [hanzi, strokeData.data, writerOptions]);
 
   if (strokeData.isError) {
     return (
