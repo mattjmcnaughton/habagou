@@ -73,10 +73,18 @@ Rules:
 git worktree add ../habagou-featx featx
 cd ../habagou-featx
 devenv up -d         # postgres only
+devenv shell         # pinned uv/node/pnpm/just toolchain
+```
+
+Inside that shell:
+
+```sh
 just bootstrap       # migrate -> corpus import (cached) -> seed
 just dev             # backend + frontend, natively
 just info            # where is everything?
+```
 
+```sh
 # throw it away
 git worktree remove ../habagou-featx   # code
 # state died with the directory (.devenv/state is inside it)
@@ -94,7 +102,13 @@ Agents enter the devenv environment through Docker, keeping Nix off the host:
 
 ```sh
 just dev-shell-docker    # builds Dockerfile.dev, then opens devenv shell
+```
+
+Inside the container shell:
+
+```sh
 devenv up -d             # inside the container: Postgres only
+just bootstrap           # inside the container: migrate/import/seed
 just dev                 # inside the container: backend + frontend
 ```
 
