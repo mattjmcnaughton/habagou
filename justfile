@@ -153,11 +153,15 @@ openapi-check:
 verify-traceability:
     uv run python scripts/verify_traceability.py
 
+# Validate the machine-readable workflow catalog
+verify-workflows:
+    uv run python scripts/verify_workflow_catalog.py
+
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
 
 # Backend gate
-gate-be: fmt-be lint-be typecheck-be test-unit-be
+gate-be: fmt-be lint-be typecheck-be verify-workflows test-unit-be
 
 # Frontend gate
 gate-fe: fmt-fe lint-fe typecheck-fe test-unit-fe
