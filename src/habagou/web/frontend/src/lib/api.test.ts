@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch, createCompletion, listPacks } from "./api";
+import { type ApiError, apiFetch, createCompletion, listPacks } from "./api";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -25,10 +25,41 @@ describe("apiFetch", () => {
         ok: false,
         status: 503,
         statusText: "Service Unavailable",
+        json: vi.fn().mockResolvedValue({
+          error: {
+            code: "database_unavailable",
+            message: "database is unavailable",
+            request_id: "req-1",
+          },
+        }),
       }),
     );
 
-    await expect(apiFetch("/readyz")).rejects.toThrow("API error: 503 Service Unavailable");
+    await expect(apiFetch("/readyz")).rejects.toMatchObject({
+      code: "database_unavailable",
+      message: "database is unavailable",
+      name: "ApiError",
+      requestId: "req-1",
+      status: 503,
+    } satisfies Partial<ApiError>);
+  });
+
+  it("falls back to HTTP status when an error body is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: "Bad Gateway",
+        json: vi.fn().mockRejectedValue(new Error("not json")),
+      }),
+    );
+
+    await expect(apiFetch("/readyz")).rejects.toMatchObject({
+      code: "http_502",
+      message: "API error: 502 Bad Gateway",
+      status: 502,
+    } satisfies Partial<ApiError>);
   });
 
   it("uses the versioned API base for typed helpers", async () => {

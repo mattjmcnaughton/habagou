@@ -80,6 +80,9 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
             },
         },
     }
+    assert events[1][0] == "progress_viewed"
+    assert events[1][1]["workflow"] == "WF-07"
+    assert events[1][1]["pack_slug"] == "greetings"
 
     reset_response = await client.delete("/api/v1/progress/packs/greetings")
 
@@ -105,9 +108,9 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
             },
         },
     }
-    assert events[1][0] == "progress_reset"
-    assert events[1][1]["workflow"] == "WF-08"
-    assert events[1][1]["deleted_count"] == 1
+    assert events[2][0] == "progress_reset"
+    assert events[2][1]["workflow"] == "WF-08"
+    assert events[2][1]["deleted_count"] == 1
     assert await _completion_count() == 1
 
 

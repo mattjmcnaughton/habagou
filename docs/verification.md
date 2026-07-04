@@ -77,8 +77,10 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `activity_completed` | WF-03/04/05 | `activity`, `pack_slug`, `user_id`, `duration_ms` (client-reported) |
 | `strokes_served` | WF-06 | `hanzi`, `cache_hit` (if server-side cache added), `found` |
 | `strokes_missing` | WF-06 | `hanzi` — **leading indicator of corpus/seed drift; alertable at rate > 0** |
+| `progress_viewed` | WF-07 | `pack_slug`, `user_id` |
 | `progress_reset` | WF-08 | `pack_slug`, `deleted_count` |
 | `admin_action` | WF-09 | `action`, `pack_slug`, `authorized` |
+| `deploy_ready` | WF-10 | `database` |
 | `invariant_check` | — | `check`, `outcome`, `violations` |
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable.

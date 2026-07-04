@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from habagou.dependencies import clear_current_user_cache, get_current_user
 from habagou.models import User
@@ -51,8 +52,10 @@ async def test_get_current_user_returns_seeded_guest(
     monkeypatch.setattr("habagou.dependencies.UserRepository", StubUserRepository)
 
     session = cast("AsyncSession", StubSession())
-    assert await get_current_user(session) is guest
-    assert await get_current_user(session) is guest
+    request = _request()
+    assert await get_current_user(request, session) is guest
+    assert await get_current_user(request, session) is guest
+    assert request.state.current_user_id == str(GUEST_USER_ID)
     assert session_get_calls == 2
     assert calls == 0
 
@@ -75,6 +78,10 @@ async def test_get_current_user_raises_when_guest_is_missing(
     monkeypatch.setattr("habagou.dependencies.UserRepository", StubUserRepository)
 
     with pytest.raises(HTTPException) as error:
-        await get_current_user(cast("AsyncSession", StubSession()))
+        await get_current_user(_request(), cast("AsyncSession", StubSession()))
 
     assert error.value.status_code == 503
+
+
+def _request() -> Request:
+    return Request({"type": "http", "method": "GET", "path": "/", "headers": []})

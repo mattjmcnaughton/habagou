@@ -74,7 +74,10 @@ export const handlers = [
     const slug = String(params.slug);
     const pack = packDetails[slug];
     if (!pack) {
-      return HttpResponse.json({ detail: "pack not found" }, { status: 404 });
+      return HttpResponse.json(
+        { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
+        { status: 404 },
+      );
     }
     return HttpResponse.json<PackDetail>(pack);
   }),
@@ -97,7 +100,10 @@ export const handlers = [
     };
     const pack = packDetails[completion.pack_slug];
     if (!pack) {
-      return HttpResponse.json({ detail: "pack not found" }, { status: 404 });
+      return HttpResponse.json(
+        { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
+        { status: 404 },
+      );
     }
     const progress = {
       ...pack.progress,
@@ -119,7 +125,10 @@ export const handlers = [
     const slug = String(params.slug);
     const pack = packDetails[slug];
     if (!pack) {
-      return HttpResponse.json({ detail: "pack not found" }, { status: 404 });
+      return HttpResponse.json(
+        { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
+        { status: 404 },
+      );
     }
     const reset: ProgressReset = {
       pack_slug: slug,

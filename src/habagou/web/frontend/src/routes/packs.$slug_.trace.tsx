@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useReducer, useRef } from "react";
+import { CompletionStatus } from "../components/completion-status";
 import { TraceCanvas, type TraceCanvasHandle } from "../components/trace-canvas";
 import {
   currentStrokeLabel,
@@ -75,9 +76,7 @@ function TraceActivity() {
             <p className="mt-2 text-sm leading-6 text-mist">
               You wrote every character in {pack.data.title}.
             </p>
-            <p className="mt-4 text-sm text-jade">
-              {completion.isSuccess ? "Completion recorded." : "Recording completion..."}
-            </p>
+            <CompletionStatus completion={completion} />
             <Link
               className="mt-6 inline-flex w-full justify-center rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
               params={{ slug }}
