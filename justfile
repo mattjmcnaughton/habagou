@@ -1,5 +1,6 @@
 fe_dir := "src/habagou/web/frontend"
 dev_image := "habagou-dev"
+BASE_URL := env_var_or_default("BASE_URL", "")
 
 _python := "python3"
 _env := "eval \"$(python3 scripts/dev_env.py env)\""
@@ -88,8 +89,34 @@ test-integration:
     uv run pytest -n auto tests/integration
 
 # Run e2e tests
-test-e2e:
+test-e2e: test-e2e-be test-e2e-fe
+
+# Run backend e2e traceability anchors
+test-e2e-be:
     uv run pytest tests/e2e
+
+# Run frontend browser e2e tests
+test-e2e-fe:
+    mkdir -p .artifacts/test-results
+    cd {{fe_dir}} && pnpm exec playwright test
+
+# Run the mutating browser suite against an ephemeral local instance or BASE_URL
+e2e BASE_URL_ARG="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p .artifacts/test-results
+    base_url="{{BASE_URL_ARG}}"
+    if [[ "$base_url" == BASE_URL=* ]]; then
+        base_url="${base_url#BASE_URL=}"
+    fi
+    if [[ -z "$base_url" ]]; then
+        base_url="{{BASE_URL}}"
+    fi
+    if [ -n "$base_url" ]; then
+        cd {{fe_dir}} && BASE_URL="$base_url" pnpm exec playwright test
+    else
+        cd {{fe_dir}} && pnpm exec playwright test
+    fi
 
 # Run tests that hit external services
 test-external:

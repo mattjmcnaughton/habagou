@@ -1,134 +1,25 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-events";
 
-const blankProgress = {
-  trace: { completed: false, completion_count: 0, best_duration_ms: null },
-  match: { completed: false, completion_count: 0, best_duration_ms: null },
-  sentence: { completed: false, completion_count: 0, best_duration_ms: null },
-};
+const packsUnderTest = ["greetings", "numbers"] as const;
 
-const packSummary = {
-  id: "11111111-1111-4111-8111-111111111111",
-  slug: "greetings",
-  title: "Greetings",
-  glyph: "你",
-  color: "#c4633f",
-  char_count: 5,
-  sentence_count: 3,
-  progress: blankProgress,
-};
+test.describe.configure({ mode: "serial" });
 
-const numbersSummary = {
-  id: "22222222-2222-4222-8222-222222222222",
-  slug: "numbers",
-  title: "Numbers",
-  glyph: "一",
-  color: "#3f8a86",
-  char_count: 1,
-  sentence_count: 1,
-  progress: blankProgress,
-};
+test.beforeEach(async ({ request }) => {
+  await resetPacks(request);
+});
 
-const packDetail = {
-  ...packSummary,
-  characters: [
-    { hanzi: "你", pinyin: "nǐ", meaning: "you" },
-    { hanzi: "好", pinyin: "hǎo", meaning: "good" },
-    { hanzi: "我", pinyin: "wǒ", meaning: "I, me" },
-    { hanzi: "他", pinyin: "tā", meaning: "he, him" },
-    { hanzi: "谢", pinyin: "xiè", meaning: "thanks" },
-  ],
-  sentences: [
-    { hanzi: "你好", pinyin: "nǐ hǎo", translation: "Hello" },
-    { hanzi: "我很好", pinyin: "wǒ hěn hǎo", translation: "I am well" },
-    { hanzi: "谢谢你", pinyin: "xièxie nǐ", translation: "Thank you" },
-  ],
-};
-
-const numbersDetail = {
-  ...numbersSummary,
-  characters: [{ hanzi: "一", pinyin: "yī", meaning: "one" }],
-  sentences: [{ hanzi: "一", pinyin: "yī", translation: "One" }],
-};
-
-test.beforeEach(async ({ page }) => {
-  let sentenceCompleted = false;
-  let traceCompleted = false;
-  let matchCompleted = false;
-  const greetingsProgress = () => ({
-    ...blankProgress,
-    sentence: sentenceCompleted
-      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
-      : blankProgress.sentence,
-  });
-  const numbersProgress = () => ({
-    ...blankProgress,
-    trace: traceCompleted
-      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
-      : blankProgress.trace,
-    match: matchCompleted
-      ? { completed: true, completion_count: 1, best_duration_ms: 1000 }
-      : blankProgress.match,
-  });
-  await page.route("**/api/v1/packs", async (route) => {
-    await route.fulfill({
-      json: [
-        { ...packSummary, progress: greetingsProgress() },
-        {
-          ...numbersSummary,
-          progress: numbersProgress(),
-        },
-      ],
-    });
-  });
-  await page.route("**/api/v1/packs/greetings", async (route) => {
-    await route.fulfill({ json: { ...packDetail, progress: greetingsProgress() } });
-  });
-  await page.route("**/api/v1/packs/numbers", async (route) => {
-    await route.fulfill({
-      json: {
-        ...numbersDetail,
-        progress: numbersProgress(),
-      },
-    });
-  });
-  await page.route("**/api/v1/characters/*/strokes", async (route) => {
-    await route.fulfill({
-      json: {
-        strokes: ["M 128 512 L 896 512"],
-        medians: [
-          [
-            [128, 512],
-            [896, 512],
-          ],
-        ],
-      },
-    });
-  });
-  await page.route("**/api/v1/progress/completions", async (route) => {
-    const body = await route.request().postDataJSON();
-    if (body.pack_slug === "numbers" && body.activity === "trace") {
-      traceCompleted = true;
-    }
-    if (body.pack_slug === "numbers" && body.activity === "match") {
-      matchCompleted = true;
-    }
-    if (body.pack_slug === "greetings" && body.activity === "sentence") {
-      sentenceCompleted = true;
-    }
-    await route.fulfill({
-      json: {
-        ...body,
-        progress: body.pack_slug === "greetings" ? greetingsProgress() : numbersProgress(),
-      },
-    });
-  });
+test.afterEach(async ({ request }) => {
+  await resetPacks(request);
 });
 
 test("[WF-02] navigates from home to pack detail", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Greetings pack, 5 characters, 3 sentences" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Greetings pack, 5 characters, 3 sentences" }).click();
 
   await expect(page).toHaveURL("/packs/greetings");
@@ -139,26 +30,17 @@ test("[WF-02] navigates from home to pack detail", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("[WF-03] completes a one-stroke trace and records progress", async ({ page }) => {
+test("[WF-03] completes a traced pack and records progress", async ({ page }) => {
   await page.goto("/packs/numbers");
 
   await page.getByRole("link", { name: "Trace. Write each character stroke by stroke" }).click();
   await expect(page).toHaveURL("/packs/numbers/trace");
-  await expect(page.getByText("Stroke 1 of 1")).toBeVisible();
 
-  const canvas = page.getByTestId("trace-canvas");
-  const box = await canvas.boundingBox();
-  if (!box) {
-    throw new Error("Trace canvas did not render a box");
+  for (const [index, hanzi] of ["一", "二", "三", "四", "五"].entries()) {
+    await completeTraceCharacter(page, hanzi);
+    await page.getByRole("button", { name: index === 4 ? "Finish" : "Next character" }).click();
   }
-  await page.mouse.move(box.x + box.width * 0.22, box.y + box.height * 0.5);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.78, box.y + box.height * 0.5, { steps: 12 });
-  await page.mouse.up();
-  await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
 
-  await expect(page.getByText("Nice. That is 一.")).toBeVisible();
-  await page.getByRole("button", { name: "Finish" }).click();
   await expect(page.getByRole("heading", { name: "Pack traced!" })).toBeVisible();
   await expect(page.getByText("Completion recorded.")).toBeVisible();
 
@@ -169,15 +51,21 @@ test("[WF-03] completes a one-stroke trace and records progress", async ({ page 
 });
 
 test("[WF-04] completes a full match and records progress", async ({ page }) => {
-  await page.goto("/packs/numbers");
+  await page.goto("/packs/numbers/match?shuffleSeed=e2e");
 
-  await page.getByRole("link", { name: "Match. Pair characters with their meanings" }).click();
-  await expect(page).toHaveURL("/packs/numbers/match");
   await expect(page.getByRole("heading", { name: "Match characters" })).toBeVisible();
-  await expect(page.getByText("0 / 1")).toBeVisible();
+  await expect(page.getByText("0 / 5")).toBeVisible();
 
-  await page.getByRole("button", { name: "一 character" }).click();
-  await page.getByRole("button", { name: "one, yī" }).click();
+  for (const pair of [
+    ["一 character", "one, yī"],
+    ["二 character", "two, èr"],
+    ["三 character", "three, sān"],
+    ["四 character", "four, sì"],
+    ["五 character", "five, wǔ"],
+  ] as const) {
+    await page.getByRole("button", { name: pair[0] }).click();
+    await page.getByRole("button", { name: pair[1] }).click();
+  }
 
   await expect(page.getByRole("heading", { name: "All matched!" })).toBeVisible();
   await expect(page.getByText(/Finished in \d+s\./)).toBeVisible();
@@ -199,10 +87,7 @@ test("[WF-05] traces a sentence with a sentence-only character", async ({ page }
     }
   });
 
-  await page.goto("/packs/greetings");
-
-  await page.getByRole("link", { name: "Sentences. Write full sentences from the pack" }).click();
-  await expect(page).toHaveURL("/packs/greetings/sentence");
+  await page.goto("/packs/greetings/sentence");
   await expect(page.getByRole("heading", { name: "Hello" })).toBeVisible();
 
   await completeSentenceCharacter(page, "你");
@@ -235,14 +120,86 @@ test("[WF-05] traces a sentence with a sentence-only character", async ({ page }
   ).toBeVisible();
 });
 
-async function completeSentenceCharacter(
-  page: import("@playwright/test").Page,
-  hanzi: string,
-  doneText?: string,
-) {
+test("[WF-06] serves stroke data through the running app", async ({ request }) => {
+  const response = await request.get("/api/v1/characters/你/strokes");
+
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["cache-control"]).toContain("immutable");
+  const body = (await response.json()) as { medians: unknown[]; strokes: unknown[] };
+  expect(body.strokes.length).toBeGreaterThan(0);
+  expect(body.medians.length).toBe(body.strokes.length);
+});
+
+test("[WF-07] shows recorded progress on the pack screen", async ({ page, request }) => {
+  await recordCompletion(request, "numbers", "match");
+
+  await page.goto("/packs/numbers");
+
+  await expect(page.getByRole("heading", { name: "Numbers" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Match, completed. Pair characters with their meanings" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Trace. Write each character stroke by stroke" }),
+  ).toBeVisible();
+});
+
+test("[WF-08] resets guest progress for a pack", async ({ page, request }) => {
+  await recordCompletion(request, "numbers", "trace");
+  await recordCompletion(request, "numbers", "match");
+
+  await page.goto("/packs/numbers");
+  await expect(
+    page.getByRole("link", { name: "Trace, completed. Write each character stroke by stroke" }),
+  ).toBeVisible();
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("Reset your progress for Numbers?");
+    await dialog.accept();
+  });
+  await page.getByRole("button", { name: "Reset progress for this pack" }).click();
+
+  await expect(page.getByText("Progress reset. 2 completions cleared.")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Trace. Write each character stroke by stroke" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Match. Pair characters with their meanings" }),
+  ).toBeVisible();
+});
+
+async function completeTraceCharacter(page: Page, hanzi: string) {
   const canvas = page.getByTestId("trace-canvas");
   await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
-  await expect(page.getByText("Stroke 1 of 1")).toBeVisible();
+  await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
+  await expect(page.getByText(`Nice. That is ${hanzi}.`)).toBeVisible();
+}
+
+async function completeSentenceCharacter(page: Page, hanzi: string, doneText?: string) {
+  const canvas = page.getByTestId("trace-canvas");
+  await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
   await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
   await expect(page.getByText(doneText ?? `Nice. That is ${hanzi}.`)).toBeVisible();
+}
+
+async function recordCompletion(
+  request: APIRequestContext,
+  packSlug: string,
+  activity: "match" | "sentence" | "trace",
+) {
+  const response = await request.post("/api/v1/progress/completions", {
+    data: {
+      activity,
+      duration_ms: 1000,
+      pack_slug: packSlug,
+    },
+  });
+  expect(response.status()).toBe(201);
+}
+
+async function resetPacks(request: APIRequestContext) {
+  for (const slug of packsUnderTest) {
+    const response = await request.delete(`/api/v1/progress/packs/${slug}`);
+    expect(response.ok()).toBe(true);
+  }
 }

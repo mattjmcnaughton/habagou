@@ -104,6 +104,22 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: habagou
+          POSTGRES_USER: habagou
+          POSTGRES_PASSWORD: habagou
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U habagou -d habagou"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
     steps:
       - uses: actions/checkout@v4
 
@@ -116,10 +132,30 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev --frozen
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/habagou/web/frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: src/habagou/web/frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: src/habagou/web/frontend
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
 
-      - name: Run e2e scaffold
+      - name: Run e2e suite
         env:
           PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/e2e.xml
         run: mkdir -p .artifacts/test-results && just test-e2e
@@ -129,7 +165,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-e2e
-          path: .artifacts/test-results/e2e.xml
+          path: |
+            .artifacts/test-results/e2e.xml
+            .artifacts/test-results/playwright.json
           if-no-files-found: error
 
   openapi-drift:
