@@ -42,8 +42,10 @@ jobs:
         with:
           node-version: "24.x"
 
-      - name: Enable pnpm
-        run: corepack enable
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.4
 
       - name: Install release dependencies
         run: pnpm install --frozen-lockfile
