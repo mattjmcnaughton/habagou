@@ -50,14 +50,23 @@ docs/
 
 ## Getting started
 
-The primary human dev environment is [devenv](https://devenv.sh/) — it pins the entire toolchain (Python, uv, Node, pnpm, just, Postgres) and gives every checkout its own isolated Postgres over a Unix socket, so you can run any number of independent instances (e.g. one per git worktree) with no port coordination. Agent development uses the checked-in `Dockerfile.dev`, which installs Nix and devenv inside the image rather than on the host. See [docs/devex.md](docs/devex.md).
+The primary human dev environment is [devenv](https://devenv.sh/) — it pins the entire toolchain (Python, uv, Node, pnpm, just, Postgres) and gives every checkout its own isolated Postgres over a Unix socket, so you can run any number of independent instances (e.g. one per git worktree) with no port coordination. Install Nix/devenv before this step; agents use the checked-in `Dockerfile.dev`, which installs Nix and devenv inside the image rather than on the host. See [docs/devex.md](docs/devex.md).
 
 ```sh
-devenv up -d       # postgres for this checkout (devenv owns only the database)
-just bootstrap     # migrate + corpus import + seed (idempotent)
-just dev           # backend + frontend
-just info          # this instance's ports, socket path, DATABASE_URL
+devenv up -d
+devenv shell
 ```
+
+Inside the devenv shell:
+
+```sh
+cd src/habagou/web/frontend && pnpm install --frozen-lockfile && cd -
+just bootstrap
+just info
+just dev
+```
+
+Open the frontend URL printed by `just info`. Ports are derived from the checkout name, so they are not always `8000` and `5173`.
 
 Agent/container path:
 
@@ -112,6 +121,7 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 | `just info` | Show this instance's ports and database |
 | `just e2e BASE_URL=…` | Full e2e suite against staging |
 | `just smoke BASE_URL=…` | Read-only smoke against production |
+| `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | Production data invariant check |
 
 ## Deployment
 
@@ -127,4 +137,4 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 
 ## License
 
-Stroke data is derived from [hanzi-writer-data](https://github.com/chanind/hanzi-writer-data) (data originally from [Make Me a Hanzi](https://github.com/skishore/makemeahanzi), Arphic Public License). See `docs/technical/tdd.md` § Licensing.
+Habagou application code is MIT licensed. Stroke data is derived from [hanzi-writer-data](https://github.com/chanind/hanzi-writer-data), whose glyph outlines originate from [Make Me a Hanzi](https://github.com/skishore/makemeahanzi) and are distributed under the Arphic Public License. See [ATTRIBUTION.md](ATTRIBUTION.md) and [LICENSE-ARPHIC](LICENSE-ARPHIC).

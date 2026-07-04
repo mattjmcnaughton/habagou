@@ -1,72 +1,100 @@
 # Architecture
 
-## Overview
+Habagou is a full-stack Hanzi handwriting practice app. The backend is FastAPI
+with async SQLAlchemy/Postgres. The frontend is a Vite React app that runs
+separately during development and is served as static assets by FastAPI in the
+production image.
 
-habagou is a Python web application using FastAPI for the backend and a separately-scaffolded frontend.
+## Runtime Shape
 
-## Project Structure
+```mermaid
+flowchart LR
+  Browser["Browser / React app"] --> API["FastAPI app"]
+  API --> DB[("Postgres")]
+  API --> Static["Built frontend assets"]
+  Bootstrap["entrypoint / just bootstrap"] --> DB
+  Bootstrap --> Corpus["pinned hanzi-writer-data archive"]
+```
+
+- Development: Vite serves the frontend and proxies `/api` to the backend.
+- Production/Compose: FastAPI serves the built frontend and `/api/v1`.
+- Health probes are unversioned: `/healthz` and `/readyz`.
+- API resources are versioned under `/api/v1`.
+
+## Backend Modules
 
 ```
 src/habagou/
-  app.py               # FastAPI app factory
-  config.py            # Pydantic-settings config from env vars
-  logging.py           # structlog setup
-  telemetry.py         # OpenTelemetry setup
-  routers/             # HTTP endpoint definitions
-    health.py          # /healthz, /readyz
-  controllers/         # Request orchestration
-  services/            # Business logic
-  dtos/                # Pydantic request/response models
-  web/                 # Frontend integration
-    serve.py           # Static file serving for production
-    frontend/          # Frontend app (scaffolded separately)
-  db.py                # Async engine/session factory
-  models/              # SQLAlchemy async models
-  repositories/        # Data access layer
-tests/
-  unit/                # Fast, isolated unit tests
-  integration/         # Tests with real dependencies
-  e2e/                 # End-to-end tests
+  app.py               # app factory, middleware, exception handlers
+  config.py            # environment-driven settings
+  db.py                # async engine/session factory
+  dependencies.py      # current-user resolver
+  events.py            # workflow event logging and metrics
+  routers/
+    health.py          # healthz/readyz
+    v1/                # packs, characters, progress, admin
+  services/            # business logic
+  repositories/        # SQLAlchemy data access
+  models/              # SQLAlchemy models
+  dtos/                # Pydantic API DTOs
+  web/serve.py         # production static frontend serving
 ```
 
-## Layering
+Routers translate HTTP into DTOs and service calls. Services own application
+rules. Repositories isolate SQLAlchemy query details. DTOs are separate from ORM
+models.
 
-```
-routers (HTTP endpoints, parse requests into DTOs)
-  -> controllers (orchestrate across services)
-    -> services (business logic, framework-agnostic)
-      -> repositories (data access, return SQLAlchemy models)
-        -> models (SQLAlchemy)
-```
+## Data Model
 
-DTOs (Pydantic models) are used at the router and controller level for API I/O. They are always separate from database models.
+- `characters`: pinned Hanzi Writer stroke JSON imported into Postgres.
+- `packs`: curated learning packs with lifecycle status and sort order.
+- `pack_characters`: pack-specific pinyin/meaning metadata.
+- `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
+- `users`: v1 has one fixed seeded guest user.
+- `activity_completions`: append-only progress events aggregated at read time.
+
+The corpus import and seed pipeline validates that every curated pack and
+sentence character exists in `characters`. `scripts/check_invariants.py` repeats
+the production data checks post-deploy or on cron.
 
 ## Frontend
 
-The frontend is scaffolded separately into `src/habagou/web/frontend/` using the `frontend-react` Copier template. In development, the frontend dev server runs independently with API proxying. In production, built static files are served by FastAPI via `web/serve.py`.
+The React app lives in `src/habagou/web/frontend`.
 
-## Toolchain
+- TanStack Router defines pack, trace, match, and sentence routes.
+- TanStack Query owns API fetching, cache updates, and retry/refetch paths.
+- Hanzi Writer renders trace canvases using API-provided stroke JSON.
+- Vitest covers state machines/components; Playwright covers full browser
+  workflows and production smoke.
 
-| Tool | Purpose |
-| ---- | ------- |
-| uv | Package management, virtual environments |
-| hatchling | Build backend |
-| ruff | Formatting and linting |
-| ty | Type checking |
-| pytest | Testing |
-| FastAPI | Async web framework |
-| uvicorn | ASGI server |
-| structlog | Structured logging |
-| pydantic-settings | Configuration |
-| OpenTelemetry | Distributed tracing |
-| pnpm | Frontend package management |
-| SQLAlchemy | Async ORM |
-| Alembic | Database migrations |
+## Development And Deployment
 
-## Conventions
+The primary human loop is devenv:
 
-- All configuration is in `pyproject.toml`.
-- Version is the single source of truth in `pyproject.toml`, read via `importlib.metadata`.
-- `py.typed` marker enables downstream type checking (PEP 561).
-- Health endpoints are always available at `/healthz` and `/readyz`.
-- Just targets have `-be`/`-fe` variants for backend/frontend (e.g. `just fmt-be`, `just fmt-fe`).
+1. `devenv up -d` for the per-checkout Postgres service
+2. `devenv shell`
+3. Inside that shell, `just bootstrap`
+4. Inside that shell, `just dev`
+
+The justfile is the stable interface for native, Compose, CI, staging, and
+production validation commands. Agents use `Dockerfile.dev` for a Docker-hosted
+devenv shell so Nix is not installed on the host without explicit approval.
+
+Deployment uses Docker Compose today: one production image for the app plus a
+Postgres service. The app container runs migrations, imports the corpus, seeds
+data idempotently, and starts Uvicorn.
+
+## Verification
+
+- `just gate`: formatting, linting, typechecking, workflow catalog validation,
+  and unit tests.
+- `just test-integration`: real Postgres with per-test databases.
+- `just test-e2e`: Playwright browser journeys for WF-02 through WF-08.
+- `just smoke BASE_URL=...`: read-only production smoke for health, WF-02, and
+  WF-06.
+- `scripts/check_invariants.py --dsn ...`: production data invariant check.
+- `just verify-traceability`: workflow-layer matrix from JUnit/Playwright
+  reports.
+
+See [docs/verification.md](verification.md) for the workflow catalog and
+required layers.
