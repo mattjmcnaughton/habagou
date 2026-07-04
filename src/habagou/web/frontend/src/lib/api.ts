@@ -12,12 +12,51 @@ export type CompletionResponse = Components["schemas"]["CompletionResponseDTO"];
 export type ProgressReset = Components["schemas"]["ProgressResetDTO"];
 export type StrokeData = CharacterJson;
 
+type ErrorEnvelope = {
+  error?: {
+    code?: string;
+    message?: string;
+    request_id?: string;
+    details?: unknown;
+  };
+};
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string,
+    public readonly requestId?: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`);
+    const envelope = await parseErrorEnvelope(res);
+    const code = envelope.error?.code ?? `http_${res.status}`;
+    const message = envelope.error?.message ?? `API error: ${res.status} ${res.statusText}`;
+    throw new ApiError(
+      message,
+      res.status,
+      code,
+      envelope.error?.request_id,
+      envelope.error?.details,
+    );
   }
   return res.json() as Promise<T>;
+}
+
+async function parseErrorEnvelope(res: Response): Promise<ErrorEnvelope> {
+  try {
+    return (await res.json()) as ErrorEnvelope;
+  } catch {
+    return {};
+  }
 }
 
 export function apiV1Path(path: `/${string}`): string {

@@ -2,7 +2,8 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+import structlog
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotations.
     AsyncSession,
 )
@@ -16,6 +17,7 @@ _guest_user_seeded = False
 
 
 async def get_current_user(
+    request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
     """Resolve the current user.
@@ -28,12 +30,14 @@ async def get_current_user(
     user = await session.get(User, GUEST_USER_ID)
     if user is not None:
         _guest_user_seeded = True
+        _bind_user_to_request(request, user)
         return user
 
     if not _guest_user_seeded:
         user = await UserRepository(session).get_guest()
         if user is not None:
             _guest_user_seeded = True
+            _bind_user_to_request(request, user)
             return user
 
         raise HTTPException(
@@ -51,3 +55,9 @@ def clear_current_user_cache() -> None:
     """Clear the cached guest user for tests and database retargeting."""
     global _guest_user_seeded
     _guest_user_seeded = False
+
+
+def _bind_user_to_request(request: Request, user: User) -> None:
+    user_id = str(user.id)
+    request.state.current_user_id = user_id
+    structlog.contextvars.bind_contextvars(user_id=user_id)

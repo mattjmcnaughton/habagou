@@ -107,8 +107,21 @@ export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(funct
 
   if (strokeData.isError) {
     return (
-      <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-clay/40 bg-panel text-sm text-clay">
-        Stroke data unavailable for <span className="ml-1 font-hanzi">{hanzi}</span>
+      <div
+        className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-lg border border-clay/40 bg-panel px-5 text-center text-sm text-clay"
+        role="alert"
+      >
+        <p>
+          Stroke data unavailable for <span className="font-hanzi">{hanzi}</span>.
+        </p>
+        <button
+          className="rounded-md border border-clay/40 px-3 py-2 text-sm font-semibold text-porcelain transition-colors hover:bg-clay/10 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={strokeData.isFetching}
+          onClick={() => void strokeData.refetch()}
+          type="button"
+        >
+          {strokeData.isFetching ? "Retrying..." : "Retry stroke data"}
+        </button>
       </div>
     );
   }

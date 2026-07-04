@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import delete, or_, select
 
 from habagou import db
+from habagou.events import emit_workflow_event
 from habagou.models import (
     Character,
     Pack,
@@ -262,8 +263,22 @@ def format_bootstrap_completed(result: SeedResult) -> str:
     return f"bootstrap_completed chars={result.chars} packs={result.packs}"
 
 
+def emit_bootstrap_completed(
+    result: SeedResult, *, migrations_applied: bool = True
+) -> None:
+    """Emit the canonical bootstrap workflow event."""
+    emit_workflow_event(
+        "bootstrap_completed",
+        workflow="WF-01",
+        chars_imported=result.chars,
+        packs_seeded=result.packs,
+        migrations_applied=migrations_applied,
+    )
+
+
 def main() -> None:
     result = asyncio.run(seed_database())
+    emit_bootstrap_completed(result)
     print(format_bootstrap_completed(result))
 
 

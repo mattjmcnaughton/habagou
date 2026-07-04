@@ -33,7 +33,11 @@ async def test_admin_endpoints_disabled_when_token_unset(
     )
 
     assert response.status_code == 503
-    assert response.json()["detail"] == "admin endpoints disabled: ADMIN_TOKEN is unset"
+    assert response.json()["error"] == {
+        "code": "service_unavailable",
+        "message": "admin endpoints disabled: ADMIN_TOKEN is unset",
+        "request_id": response.json()["error"]["request_id"],
+    }
 
 
 @pytest.mark.workflow("WF-09")

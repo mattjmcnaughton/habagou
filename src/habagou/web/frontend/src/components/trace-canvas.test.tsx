@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import type { QuizOptions } from "hanzi-writer";
 import { createRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "../mocks/server";
 import { TraceCanvas, type TraceCanvasHandle } from "./trace-canvas";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "./trace-events";
 
@@ -126,5 +128,43 @@ describe("TraceCanvas", () => {
 
     expect(writer.showCharacter).toHaveBeenCalledWith({ duration: 380 });
     expect(onComplete).toHaveBeenCalled();
+  });
+
+  it("shows a recoverable stroke-data error", async () => {
+    let failed = false;
+    server.use(
+      http.get("/api/v1/characters/:hanzi/strokes", () => {
+        if (!failed) {
+          failed = true;
+          return HttpResponse.json(
+            {
+              error: {
+                code: "database_unavailable",
+                message: "database is unavailable",
+                request_id: "req-strokes",
+              },
+            },
+            { status: 503 },
+          );
+        }
+        return HttpResponse.json({
+          strokes: ["M 0 0 L 10 10"],
+          medians: [
+            [
+              [0, 0],
+              [10, 10],
+            ],
+          ],
+        });
+      }),
+    );
+
+    renderTraceCanvas(<TraceCanvas hanzi="你" size={300} />);
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Stroke data unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "Retry stroke data" }));
+
+    await waitFor(() => expect(createWriter).toHaveBeenCalled());
+    expect(await screen.findByTestId("trace-canvas")).toBeTruthy();
   });
 });

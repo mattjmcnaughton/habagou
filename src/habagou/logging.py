@@ -1,6 +1,7 @@
 """Structured logging configuration."""
 
 import logging
+from typing import Any
 
 import structlog
 
@@ -30,3 +31,8 @@ def configure_logging() -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+
+def log_request(**fields: Any) -> None:
+    """Emit one structured request log entry."""
+    structlog.get_logger("habagou.requests").info("request_completed", **fields)

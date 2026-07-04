@@ -43,6 +43,17 @@ async def create_completion(
         completion=completion,
     )
     if result is None:
+        emit_workflow_event(
+            "activity_completed",
+            workflow=_workflow_for_activity(completion.activity),
+            outcome="error",
+            duration_ms=completion.duration_ms,
+            activity=completion.activity.value,
+            pack_slug=completion.pack_slug,
+            user_id=str(current_user.id),
+            request_duration_ms=_elapsed_ms(started_at),
+            reason="pack_not_found",
+        )
         raise _pack_not_found(completion.pack_slug)
 
     emit_workflow_event(
@@ -67,12 +78,29 @@ async def get_pack_progress(
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PackProgressResponseDTO:
+    started_at = time.perf_counter()
     result = await ProgressService(session).get_pack_progress(
         user=current_user,
         pack_slug=slug,
     )
     if result is None:
+        emit_workflow_event(
+            "progress_viewed",
+            workflow="WF-07",
+            outcome="error",
+            duration_ms=_elapsed_ms(started_at),
+            pack_slug=slug,
+            user_id=str(current_user.id),
+            reason="pack_not_found",
+        )
         raise _pack_not_found(slug)
+    emit_workflow_event(
+        "progress_viewed",
+        workflow="WF-07",
+        duration_ms=_elapsed_ms(started_at),
+        pack_slug=slug,
+        user_id=str(current_user.id),
+    )
     return result
 
 
@@ -92,6 +120,16 @@ async def reset_pack_progress(
         pack_slug=slug,
     )
     if result is None:
+        emit_workflow_event(
+            "progress_reset",
+            workflow="WF-08",
+            outcome="error",
+            duration_ms=_elapsed_ms(started_at),
+            pack_slug=slug,
+            deleted_count=0,
+            user_id=str(current_user.id),
+            reason="pack_not_found",
+        )
         raise _pack_not_found(slug)
 
     emit_workflow_event(

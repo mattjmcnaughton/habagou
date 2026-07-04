@@ -123,4 +123,36 @@ describe("App", () => {
       ).toBeNull();
     });
   });
+
+  it("[WF-08] shows a retry action when progress reset fails", async () => {
+    window.history.pushState({}, "", "/packs/numbers");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const resetRequest = vi.fn();
+    server.use(
+      http.delete(`${API_V1_BASE}/progress/packs/:slug`, ({ params }) => {
+        resetRequest(params.slug);
+        return HttpResponse.json(
+          {
+            error: {
+              code: "database_unavailable",
+              message: "database is unavailable",
+              request_id: "req-reset",
+            },
+          },
+          { status: 503 },
+        );
+      }),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Numbers" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reset progress for this pack" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Progress could not be reset.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry reset" }));
+    await waitFor(() => expect(resetRequest).toHaveBeenCalledTimes(2));
+  });
 });

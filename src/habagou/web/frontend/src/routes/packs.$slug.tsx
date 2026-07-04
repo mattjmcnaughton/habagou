@@ -166,6 +166,19 @@ function PackScreen() {
                   {reset.data.deleted_count === 1 ? "" : "s"} cleared.
                 </p>
               ) : null}
+              {reset.isError ? (
+                <div className="mt-3" role="alert">
+                  <p className="text-sm text-clay">Progress could not be reset.</p>
+                  <button
+                    className="mt-3 rounded-md border border-clay/40 px-3 py-2 text-sm font-semibold text-porcelain transition-colors hover:bg-clay/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={reset.isPending}
+                    onClick={() => reset.mutate()}
+                    type="button"
+                  >
+                    {reset.isPending ? "Retrying..." : "Retry reset"}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </>
         ) : null}

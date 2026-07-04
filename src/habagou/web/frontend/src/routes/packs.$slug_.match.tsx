@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Dispatch, ReactNode } from "react";
+import { CompletionStatus } from "../components/completion-status";
 import {
   formatMatchDuration,
   initialMatchState,
@@ -97,9 +98,7 @@ function MatchGame({ pack }: { pack: PackDetail }) {
             </div>
             <h1 className="mt-5 text-2xl font-bold">All matched!</h1>
             <p className="mt-2 text-sm leading-6 text-mist">Finished in {duration}.</p>
-            <p className="mt-4 text-sm text-jade">
-              {completion.isSuccess ? "Completion recorded." : "Recording completion..."}
-            </p>
+            <CompletionStatus completion={completion} />
             <Link
               className="mt-6 inline-flex w-full justify-center rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
               params={{ slug: pack.slug }}
