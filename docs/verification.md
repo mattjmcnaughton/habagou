@@ -95,7 +95,7 @@ Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instr
 |---|---|---|
 | Local / CI | Full suite against ephemeral per-test databases | Yes (ephemeral) |
 | **Staging** | **Full e2e suite** (`just e2e BASE_URL=…`) after every staging deploy — same tagged workflows, same traceability matrix, real deployed stack | Yes — staging guest progress is disposable; the suite resets it |
-| Production | `just smoke BASE_URL=…` (read-only: health, WF-02, WF-06) + `scripts/check_invariants.py` | No |
+| Production | `just smoke BASE_URL=…` (read-only: health, WF-02, WF-06) + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | No |
 
 - **Staging deploy gate**: a staging deploy is done when the full e2e matrix passes against it; a prod deploy is done when smoke + invariants pass against it. Both runnable on cron thereafter.
 - **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by `habagou_workflow_total`/`duration` — deliberately the same shape as the CI matrix. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
@@ -109,4 +109,4 @@ Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instr
 | `just gate-expensive` | gate + integration + e2e (parallel, per-test DBs) | pre-merge / CI PR |
 | `verify-traceability` | workflow × layer matrix, fails on gaps | CI PR |
 | `just e2e BASE_URL=…` | full mutating e2e vs staging | every staging deploy |
-| `just smoke BASE_URL=…` + invariants | read-only prod validation | post-deploy, cron |
+| `just smoke BASE_URL=…` + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | read-only prod validation | post-deploy, cron |

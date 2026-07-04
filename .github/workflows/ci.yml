@@ -91,6 +91,9 @@ jobs:
           PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/integration.xml
         run: mkdir -p .artifacts/test-results && just bootstrap && just test-integration
 
+      - name: Run data invariant check
+        run: uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"
+
       - name: Upload integration test report
         if: always()
         uses: actions/upload-artifact@v4
