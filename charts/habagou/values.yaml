@@ -1,0 +1,104 @@
+# Default values for habagou.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mattjmcnaughton/habagou
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Non-secret environment variables. Keys mirror src/habagou/config.py settings
+# field names (uppercased) plus bootstrap settings used by docker/entrypoint.sh.
+env:
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  REQUIRE_FRONTEND: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  XDG_CACHE_HOME: /home/app/.cache
+  HABAGOU_BOOTSTRAP_ATTEMPTS: "30"
+  HABAGOU_BOOTSTRAP_RETRY_SECONDS: "2"
+
+# External Secrets Operator integration.
+# The chart does NOT create the (Cluster)SecretStore. That is managed
+# separately by the cluster admin. This chart only creates the ExternalSecret
+# that references the store.
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  # Each entry maps a target Secret key to a remote AWS Secrets Manager ref.
+  # `property` is optional and used when the remote secret is a JSON blob.
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: homelab/habagou/database-url
+    # Remove this entry if admin endpoints should remain disabled.
+    - secretKey: ADMIN_TOKEN
+      remoteRef:
+        key: homelab/habagou/admin-token
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Tailscale Ingress. The Tailscale operator provisions a MagicDNS name
+# (<hostname>.<tailnet>.ts.net) and an HTTPS certificate.
+ingress:
+  enabled: true
+  className: tailscale
+  hostname: habagou
+  tls: true
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+writableVolumes:
+  tmp:
+    enabled: true
+    mountPath: /tmp
+    emptyDir: {}
+  cache:
+    enabled: true
+    mountPath: /home/app/.cache
+    emptyDir: {}
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
