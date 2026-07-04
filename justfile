@@ -118,6 +118,23 @@ e2e BASE_URL_ARG="":
         cd {{fe_dir}} && pnpm exec playwright test
     fi
 
+# Run the read-only production smoke suite against BASE_URL
+smoke BASE_URL_ARG="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    base_url="{{BASE_URL_ARG}}"
+    if [[ "$base_url" == BASE_URL=* ]]; then
+        base_url="${base_url#BASE_URL=}"
+    fi
+    if [[ -z "$base_url" ]]; then
+        base_url="{{BASE_URL}}"
+    fi
+    if [[ -z "$base_url" ]]; then
+        echo "usage: just smoke BASE_URL=http://127.0.0.1:8000" >&2
+        exit 2
+    fi
+    cd {{fe_dir}} && BASE_URL="$base_url" pnpm exec playwright test --grep @smoke
+
 # Run tests that hit external services
 test-external:
     uv run pytest -m external
