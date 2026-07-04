@@ -104,3 +104,8 @@ docker run -p 8000:8000 habagou
 # Or use the project wrapper
 just compose-up
 ```
+
+Release images are published by GitHub Actions after successful CI on `main`
+when semantic-release creates a new release. The workflow pushes
+`ghcr.io/mattjmcnaughton/habagou` with full semver, major/minor, and `latest`
+tags.
