@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/mattjmcnaughton/habagou/compare/v1.1.1...v1.1.2) (2026-07-05)
+
+
+### Bug Fixes
+
+* correct stale Kubernetes deployment note in README ([3512855](https://github.com/mattjmcnaughton/habagou/commit/35128553477755b59d445fe0b48f8ea61d415376))
+
 ## [1.1.1](https://github.com/mattjmcnaughton/habagou/compare/v1.1.0...v1.1.1) (2026-07-05)
 
 
