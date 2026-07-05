@@ -124,7 +124,7 @@ async def test_get_pack_returns_detail_with_progress(
     assert events[0][0] == "pack_served"
     assert events[0][1]["workflow"] == "WF-02"
     assert events[0][1]["pack_slug"] == "greetings"
-    assert "outcome" not in events[0][1]
+    assert events[0][1]["outcome"] == "ok"
 
 
 @pytest.mark.workflow("WF-02")

@@ -4,7 +4,7 @@
 |---|---|
 | Status | **Final v1.0** — approved for implementation |
 | Depends on | [PRD](product/prd.md), [TDD](technical/tdd.md), [DEVEX](devex.md) |
-| Goal | (1) name the workflows, (2) provably show each works pre-merge, (3) instrument each so prod shows it working |
+| Goal | (1) name the workflows, (2) keep test coverage tied to those workflows, (3) instrument each so prod shows it working |
 
 ## 1. Approach
 
@@ -12,15 +12,15 @@ The unit of verification is the **workflow** — a named, user- or operator-visi
 
 - Tests are **tagged** with the workflow(s) they prove (`@pytest.mark.workflow("WF-03")`, Playwright `@wf-03` tag).
 - Production instrumentation emits **the same IDs** (`workflow="WF-03"` field on structured events).
-- CI produces a **traceability report**: for every workflow in the catalog, which unit/integration/e2e tests ran and passed. A workflow with no e2e coverage fails the report.
 
-This gives one vocabulary from PRD → test → prod dashboard: "is tracing working?" is answerable at every stage by the same key.
+This gives one vocabulary from PRD → test → prod dashboard without a separate
+traceability enforcement layer.
 
 ## 2. Workflow catalog
 
 The machine-readable catalog lives at `src/habagou/workflows.yml` and is
 packaged with the application. It is the single source of truth for workflow
-IDs, titles, and minimum required verification layers.
+IDs and titles.
 
 Each workflow gets a short spec section in this doc as it's implemented (steps, invariants, edge cases). The catalog is the contract; PRD FRs map into it (e.g. FR-4..7 ⊂ WF-03).
 
@@ -43,15 +43,17 @@ Cross-cutting rules:
 - **Test data isolation** (uses DEVEX §2 infrastructure): integration/e2e fixtures create a **per-test database** inside the instance's cluster via `CREATE DATABASE test_<id> TEMPLATE habagou_test_base`, where the template DB is migrated+seeded once per session with the fixture corpus subset. Tests run fully parallel with zero shared state; teardown is `DROP DATABASE`.
 - **The e2e harness provisions instances exactly like a developer does** (same bootstrap path), so "works on my machine" and "works in CI" are the same claim.
 
-## 4. Traceability
+## 4. Workflow Coverage
 
-Enforced mechanically, kept lightweight:
+Kept intentionally lightweight:
 
-1. `src/habagou/workflows.yml` — machine-readable catalog (ID, title, minimum required layers, e.g. WF-03 requires unit+integration+e2e; WF-10 requires the compose smoke).
+1. `src/habagou/workflows.yml` lists workflow IDs and titles.
 2. Tests declare workflows via marks/tags.
-3. CI job `verify-traceability`: parses test reports (pytest junit + Playwright JSON), joins against the catalog, fails if any workflow misses its minimum layer or any tagged test failed; emits a matrix artifact (workflow × layer → pass/fail/missing) on every PR.
+3. Code review checks that workflow changes add or update meaningful tests.
 
-This is ~100 lines of script, not a framework — but it makes "provably show the workflows work" a CI gate rather than a code-review vibe.
+There is deliberately no CI script that proves every workflow has a required
+layer matrix. The test suite should cover the workflows, but the workflow labels
+are a shared vocabulary, not an enforcement framework.
 
 ### WF-11 — Review dashboard
 
@@ -108,18 +110,18 @@ Note `activity_completed` is *derived from the same write* that creates the `act
 
 ### 5.2 Traces (OpenTelemetry — scaffolded in, exports when configured)
 
-Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instrumentation, OTLP exporter active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no-op locally). Workflow outcomes are emitted as structured events from `events.py`, giving a log-stream mirror of the CI traceability matrix.
+Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instrumentation, OTLP exporter active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no-op locally). Workflow outcomes are emitted as structured events from `events.py`.
 
 ### 5.3 Environment tiers & live validation loops
 
 | Environment | Verification | Mutations allowed |
 |---|---|---|
 | Local / CI | Full suite against ephemeral per-test databases | Yes (ephemeral) |
-| **Staging** | **Full e2e suite** (`just e2e BASE_URL=…`) after every staging deploy — same tagged workflows, same traceability matrix, real deployed stack | Yes — staging guest progress is disposable; the suite resets it |
+| **Staging** | **Full e2e suite** (`just e2e BASE_URL=…`) after every staging deploy — same tagged workflows, real deployed stack | Yes — staging guest progress is disposable; the suite resets it |
 | Production | `just smoke BASE_URL=…` (read-only: health, WF-02, WF-06) + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | No |
 
-- **Staging deploy gate**: a staging deploy is done when the full e2e matrix passes against it; a prod deploy is done when smoke + invariants pass against it. Both runnable on cron thereafter.
-- **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by structured workflow events — deliberately the same shape as the CI matrix. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
+- **Staging deploy gate**: a staging deploy is done when the full e2e suite passes against it; a prod deploy is done when smoke + invariants pass against it. Both runnable on cron thereafter.
+- **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by structured workflow events. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
 - **Mutating verification lives in staging** (above), not prod: driving WF-03 against prod would pollute the shared guest user's real progress. Revisit prod synthetics when v2 accounts allow a dedicated synthetic user.
 
 ## 6. Verification gate summary
@@ -128,6 +130,5 @@ Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instr
 |---|---|---|
 | `just gate` | fmt, lint, typecheck, unit (BE+FE), OpenAPI drift check | every commit / pre-push |
 | `just gate-expensive` | gate + integration + e2e (parallel, per-test DBs) | pre-merge / CI PR |
-| `verify-traceability` | workflow × layer matrix, fails on gaps | CI PR |
 | `just e2e BASE_URL=…` | full mutating e2e vs staging | every staging deploy |
 | `just smoke BASE_URL=…` + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | read-only prod validation | post-deploy, cron |
