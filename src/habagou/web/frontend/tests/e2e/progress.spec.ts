@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-events";
+import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
 
 const packsUnderTest = ["greetings", "numbers", "family", "food-drink"] as const;
 
