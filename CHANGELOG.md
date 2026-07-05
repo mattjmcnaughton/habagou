@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/mattjmcnaughton/habagou/compare/v1.1.0...v1.1.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* **match:** add tile selection and match feedback ([3d5d8b2](https://github.com/mattjmcnaughton/habagou/commit/3d5d8b25821c9d06d0722d75c34a9c95724f8611))
+
 # [1.1.0](https://github.com/mattjmcnaughton/habagou/compare/v1.0.1...v1.1.0) (2026-07-05)
 
 
