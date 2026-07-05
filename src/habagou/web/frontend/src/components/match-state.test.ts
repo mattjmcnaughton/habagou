@@ -38,12 +38,19 @@ describe("matchReducer", () => {
   it("[WF-04] locks a correct pair", () => {
     let state = initialMatchState(characters, { nowMs: 1000, shuffleSeed: "test" });
 
+    expect(state.justMatchedPairId).toBeNull();
+
     state = matchReducer(state, { key: "hanzi-0", nowMs: 1100, type: "tap" });
     state = matchReducer(state, { key: "meaning-0", nowMs: 1200, type: "tap" });
 
     expect(state.selectedKey).toBeNull();
+    expect(state.justMatchedPairId).toBe("0");
     expect(state.matchedPairIds).toEqual(["0"]);
     expect(matchProgressLabel(state)).toBe("1 / 3");
+
+    state = matchReducer(state, { type: "clearJustMatched" });
+    expect(state.justMatchedPairId).toBeNull();
+    expect(state.matchedPairIds).toEqual(["0"]);
   });
 
   it("[WF-04] marks a wrong pair and resets after 560 ms", () => {

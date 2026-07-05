@@ -17,6 +17,7 @@ export type MatchCard = {
 export type MatchState = {
   completed: boolean;
   completedAtMs: number | null;
+  justMatchedPairId: string | null;
   left: MatchCard[];
   matchedPairIds: string[];
   right: MatchCard[];
@@ -27,6 +28,7 @@ export type MatchState = {
 };
 
 export type MatchAction =
+  | { type: "clearJustMatched" }
   | { key: string; nowMs: number; type: "tap" }
   | { nowMs: number; type: "resetWrong" };
 
@@ -54,6 +56,7 @@ export function initialMatchState(
   return {
     completed: characters.length === 0,
     completedAtMs: characters.length === 0 ? startedAtMs : null,
+    justMatchedPairId: null,
     left,
     matchedPairIds: [],
     right,
@@ -66,6 +69,8 @@ export function initialMatchState(
 
 export function matchReducer(state: MatchState, action: MatchAction): MatchState {
   switch (action.type) {
+    case "clearJustMatched":
+      return { ...state, justMatchedPairId: null };
     case "tap":
       return tapCard(state, action.key, action.nowMs);
     case "resetWrong":
@@ -124,6 +129,7 @@ function tapCard(state: MatchState, key: string, nowMs: number): MatchState {
     ...state,
     completed,
     completedAtMs: completed ? nowMs : null,
+    justMatchedPairId: card.pairId,
     matchedPairIds,
     selectedKey: null,
   };
