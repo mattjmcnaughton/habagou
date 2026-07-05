@@ -4,6 +4,8 @@ import re
 from importlib.resources import files
 from pathlib import Path
 
+import pytest
+
 from habagou import events
 
 _WORKFLOW_ID = re.compile(r"^\s*-\s*id:\s*(WF-\d{2})\s*$")
@@ -64,6 +66,63 @@ def test_emit_workflow_event_does_not_require_metric_exporter(monkeypatch) -> No
     monkeypatch.setattr(events.structlog, "get_logger", lambda _name: StubLogger())
 
     events.emit_workflow_event("pack_served", workflow="WF-02", duration_ms=1)
+
+
+@pytest.mark.anyio
+async def test_workflow_event_emits_mutated_fields(monkeypatch) -> None:
+    emitted: list[tuple[str, dict[str, object]]] = []
+    monkeypatch.setattr(
+        events,
+        "emit_workflow_event",
+        lambda event, **fields: emitted.append((event, fields)),
+    )
+
+    async with events.workflow_event("activity_completed", workflow="WF-04") as event:
+        event.duration_ms = 1200
+        event.fields.update(activity="match", request_duration_ms=event.elapsed_ms())
+
+    assert emitted == [
+        (
+            "activity_completed",
+            {
+                "workflow": "WF-04",
+                "outcome": "ok",
+                "duration_ms": 1200,
+                "activity": "match",
+                "request_duration_ms": emitted[0][1]["request_duration_ms"],
+            },
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_workflow_event_emits_expected_error_before_reraising(
+    monkeypatch,
+) -> None:
+    emitted: list[tuple[str, dict[str, object]]] = []
+    monkeypatch.setattr(
+        events,
+        "emit_workflow_event",
+        lambda event, **fields: emitted.append((event, fields)),
+    )
+
+    with pytest.raises(RuntimeError, match="expected"):
+        async with events.workflow_event("progress_viewed", workflow="WF-07") as event:
+            event.outcome = "error"
+            event.fields["reason"] = "pack_not_found"
+            raise RuntimeError("expected")
+
+    assert emitted == [
+        (
+            "progress_viewed",
+            {
+                "workflow": "WF-07",
+                "outcome": "error",
+                "duration_ms": emitted[0][1]["duration_ms"],
+                "reason": "pack_not_found",
+            },
+        )
+    ]
 
 
 def _workflow_ids_from_catalog() -> set[str]:

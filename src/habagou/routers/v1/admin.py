@@ -1,7 +1,6 @@
 """Admin API routes."""
 
 import secrets
-import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -12,7 +11,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 from habagou.config import settings
 from habagou.db import get_session
 from habagou.dtos.admin import PackAdminDTO, PackSortOrderPatchDTO
-from habagou.events import Outcome, emit_workflow_event
+from habagou.events import Outcome, WorkflowEvent, workflow_event
 from habagou.services.admin import AdminService
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -32,10 +31,10 @@ async def retire_pack(
     session: Annotated[AsyncSession, Depends(get_session)],
     admin_token: Annotated[str | None, Header(alias="ADMIN_TOKEN")] = None,
 ) -> PackAdminDTO:
-    started_at = time.perf_counter()
-    _require_admin(token=admin_token, action="retire", slug=slug, started_at=started_at)
-    result = await AdminService(session).retire_pack(slug)
-    return _admin_result(result, action="retire", slug=slug, started_at=started_at)
+    async with workflow_event("admin_action", workflow="WF-09") as event:
+        _require_admin(token=admin_token, action="retire", slug=slug, event=event)
+        result = await AdminService(session).retire_pack(slug)
+        return _admin_result(result, action="retire", slug=slug, event=event)
 
 
 @router.post(
@@ -52,12 +51,10 @@ async def publish_pack(
     session: Annotated[AsyncSession, Depends(get_session)],
     admin_token: Annotated[str | None, Header(alias="ADMIN_TOKEN")] = None,
 ) -> PackAdminDTO:
-    started_at = time.perf_counter()
-    _require_admin(
-        token=admin_token, action="publish", slug=slug, started_at=started_at
-    )
-    result = await AdminService(session).publish_pack(slug)
-    return _admin_result(result, action="publish", slug=slug, started_at=started_at)
+    async with workflow_event("admin_action", workflow="WF-09") as event:
+        _require_admin(token=admin_token, action="publish", slug=slug, event=event)
+        result = await AdminService(session).publish_pack(slug)
+        return _admin_result(result, action="publish", slug=slug, event=event)
 
 
 @router.patch(
@@ -75,20 +72,20 @@ async def patch_pack(
     session: Annotated[AsyncSession, Depends(get_session)],
     admin_token: Annotated[str | None, Header(alias="ADMIN_TOKEN")] = None,
 ) -> PackAdminDTO:
-    started_at = time.perf_counter()
-    _require_admin(
-        token=admin_token,
-        action="patch_sort_order",
-        slug=slug,
-        started_at=started_at,
-    )
-    result = await AdminService(session).set_pack_sort_order(slug, patch.sort_order)
-    return _admin_result(
-        result,
-        action="patch_sort_order",
-        slug=slug,
-        started_at=started_at,
-    )
+    async with workflow_event("admin_action", workflow="WF-09") as event:
+        _require_admin(
+            token=admin_token,
+            action="patch_sort_order",
+            slug=slug,
+            event=event,
+        )
+        result = await AdminService(session).set_pack_sort_order(slug, patch.sort_order)
+        return _admin_result(
+            result,
+            action="patch_sort_order",
+            slug=slug,
+            event=event,
+        )
 
 
 def _require_admin(
@@ -96,13 +93,13 @@ def _require_admin(
     token: str | None,
     action: str,
     slug: str,
-    started_at: float,
+    event: WorkflowEvent,
 ) -> None:
     if not settings.admin_token:
-        _emit_admin_action(
+        _set_admin_action(
+            event=event,
             action=action,
             slug=slug,
-            started_at=started_at,
             authorized=False,
             outcome="error",
             reason="disabled",
@@ -113,10 +110,10 @@ def _require_admin(
         )
 
     if not secrets.compare_digest(token or "", settings.admin_token):
-        _emit_admin_action(
+        _set_admin_action(
+            event=event,
             action=action,
             slug=slug,
-            started_at=started_at,
             authorized=False,
             outcome="error",
             reason="unauthorized",
@@ -132,13 +129,13 @@ def _admin_result(
     *,
     action: str,
     slug: str,
-    started_at: float,
+    event: WorkflowEvent,
 ) -> PackAdminDTO:
     if result is None:
-        _emit_admin_action(
+        _set_admin_action(
+            event=event,
             action=action,
             slug=slug,
-            started_at=started_at,
             authorized=True,
             outcome="error",
             reason="not_found",
@@ -148,39 +145,25 @@ def _admin_result(
             detail=f"pack not found: {slug}",
         )
 
-    _emit_admin_action(
+    _set_admin_action(
+        event=event,
         action=action,
         slug=slug,
-        started_at=started_at,
         authorized=True,
     )
     return result
 
 
-def _emit_admin_action(
+def _set_admin_action(
     *,
+    event: WorkflowEvent,
     action: str,
     slug: str,
-    started_at: float,
     authorized: bool,
     outcome: Outcome = "ok",
     reason: str | None = None,
 ) -> None:
-    fields: dict[str, object] = {
-        "action": action,
-        "pack_slug": slug,
-        "authorized": authorized,
-    }
+    event.outcome = outcome
+    event.fields.update(action=action, pack_slug=slug, authorized=authorized)
     if reason is not None:
-        fields["reason"] = reason
-    emit_workflow_event(
-        "admin_action",
-        workflow="WF-09",
-        outcome=outcome,
-        duration_ms=_elapsed_ms(started_at),
-        **fields,
-    )
-
-
-def _elapsed_ms(started_at: float) -> int:
-    return round((time.perf_counter() - started_at) * 1000)
+        event.fields["reason"] = reason

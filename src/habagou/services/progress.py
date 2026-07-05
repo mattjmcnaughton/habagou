@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from habagou.dtos.packs import ActivityProgressDTO, PackProgressDTO
 from habagou.dtos.progress import (
     CompletionCreateDTO,
     CompletionResponseDTO,
@@ -16,8 +15,9 @@ from habagou.dtos.progress import (
     ProgressResetDTO,
     ProgressSummaryDTO,
 )
-from habagou.models import ActivityType, Pack, PackStatus, User
-from habagou.repositories import ActivityProgress, PackRepository, ProgressRepository
+from habagou.models import Pack, PackStatus, User
+from habagou.repositories import PackRepository, ProgressRepository
+from habagou.services.packs import pack_progress_dto
 from habagou.streaks import (
     DAILY_GOAL_TARGET,
     bucket_level,
@@ -27,6 +27,8 @@ from habagou.streaks import (
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from habagou.dtos.packs import PackProgressDTO
 
 
 class ProgressService:
@@ -144,16 +146,4 @@ class ProgressService:
             user_id=user.id,
             pack_id=pack.id,
         )
-        return PackProgressDTO(
-            trace=_activity_progress(progress[ActivityType.TRACE]),
-            match=_activity_progress(progress[ActivityType.MATCH]),
-            sentence=_activity_progress(progress[ActivityType.SENTENCE]),
-        )
-
-
-def _activity_progress(progress: ActivityProgress) -> ActivityProgressDTO:
-    return ActivityProgressDTO(
-        completed=progress.completed,
-        completion_count=progress.completion_count,
-        best_duration_ms=progress.best_duration_ms,
-    )
+        return pack_progress_dto(progress)

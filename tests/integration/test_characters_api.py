@@ -55,7 +55,7 @@ async def test_get_character_strokes_404s_for_unknown_and_emits_event(
 ) -> None:
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.characters.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 

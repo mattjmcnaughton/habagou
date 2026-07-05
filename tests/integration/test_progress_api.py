@@ -34,7 +34,7 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
     await _record_other_user_completion("greetings", ActivityType.MATCH, 400)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.progress.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
@@ -147,7 +147,7 @@ async def test_completion_emits_activity_workflow_events(
 ) -> None:
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.progress.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
@@ -289,7 +289,7 @@ async def test_progress_summary_emits_workflow_event(
 ) -> None:
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.progress.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
