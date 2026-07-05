@@ -124,7 +124,7 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 
 ## Deployment
 
-`docker compose up` builds a single image containing the FastAPI backend serving the built frontend, alongside Postgres. Migrations, corpus import, and seeding run idempotently on startup. Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions builds and pushes `ghcr.io/mattjmcnaughton/habagou` with semver and `latest` tags. Kubernetes is the post-v1 target; nothing in the design blocks it (12-factor config, stateless app image, standard Postgres).
+`docker compose up` builds a single image containing the FastAPI backend serving the built frontend, alongside Postgres. Migrations, corpus import, and seeding run idempotently on startup. Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions builds and pushes `ghcr.io/mattjmcnaughton/habagou` with semver and `latest` tags. A packaged Helm chart lives in [`charts/habagou`](charts/habagou) for Kubernetes deployment (12-factor config, stateless app image, standard Postgres).
 
 ## Documentation
 
