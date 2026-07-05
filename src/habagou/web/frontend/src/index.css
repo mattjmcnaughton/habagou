@@ -40,6 +40,22 @@
   .match-card-wrong {
     animation: match-card-shake 560ms ease-in-out;
   }
+
+  .match-card-correct {
+    animation: match-card-correct 420ms ease;
+  }
+}
+
+@keyframes match-card-correct {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.09);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes match-card-shake {

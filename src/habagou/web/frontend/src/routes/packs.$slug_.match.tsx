@@ -81,6 +81,16 @@ function MatchGame({ pack }: { pack: PackDetail }) {
   }, [state.wrongResetAtMs]);
 
   useEffect(() => {
+    if (!state.justMatchedPairId) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      dispatch({ type: "clearJustMatched" });
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [state.justMatchedPairId]);
+
+  useEffect(() => {
     if (state.completed && completion.isIdle) {
       completionDuration.current = matchDurationMs(state, Date.now());
       completion.mutate();
@@ -160,6 +170,7 @@ function MatchCardButton({
   state: MatchState;
 }) {
   const matched = state.matchedPairIds.includes(card.pairId);
+  const justMatched = state.justMatchedPairId === card.pairId;
   const selected = state.selectedKey === card.key;
   const wrong = state.wrongKeys.includes(card.key);
   const label =
@@ -168,10 +179,16 @@ function MatchCardButton({
     <button
       aria-label={label}
       className={[
-        "min-h-20 rounded-md border p-3 text-left transition-colors",
+        "min-h-20 rounded-md border p-3 text-left transition-colors transition-transform duration-200",
         card.side === "hanzi" ? "font-hanzi text-4xl" : "text-base font-semibold",
-        matched ? "border-jade/30 bg-jade/10 opacity-55" : "border-white/10 bg-panel",
-        selected ? "border-jade bg-jade/10" : "",
+        !matched && !selected && !wrong ? "border-white/10 bg-panel" : "",
+        matched && justMatched
+          ? "match-card-correct border-[#7fd0b3] bg-jade/20 shadow-[0_0_0_3px_rgba(95,184,154,0.65)]"
+          : "",
+        matched && !justMatched ? "border-jade/30 bg-jade/10 opacity-55 duration-300" : "",
+        selected && !matched && !wrong
+          ? "border-jade bg-jade/10 shadow-[0_0_0_3px_rgba(95,184,154,0.55)] -translate-y-0.5 scale-[1.02]"
+          : "",
         wrong ? "match-card-wrong border-clay bg-clay/10" : "",
       ].join(" ")}
       disabled={matched || state.completed}
