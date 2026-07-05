@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/mattjmcnaughton/habagou/compare/v1.0.0...v1.0.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* **helm:** add host rule to ingress ([68c1e8d](https://github.com/mattjmcnaughton/habagou/commit/68c1e8de1d76230e81f160c252ff974937699c60))
+
 # 1.0.0 (2026-07-05)
 
 
