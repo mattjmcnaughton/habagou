@@ -3,7 +3,6 @@ import HanziWriter from "hanzi-writer";
 import type { QuizOptions } from "hanzi-writer";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { characterStrokesQueryOptions } from "../lib/strokes";
-import { SCRIPTED_STROKE_COMPLETE_EVENT } from "./trace-events";
 
 export type TraceCanvasHandle = {
   hint(strokeNum?: number): void;
@@ -22,6 +21,7 @@ type TraceCanvasProps = {
 
 const WRITER_PADDING = 16;
 const COMPLETE_REVEAL_MS = 380;
+export const SCRIPTED_STROKE_COMPLETE_EVENT = "habagou:scripted-stroke-complete";
 
 export const TraceCanvas = forwardRef<TraceCanvasHandle, TraceCanvasProps>(function TraceCanvas(
   { hanzi, onComplete, onStroke, onTotal, size },

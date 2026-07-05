@@ -5,8 +5,11 @@ import type { QuizOptions } from "hanzi-writer";
 import { createRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../mocks/server";
-import { TraceCanvas, type TraceCanvasHandle } from "./trace-canvas";
-import { SCRIPTED_STROKE_COMPLETE_EVENT } from "./trace-events";
+import {
+  SCRIPTED_STROKE_COMPLETE_EVENT,
+  TraceCanvas,
+  type TraceCanvasHandle,
+} from "./trace-canvas";
 
 const { createWriter, writer } = vi.hoisted(() => {
   const writer = {
