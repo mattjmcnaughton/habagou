@@ -7,7 +7,10 @@ export type Components = {
     "ActivityType": "trace" | "match" | "sentence";
     "CompletionCreateDTO": { "activity": Components["schemas"]["ActivityType"]; "duration_ms": number; "pack_slug": string };
     "CompletionResponseDTO": { "activity": Components["schemas"]["ActivityType"]; "duration_ms": number; "pack_slug": string; "progress": Components["schemas"]["PackProgressDTO"] };
+    "DailyActivityDTO": { "count": number; "date": string; "level": number };
+    "DailyGoalDTO": { "completed": number; "target": number };
     "HTTPValidationError": { "detail"?: Components["schemas"]["ValidationError"][] };
+    "NextMilestoneDTO": { "days_remaining": number; "progress_pct": number; "target_days": number };
     "PackAdminDTO": { "id": string; "slug": string; "sort_order": number; "status": Components["schemas"]["PackStatus"]; "title": string };
     "PackCharacterDTO": { "hanzi": string; "meaning": string; "pinyin": string };
     "PackDetailDTO": { "char_count": number; "characters": Components["schemas"]["PackCharacterDTO"][]; "color": string; "glyph": string; "id": string; "progress": Components["schemas"]["PackProgressDTO"]; "sentence_count": number; "sentences": Components["schemas"]["PackSentenceDTO"][]; "slug": string; "title": string };
@@ -18,6 +21,7 @@ export type Components = {
     "PackStatus": "draft" | "published" | "retired";
     "PackSummaryDTO": { "char_count": number; "color": string; "glyph": string; "id": string; "progress": Components["schemas"]["PackProgressDTO"]; "sentence_count": number; "slug": string; "title": string };
     "ProgressResetDTO": { "deleted_count": number; "pack_slug": string; "progress": Components["schemas"]["PackProgressDTO"] };
+    "ProgressSummaryDTO": { "activity": Components["schemas"]["DailyActivityDTO"][]; "best_streak": number; "current_streak": number; "daily_goal": Components["schemas"]["DailyGoalDTO"]; "next_milestone": Components["schemas"]["NextMilestoneDTO"] };
     "ValidationError": { "ctx"?: Record<string, never>; "input"?: unknown; "loc": (string | number)[]; "msg": string; "type": string };
   };
 };

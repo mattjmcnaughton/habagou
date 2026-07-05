@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type ApiError, apiFetch, createCompletion, listPacks } from "./api";
+import { type ApiError, apiFetch, createCompletion, getProgressSummary, listPacks } from "./api";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -101,5 +101,30 @@ describe("apiFetch", () => {
         duration_ms: 100,
       }),
     });
+  });
+
+  it("requests progress summary with the browser timezone offset", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        current_streak: 0,
+        best_streak: 0,
+        daily_goal: { completed: 0, target: 3 },
+        activity: [],
+        next_milestone: {
+          target_days: 7,
+          days_remaining: 7,
+          progress_pct: 0,
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await getProgressSummary();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/v1/progress/summary?tz_offset_minutes=${new Date().getTimezoneOffset()}`,
+      undefined,
+    );
   });
 });

@@ -1,5 +1,11 @@
 import { HttpResponse, http } from "msw";
-import type { CompletionResponse, PackDetail, PackSummary, ProgressReset } from "../lib/api";
+import type {
+  CompletionResponse,
+  PackDetail,
+  PackSummary,
+  ProgressReset,
+  ProgressSummary,
+} from "../lib/api";
 
 const API_V1 = "/api/v1";
 
@@ -66,9 +72,39 @@ const packDetails: Record<string, PackDetail> = {
   },
 };
 
+function mockProgressSummary(): ProgressSummary {
+  const today = new Date();
+  return {
+    current_streak: 12,
+    best_streak: 21,
+    daily_goal: { completed: 2, target: 3 },
+    activity: Array.from({ length: 45 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 44 + index);
+      const count = [0, 1, 2, 3, 3, 0, 2][index % 7];
+      return {
+        date: [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0"),
+        ].join("-"),
+        count,
+        level: Math.min(count, 3),
+      };
+    }),
+    next_milestone: {
+      target_days: 14,
+      days_remaining: 2,
+      progress_pct: 86,
+    },
+  };
+}
+
 export const handlers = [
   http.get(`${API_V1}/packs`, () => {
     return HttpResponse.json<PackSummary[]>(packSummaries);
+  }),
+  http.get(`${API_V1}/progress/summary`, () => {
+    return HttpResponse.json<ProgressSummary>(mockProgressSummary());
   }),
   http.get(`${API_V1}/packs/:slug`, ({ params }) => {
     const slug = String(params.slug);

@@ -21,6 +21,18 @@ describe("App", () => {
     expect(screen.getByText("✓ trace")).toBeTruthy();
   });
 
+  it("[WF-11] shows a compact progress link on the home page", async () => {
+    render(<App />);
+
+    const progressLink = await screen.findByRole("link", {
+      name: "Progress today, 2 of 3 complete, 12-day streak",
+    });
+
+    expect(progressLink).toBeTruthy();
+    expect(progressLink.textContent).toContain("12-day");
+    expect(screen.getByText("2/3 goal")).toBeTruthy();
+  });
+
   it("[WF-02] navigates from home to a pack screen", async () => {
     render(<App />);
 
@@ -154,5 +166,70 @@ describe("App", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Retry reset" }));
     await waitFor(() => expect(resetRequest).toHaveBeenCalledTimes(2));
+  });
+
+  it("[WF-11] shows streak, goal ring and milestone from the summary API", async () => {
+    window.history.pushState({}, "", "/progress");
+
+    render(<App />);
+
+    expect(await screen.findByText("12-day streak")).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.textContent === "2/3")).toBeTruthy();
+    expect(screen.getByText("14-day streak")).toBeTruthy();
+    expect(screen.getByText(/2 days away/)).toBeTruthy();
+  });
+
+  it("[WF-11] expands and collapses the activity heatmap", async () => {
+    window.history.pushState({}, "", "/progress");
+
+    render(<App />);
+
+    expect(await screen.findByText("Activity")).toBeTruthy();
+    const activity = screen.getByRole("button", { expanded: false });
+    expect(activity.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(activity);
+
+    expect(screen.getByText("Tap to collapse")).toBeTruthy();
+    expect(screen.getByText("This month")).toBeTruthy();
+    expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { expanded: true }));
+
+    expect(screen.getByText("Tap to expand")).toBeTruthy();
+    expect(screen.getByRole("button", { expanded: false })).toBeTruthy();
+  });
+
+  it("[WF-11] Practice now links to the first incomplete pack", async () => {
+    window.history.pushState({}, "", "/progress");
+
+    render(<App />);
+
+    const practiceNow = await screen.findByRole("link", { name: "Practice now" });
+    expect(practiceNow.getAttribute("href")).toBe("/packs/greetings");
+  });
+
+  it("[WF-11] shows the progress error state", async () => {
+    window.history.pushState({}, "", "/progress");
+    server.use(
+      http.get(`${API_V1_BASE}/progress/summary`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "database_unavailable",
+              message: "database is unavailable",
+              request_id: "req-progress",
+            },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByText("Progress could not be loaded.", {}, { timeout: 3000 }),
+    ).toBeTruthy();
   });
 });

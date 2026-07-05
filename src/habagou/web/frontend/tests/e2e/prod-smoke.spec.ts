@@ -36,6 +36,16 @@ test("[WF-06] @smoke fetches immutable stroke data", async ({ request }) => {
   expect(body.medians.length).toBe(body.strokes.length);
 });
 
+test("[WF-11] @smoke renders the progress dashboard", async ({ page, request }) => {
+  const response = await request.get("/api/v1/progress/summary");
+  expect(response.ok(), await responseText(response)).toBe(true);
+
+  await page.goto("/progress");
+
+  await expect(page.getByText("Activity")).toBeVisible();
+  await expect(page.getByText("Practice now")).toBeVisible();
+});
+
 async function responseText(response: { text(): Promise<string> }) {
   try {
     return await response.text();

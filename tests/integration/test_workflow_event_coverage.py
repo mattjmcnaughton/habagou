@@ -29,6 +29,7 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str]]] = {
     "WF-08": ({"progress_reset"}, {"pack_slug", "deleted_count", "user_id"}),
     "WF-09": ({"admin_action"}, {"action", "pack_slug", "authorized"}),
     "WF-10": ({"deploy_ready"}, {"database"}),
+    "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}),
 }
 
 
@@ -71,6 +72,7 @@ async def test_all_workflows_emit_verification_events(
         )
     await _ok(await client.get("/api/v1/characters/你/strokes"))
     await _ok(await client.get("/api/v1/progress/packs/greetings"))
+    await _ok(await client.get("/api/v1/progress/summary"))
     await _ok(await client.delete("/api/v1/progress/packs/greetings"))
     await _ok(
         await client.patch(

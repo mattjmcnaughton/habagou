@@ -30,6 +30,7 @@ This gives one vocabulary from PRD → test → prod dashboard: "is tracing work
 | WF-08 | Reset progress | Learner | Confirmed reset → completions for (user, pack) deleted → badges cleared |
 | WF-09 | Admin curate | Admin | Retire/publish/reorder takes effect in WF-02 output; unauthorized → 401 |
 | WF-10 | Deploy & serve | Operator | Clean `docker compose up` → WF-01 runs → app healthy → WF-03 passes end-to-end |
+| WF-11 | Review dashboard | Learner | Progress screen shows streak, daily goal, heatmap and milestone truthfully derived from the event log |
 
 Each workflow gets a short spec section in this doc as it's implemented (steps, invariants, edge cases). The catalog is the contract; PRD FRs map into it (e.g. FR-4..7 ⊂ WF-03).
 
@@ -62,6 +63,35 @@ Enforced mechanically, kept lightweight:
 
 This is ~100 lines of script, not a framework — but it makes "provably show the workflows work" a CI gate rather than a code-review vibe.
 
+### WF-11 — Review dashboard
+
+Steps:
+
+1. Learner opens `/progress`.
+2. The frontend requests `GET /api/v1/progress/summary` with the browser's
+   `tz_offset_minutes`.
+3. The API resolves the current user, aggregates that user's
+   `activity_completions` by local day, and returns the current streak, best
+   streak, daily goal, 45-day heatmap window, and next milestone.
+4. The progress screen renders the goal ring, streak chip, collapsible
+   heatmap, milestone card, pack progress, and "Practice now" link.
+
+Invariants:
+
+- Streaks count consecutive local days with at least three completions.
+- An unfinished today does not break an existing streak; current streak anchors
+  at yesterday unless today has met the goal.
+- Summary data is derived only from the append-only `activity_completions` log.
+- All aggregation is scoped by `get_current_user`, so other users' rows never
+  affect the dashboard.
+
+Edge cases:
+
+- Empty history returns a zero-state summary with 45 zero-filled activity days.
+- `tz_offset_minutes` shifts UTC instants into the learner's local day before
+  grouping.
+- A sub-target day contributes to heatmap intensity but not to streak length.
+
 ## 5. Production instrumentation
 
 Same vocabulary, three signal types. All flow through one tiny helper (`src/habagou/events.py`) so field names cannot drift.
@@ -81,6 +111,7 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `progress_reset` | WF-08 | `pack_slug`, `deleted_count` |
 | `admin_action` | WF-09 | `action`, `pack_slug`, `authorized` |
 | `deploy_ready` | WF-10 | `database` |
+| `progress_summary_viewed` | WF-11 | `user_id`, `current_streak` |
 | `invariant_check` | — | `check`, `outcome`, `violations` |
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable.

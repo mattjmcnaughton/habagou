@@ -36,6 +36,11 @@ EXPECTED_WORKFLOWS = (
     Workflow(id="WF-08", title="Reset progress", minimum_layers=("integration", "e2e")),
     Workflow(id="WF-09", title="Admin curate", minimum_layers=("integration",)),
     Workflow(id="WF-10", title="Deploy and serve", minimum_layers=("e2e",)),
+    Workflow(
+        id="WF-11",
+        title="Review dashboard",
+        minimum_layers=("unit", "integration", "e2e"),
+    ),
 )
 
 

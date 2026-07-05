@@ -3,7 +3,7 @@
 import time
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotations.
     AsyncSession,
 )
@@ -15,6 +15,7 @@ from habagou.dtos.progress import (
     CompletionResponseDTO,
     PackProgressResponseDTO,
     ProgressResetDTO,
+    ProgressSummaryDTO,
 )
 from habagou.events import emit_workflow_event
 from habagou.models import (  # noqa: TC001 - FastAPI resolves annotations.
@@ -24,6 +25,27 @@ from habagou.models import (  # noqa: TC001 - FastAPI resolves annotations.
 from habagou.services.progress import ProgressService
 
 router = APIRouter(prefix="/api/v1/progress", tags=["progress"])
+
+
+@router.get("/summary", response_model=ProgressSummaryDTO)
+async def get_progress_summary(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    tz_offset_minutes: Annotated[int, Query(ge=-900, le=900)] = 0,
+) -> ProgressSummaryDTO:
+    started_at = time.perf_counter()
+    result = await ProgressService(session).get_summary(
+        user=current_user,
+        tz_offset_minutes=tz_offset_minutes,
+    )
+    emit_workflow_event(
+        "progress_summary_viewed",
+        workflow="WF-11",
+        duration_ms=_elapsed_ms(started_at),
+        user_id=str(current_user.id),
+        current_streak=result.current_streak,
+    )
+    return result
 
 
 @router.post(
