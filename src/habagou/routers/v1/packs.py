@@ -1,6 +1,5 @@
 """Pack API routes."""
 
-import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,7 +10,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 from habagou.db import get_session
 from habagou.dependencies import get_current_user
 from habagou.dtos.packs import PackDetailDTO, PackSummaryDTO
-from habagou.events import emit_workflow_event
+from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
 from habagou.services.packs import PackService
 
@@ -23,16 +22,10 @@ async def list_packs(
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[PackSummaryDTO]:
-    started_at = time.perf_counter()
-    packs = await PackService(session).list_published(current_user)
-    emit_workflow_event(
-        "pack_list_served",
-        workflow="WF-02",
-        duration_ms=_elapsed_ms(started_at),
-        pack_count=len(packs),
-        user_id=str(current_user.id),
-    )
-    return packs
+    async with workflow_event("pack_list_served", workflow="WF-02") as event:
+        packs = await PackService(session).list_published(current_user)
+        event.fields.update(pack_count=len(packs), user_id=str(current_user.id))
+        return packs
 
 
 @router.get(
@@ -45,31 +38,18 @@ async def get_pack(
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PackDetailDTO:
-    started_at = time.perf_counter()
-    pack = await PackService(session).get_published_by_slug(slug, current_user)
-    if pack is None:
-        emit_workflow_event(
-            "pack_served",
-            workflow="WF-02",
-            outcome="error",
-            duration_ms=_elapsed_ms(started_at),
-            pack_slug=slug,
-            user_id=str(current_user.id),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="pack not found",
-        )
-
-    emit_workflow_event(
+    async with workflow_event(
         "pack_served",
         workflow="WF-02",
-        duration_ms=_elapsed_ms(started_at),
         pack_slug=slug,
         user_id=str(current_user.id),
-    )
-    return pack
+    ) as event:
+        pack = await PackService(session).get_published_by_slug(slug, current_user)
+        if pack is None:
+            event.outcome = "error"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="pack not found",
+            )
 
-
-def _elapsed_ms(started_at: float) -> int:
-    return round((time.perf_counter() - started_at) * 1000)
+        return pack

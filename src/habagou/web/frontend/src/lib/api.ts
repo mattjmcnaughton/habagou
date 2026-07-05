@@ -1,16 +1,16 @@
-import type { Components } from "./api-types";
+import type { components } from "./api-types";
 import type { CharacterJson } from "hanzi-writer";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 export const API_V1_BASE = "/api/v1";
 
-export type PackSummary = Components["schemas"]["PackSummaryDTO"];
-export type PackDetail = Components["schemas"]["PackDetailDTO"];
-export type PackProgress = Components["schemas"]["PackProgressResponseDTO"];
-export type CompletionCreate = Components["schemas"]["CompletionCreateDTO"];
-export type CompletionResponse = Components["schemas"]["CompletionResponseDTO"];
-export type ProgressReset = Components["schemas"]["ProgressResetDTO"];
-export type ProgressSummary = Components["schemas"]["ProgressSummaryDTO"];
+export type PackSummary = components["schemas"]["PackSummaryDTO"];
+export type PackDetail = components["schemas"]["PackDetailDTO"];
+export type PackProgress = components["schemas"]["PackProgressResponseDTO"];
+export type CompletionCreate = components["schemas"]["CompletionCreateDTO"];
+export type CompletionResponse = components["schemas"]["CompletionResponseDTO"];
+export type ProgressReset = components["schemas"]["ProgressResetDTO"];
+export type ProgressSummary = components["schemas"]["ProgressSummaryDTO"];
 export type StrokeData = CharacterJson;
 
 type ErrorEnvelope = {

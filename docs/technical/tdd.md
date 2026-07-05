@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-Habagou is a single deployable FastAPI service with an embedded React frontend and a Postgres database. The repo is scaffolded from the [`python-web`](https://github.com/mattjmcnaughton/templates) Copier template with `include_database=true`, `database_type=postgres`, composed with `frontend-react` (Tailwind, zustand).
+Habagou is a single deployable FastAPI service with an embedded React frontend and a Postgres database. The repo is scaffolded from the [`python-web`](https://github.com/mattjmcnaughton/templates) Copier template with `include_database=true`, `database_type=postgres`, composed with `frontend-react` (Tailwind).
 
 ```
 Browser (React + Hanzi Writer)
@@ -28,7 +28,7 @@ copier copy --trust templates/templates/python-web habagou
 #   project_name=habagou, include_database=true, database_type=postgres,
 #   enable_otel=true, include_technical_docs=true, include_product_docs=true
 copier copy --trust templates/templates/frontend-react habagou/src/habagou/web/frontend
-#   is_composed=true, include_zustand=true
+#   is_composed=true
 ```
 
 Then add `hanzi-writer`, `@fontsource/hanken-grotesk`, `@fontsource/noto-sans-sc` to the frontend `package.json`. No extra backend dependencies beyond the template.
@@ -168,7 +168,7 @@ Routes:
 Key components:
 
 - `TraceCanvas` — wraps `HanziWriter.create(...).quiz(...)`; props: hanzi, size, callbacks `{onTotal, onStroke, onComplete}`; `charDataLoader` fetches `/api/v1/characters/{hanzi}/strokes` through TanStack Query (staleTime: Infinity + prefetch of all pack characters on pack load, including sentence-only characters). Writer options ported from the prototype: `showCharacter:false, showOutline:true, showHintAfterMisses:3, drawingWidth:size*0.085`, prototype colors.
-- `MatchBoard` — port of the prototype match logic (selection, wrong-pair shake with 560 ms reset, matched-lock, timer). Pure client state (useReducer/zustand).
+- `MatchBoard` — port of the prototype match logic (selection, wrong-pair shake with 560 ms reset, matched-lock, timer). Pure client state with `useReducer`.
 - `SentenceTracer` — cell strip + `TraceCanvas`, prototype cell styling (done/active/pending).
 - `ProgressBar`, `PackCard`, `ActivityFooter` (Hint / Redo), `DoneScreen` — direct ports of prototype visuals.
 

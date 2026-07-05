@@ -12,7 +12,7 @@ Scope note: **no AI/generation work in v1** (v2 roadmap). Forward-compat obligat
 
 ### HAB-001 — Scaffold repo from templates
 Deps: none.
-Run Copier per TDD §1 (`python-web` with postgres, **`enable_otel=true`**, product/technical docs; compose `frontend-react` with `is_composed=true`, zustand). Add frontend deps: `hanzi-writer`, `@fontsource/hanken-grotesk`, `@fontsource/noto-sans-sc`. `.env.example`: `DATABASE_URL`, `ADMIN_TOKEN`, `LOG_LEVEL`, `OTEL_EXPORTER_OTLP_ENDPOINT` (optional).
+Run Copier per TDD §1 (`python-web` with postgres, **`enable_otel=true`**, product/technical docs; compose `frontend-react` with `is_composed=true`). Add frontend deps: `hanzi-writer`, `@fontsource/hanken-grotesk`, `@fontsource/noto-sans-sc`. `.env.example`: `DATABASE_URL`, `ADMIN_TOKEN`, `LOG_LEVEL`, `OTEL_EXPORTER_OTLP_ENDPOINT` (optional).
 **AC:** `just dev` starts both servers; `just gate` green; `/healthz`, `/readyz` respond; OTel is a no-op when no endpoint configured.
 
 ### HAB-002 — devenv environment
@@ -46,13 +46,13 @@ Deps: HAB-010.
 
 ### HAB-012 — [BE] Seed script: guest user + prototype packs
 Deps: HAB-011.
-`scripts/seed.py`: (1) upsert guest user (fixed well-known UUID, `username='guest'`, `is_guest=true`); (2) upsert the four prototype packs (appendix); (3) validate every referenced character — pack chars **and sentence graphemes** — against the corpus; abort listing missing chars. Idempotent. Emits `bootstrap_completed` event fields (chars, packs).
+`scripts/seed.py`: (1) upsert guest user (fixed well-known UUID, `username='guest'`, `is_guest=true`); (2) upsert the four prototype packs (appendix); (3) validate every referenced character — pack chars **and sentence chars** — against the corpus; abort listing missing chars. Idempotent. Emits `bootstrap_completed` event fields (chars, packs).
 **AC:** Post-seed DB: 1 guest, 4 published packs matching prototype; re-run idempotent; integration test proves the abort path (WF-01 negative case).
 
 ### HAB-013 — [BE] Repositories
 Deps: HAB-010.
-`PackRepository` (list published + counts, get by slug eager-loaded), `CharacterRepository` (strokes by hanzi; bulk-exists returning missing set in one query), `UserRepository` (get guest), `ProgressRepository` (record; per-pack aggregate: completed flags/counts/best duration; delete by user+pack).
-**AC:** Integration tests per repo against real Postgres.
+`PackRepository` (list published + counts, get by slug eager-loaded), `CharacterRepository` (strokes by hanzi; bulk-exists returning missing set in one query), `ProgressRepository` (record; per-pack aggregate: completed flags/counts/best duration; delete by user+pack). The guest user is read directly by well-known ID.
+**AC:** Integration tests for repositories and guest-user resolution against real Postgres.
 
 ### HAB-014 — [BE] Per-test database fixtures
 Deps: HAB-012, HAB-002.
@@ -66,7 +66,7 @@ pytest session fixture: create `habagou_test_base` once (migrate + fixture-subse
 ### HAB-020 — [BE] Current-user dependency & events helper
 Deps: HAB-012, HAB-013.
 `get_current_user` dependency resolving to the seeded guest (cached); documented as the single v2-auth swap point. `src/habagou/events.py` per VERIFICATION §5: structlog emit + OTel counter/histogram (`habagou_workflow_total`, `habagou_workflow_duration_ms`) with enforced fields (`workflow`, `outcome`, `duration_ms`).
-**AC:** Unit tests: dependency returns guest; events helper rejects unknown workflow IDs (validated against `docs/workflows.yml`); metrics no-op cleanly without OTel endpoint.
+**AC:** Unit tests: dependency returns guest; emitted workflow IDs are validated against `src/habagou/workflows.yml`; events log cleanly without OTel endpoint.
 
 ### HAB-021 — [BE] Packs API
 Deps: HAB-013, HAB-020.
@@ -138,7 +138,7 @@ Multi-stage Dockerfile (pnpm build → backend serving dist); compose entrypoint
 
 ### HAB-041 — Observability & error handling pass
 Deps: Epics 2–3.
-Request logging with resolved user id; consistent API error envelope; FE error boundaries + recoverable states for stroke-fetch/progress failures; verify every workflow in `docs/workflows.yml` emits its VERIFICATION §5.1 event with correct fields (integration-level assertion).
+Request logging with resolved user id; consistent API error envelope; FE error boundaries + recoverable states for stroke-fetch/progress failures; verify every workflow in `src/habagou/workflows.yml` emits its VERIFICATION §5.1 event with correct fields (integration-level assertion).
 **AC:** DB kill → readyz fails, clean API errors, FE recoverable state; an automated check confirms event coverage per workflow.
 
 ### HAB-042 — E2E regression suite & device pass
@@ -157,7 +157,7 @@ README quickstart verified against reality (devenv path primary, Docker as deplo
 
 ### HAB-050 — Workflow catalog file
 Deps: HAB-001.
-`docs/workflows.yml`: machine-readable catalog per VERIFICATION §2 (id, title, minimum required layers). Consumed by events helper (HAB-020) and traceability check (HAB-051).
+`src/habagou/workflows.yml`: machine-readable catalog per VERIFICATION §2 (id, title, minimum required layers). Consumed by tests and traceability check (HAB-051).
 **AC:** Schema-validated in CI; catalog matches VERIFICATION.md table.
 
 ### HAB-051 — Traceability report in CI
@@ -172,7 +172,7 @@ Deps: HAB-042.
 
 ### HAB-053 — Data invariant checker
 Deps: HAB-012.
-`scripts/check_invariants.py --dsn …`: every published pack's chars + sentence graphemes exist in corpus; guest user exists; completions reference live users/packs. Emits `invariant_check` events; non-zero exit on violation. Wired as a CI post-integration step and documented as post-deploy/cron.
+`scripts/check_invariants.py --dsn …`: every published pack's chars + sentence chars exist in corpus; guest user exists; completions reference live users/packs. Emits `invariant_check` events; non-zero exit on violation. Wired as a CI post-integration step and documented as post-deploy/cron.
 **AC:** Seeded DB passes; deleting 很 from a fixture corpus makes it fail naming the pack and character.
 
 ---
