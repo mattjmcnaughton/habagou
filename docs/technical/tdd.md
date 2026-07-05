@@ -44,7 +44,7 @@ Then add `hanzi-writer`, `@fontsource/hanken-grotesk`, `@fontsource/noto-sans-sc
 | D-5 | **Progress = append-only completion events**, aggregated at read time | Simple writes, natural history/audit; per-activity "completed?" and "best duration" are cheap aggregates at v1 scale | Mutable per-(user,pack,activity) state row — loses history; premature optimization |
 | D-6 | **Human local dev = devenv with a per-checkout Postgres over Unix sockets**; agent dev runs that same devenv path inside Docker | N independent instances with zero coordination; hermetic toolchain; see [DEVEX](../devex.md) | Shared local Postgres with database-per-instance; full-stack Docker as the primary human loop — both add coordination or weight |
 | D-8 | **URL-path API versioning** (`/api/v1`), additive-only within a version | Explicit compatibility contract for the frontend, the OpenAPI artifact, and any future clients; new major version mounts side-by-side | Header/content-negotiation versioning — harder to see in logs, caches, and curl; unversioned API — silent breakage |
-| D-7 | **Workflow-keyed verification**: named workflow catalog with tagged tests, CI traceability matrix, and prod events/metrics sharing the same IDs | One vocabulary from PRD to prod dashboard; see [VERIFICATION](../verification.md) | Untagged test suite + ad-hoc logging — cannot answer "is workflow X proven and working?" mechanically |
+| D-7 | **Workflow-keyed verification**: named workflow catalog with tagged tests and prod events sharing the same IDs | One vocabulary from PRD to test to prod dashboard; see [VERIFICATION](../verification.md) | Untagged test suite + ad-hoc logging — cannot connect tests and prod signals to named workflows |
 
 ## 3. Data model
 
@@ -178,7 +178,7 @@ Activity completion posts to `/api/v1/progress/completions` from the done screen
 
 ## 7. Testing
 
-Superseded by [VERIFICATION.md](../verification.md), which defines the workflow catalog, the layer-by-layer strategy (unit / integration with per-test template databases / e2e / prod smoke / invariant checks), contract single-sourcing from OpenAPI, and the CI traceability gate.
+Superseded by [VERIFICATION.md](../verification.md), which defines the workflow catalog, the layer-by-layer strategy (unit / integration with per-test template databases / e2e / prod smoke / invariant checks), and contract single-sourcing from OpenAPI.
 
 ## 8. Deployment & ops
 

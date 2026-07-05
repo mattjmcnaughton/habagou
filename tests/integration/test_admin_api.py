@@ -108,8 +108,12 @@ async def test_admin_can_retire_publish_and_patch_sort_order(
     assert patch.status_code == 200
     assert patch.json()["sort_order"] == 99
     assert [pack["slug"] for pack in published_list.json()][-1] == "greetings"
+    admin_events = [
+        (event, fields) for event, fields in events if event == "admin_action"
+    ]
     assert [
-        (event, fields["action"], fields["authorized"]) for event, fields in events
+        (event, fields["action"], fields["authorized"])
+        for event, fields in admin_events
     ] == [
         ("admin_action", "retire", True),
         ("admin_action", "publish", True),

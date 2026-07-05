@@ -1,7 +1,7 @@
 import type { components } from "./api-types";
 import type { CharacterJson } from "hanzi-writer";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
+const API_BASE = import.meta.env?.VITE_API_URL ?? "";
 export const API_V1_BASE = "/api/v1";
 
 export type PackSummary = components["schemas"]["PackSummaryDTO"];

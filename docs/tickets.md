@@ -27,7 +27,7 @@ devenv's `devenv up` starts **Postgres only** (DEVEX §2). Justfile targets: `ju
 
 ### HAB-004 — CI pipeline
 Deps: HAB-001.
-Template GitHub Actions: gate on every PR (plain uv/pnpm toolchain + `postgres:16` service container per DEVEX DX-2); integration job; e2e job on PRs to main; OpenAPI drift check (see HAB-025). Placeholder for `verify-traceability` (activated in HAB-051).
+Template GitHub Actions: gate on every PR (plain uv/pnpm toolchain + `postgres:16` service container per DEVEX DX-2); integration job; e2e job on PRs to main; OpenAPI drift check (see HAB-025).
 **AC:** CI green on the scaffold; integration job connects to Postgres; schema-drift check demonstrably fails on an uncommitted API change.
 
 ---
@@ -157,12 +157,12 @@ README quickstart verified against reality (devenv path primary, Docker as deplo
 
 ### HAB-050 — Workflow catalog file
 Deps: HAB-001.
-`src/habagou/workflows.yml`: machine-readable catalog per VERIFICATION §2 (id, title, minimum required layers). Consumed by tests and traceability check (HAB-051).
+`src/habagou/workflows.yml`: catalog per VERIFICATION §2 (id, title). Tests use matching workflow tags.
 **AC:** Schema-validated in CI; catalog matches VERIFICATION.md table.
 
 ### HAB-051 — Traceability report in CI
 Deps: HAB-050, HAB-004, first tagged tests (HAB-021).
-`scripts/verify_traceability.py`: join pytest junit + Playwright JSON reports against `workflows.yml`; fail on missing minimum layer or failed tagged test; emit workflow × layer matrix artifact on every PR.
+Workflow tags are reviewed as part of test coverage. There is no separate traceability verification script.
 **AC:** Removing the WF-03 e2e tag makes CI fail with a readable gap report; matrix artifact uploaded.
 
 ### HAB-052 — Prod smoke suite

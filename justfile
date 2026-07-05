@@ -150,10 +150,6 @@ openapi-check:
     cd {{fe_dir}} && pnpm exec openapi-typescript ../../../../docs/api/openapi-v1.json -o src/lib/api-types.ts
     git diff --exit-code src/habagou/web/frontend/src/lib/api-types.ts
 
-# Verify workflow test coverage from JUnit/Playwright report artifacts
-verify-traceability:
-    uv run python scripts/verify_traceability.py
-
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
 

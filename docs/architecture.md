@@ -87,15 +87,12 @@ data idempotently, and starts Uvicorn.
 
 ## Verification
 
-- `just gate`: formatting, linting, typechecking, workflow catalog validation,
-  and unit tests.
+- `just gate`: formatting, linting, typechecking, and unit tests.
 - `just test-integration`: real Postgres with per-test databases.
 - `just test-e2e`: Playwright browser journeys for WF-02 through WF-08.
 - `just smoke BASE_URL=...`: read-only production smoke for health, WF-02, and
   WF-06.
 - `scripts/check_invariants.py --dsn ...`: production data invariant check.
-- `just verify-traceability`: workflow-layer matrix from JUnit/Playwright
-  reports.
 
 See [docs/verification.md](verification.md) for the workflow catalog and
-required layers.
+verification approach.
