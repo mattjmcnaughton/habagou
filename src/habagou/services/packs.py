@@ -79,11 +79,7 @@ class PackService:
             color=item.pack.color,
             char_count=item.character_count,
             sentence_count=item.sentence_count,
-            progress=PackProgressDTO(
-                trace=_activity_progress(progress[ActivityType.TRACE]),
-                match=_activity_progress(progress[ActivityType.MATCH]),
-                sentence=_activity_progress(progress[ActivityType.SENTENCE]),
-            ),
+            progress=pack_progress_dto(progress),
         )
 
 
@@ -92,4 +88,14 @@ def _activity_progress(progress: ActivityProgress) -> ActivityProgressDTO:
         completed=progress.completed,
         completion_count=progress.completion_count,
         best_duration_ms=progress.best_duration_ms,
+    )
+
+
+def pack_progress_dto(
+    progress: dict[ActivityType, ActivityProgress],
+) -> PackProgressDTO:
+    return PackProgressDTO(
+        trace=_activity_progress(progress[ActivityType.TRACE]),
+        match=_activity_progress(progress[ActivityType.MATCH]),
+        sentence=_activity_progress(progress[ActivityType.SENTENCE]),
     )

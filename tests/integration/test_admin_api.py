@@ -49,7 +49,7 @@ async def test_admin_endpoints_reject_missing_or_wrong_token(
     monkeypatch.setattr(settings, "admin_token", "secret")
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.admin.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
@@ -78,7 +78,7 @@ async def test_admin_can_retire_publish_and_patch_sort_order(
     monkeypatch.setattr(settings, "admin_token", "secret")
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.admin.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
