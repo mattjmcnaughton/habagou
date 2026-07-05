@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from habagou.events import emit_workflow_event
 from habagou.models import (
+    GUEST_USER_ID,
     ActivityCompletion,
     Character,
     Pack,
@@ -22,7 +23,6 @@ from habagou.models import (
     PackStatus,
     User,
 )
-from habagou.seed_data import GUEST_USER_ID
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

@@ -29,9 +29,6 @@ async def configure_database_url(database_url: str) -> None:
     async_session = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
-    from habagou.dependencies import clear_current_user_cache
-
-    clear_current_user_cache()
 
 
 async def dispose_engine() -> None:

@@ -4,8 +4,7 @@ import pytest
 from sqlalchemy import delete
 
 from habagou import db
-from habagou.models import Character, User
-from habagou.seed_data import GUEST_USER_ID
+from habagou.models import GUEST_USER_ID, Character, User
 from scripts import check_invariants
 
 

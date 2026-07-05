@@ -9,11 +9,10 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 )
 
 from habagou.db import get_session
-from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
-from habagou.repositories import UserRepository
-from habagou.seed_data import GUEST_USER_ID
-
-_guest_user_seeded = False
+from habagou.models import (  # noqa: TC001 - FastAPI resolves annotations.
+    GUEST_USER_ID,
+    User,
+)
 
 
 async def get_current_user(
@@ -25,36 +24,15 @@ async def get_current_user(
     v1 always maps requests to the seeded guest user. This is the single swap
     point for authenticated accounts later.
     """
-    global _guest_user_seeded
-
     user = await session.get(User, GUEST_USER_ID)
     if user is not None:
-        _guest_user_seeded = True
         _bind_user_to_request(request, user)
         return user
 
-    if not _guest_user_seeded:
-        user = await UserRepository(session).get_guest()
-        if user is not None:
-            _guest_user_seeded = True
-            _bind_user_to_request(request, user)
-            return user
-
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="guest user is not seeded",
-        )
-
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="guest user is not available in this database",
+        detail="guest user is not seeded",
     )
-
-
-def clear_current_user_cache() -> None:
-    """Clear the cached guest user for tests and database retargeting."""
-    global _guest_user_seeded
-    _guest_user_seeded = False
 
 
 def _bind_user_to_request(request: Request, user: User) -> None:
