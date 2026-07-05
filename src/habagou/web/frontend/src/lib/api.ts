@@ -10,6 +10,7 @@ export type PackProgress = Components["schemas"]["PackProgressResponseDTO"];
 export type CompletionCreate = Components["schemas"]["CompletionCreateDTO"];
 export type CompletionResponse = Components["schemas"]["CompletionResponseDTO"];
 export type ProgressReset = Components["schemas"]["ProgressResetDTO"];
+export type ProgressSummary = Components["schemas"]["ProgressSummaryDTO"];
 export type StrokeData = CharacterJson;
 
 type ErrorEnvelope = {
@@ -85,6 +86,13 @@ export function createCompletion(completion: CompletionCreate): Promise<Completi
 
 export function getPackProgress(slug: string): Promise<PackProgress> {
   return apiFetch<PackProgress>(apiV1Path(`/progress/packs/${encodeURIComponent(slug)}`));
+}
+
+export function getProgressSummary(): Promise<ProgressSummary> {
+  const tzOffsetMinutes = new Date().getTimezoneOffset();
+  return apiFetch<ProgressSummary>(
+    apiV1Path(`/progress/summary?tz_offset_minutes=${tzOffsetMinutes}`),
+  );
 }
 
 export function resetPackProgress(slug: string): Promise<ProgressReset> {

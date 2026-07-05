@@ -21,6 +21,7 @@ from habagou.models import (
 from habagou.seed_data import GUEST_USER_ID
 
 if TYPE_CHECKING:
+    import datetime
     import uuid
     from collections.abc import Iterable
 
@@ -183,6 +184,24 @@ class ProgressRepository:
             )
             for activity in ActivityType
         }
+
+    async def daily_completion_counts(
+        self,
+        *,
+        user_id: uuid.UUID,
+        tz_offset_minutes: int = 0,
+    ) -> dict[datetime.date, int]:
+        local_day = func.date(
+            ActivityCompletion.completed_at
+            - func.make_interval(0, 0, 0, 0, 0, tz_offset_minutes)
+        )
+        result = await self.session.execute(
+            select(local_day, func.count(ActivityCompletion.id))
+            .where(ActivityCompletion.user_id == user_id)
+            .group_by(local_day)
+            .order_by(local_day)
+        )
+        return {row[0]: row[1] for row in result.all()}
 
     async def delete_by_user_pack(
         self,

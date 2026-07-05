@@ -91,6 +91,48 @@
         "title": "CompletionResponseDTO",
         "type": "object"
       },
+      "DailyActivityDTO": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "count",
+          "level"
+        ],
+        "title": "DailyActivityDTO",
+        "type": "object"
+      },
+      "DailyGoalDTO": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "target"
+        ],
+        "title": "DailyGoalDTO",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -102,6 +144,29 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "NextMilestoneDTO": {
+        "properties": {
+          "days_remaining": {
+            "title": "Days Remaining",
+            "type": "integer"
+          },
+          "progress_pct": {
+            "title": "Progress Pct",
+            "type": "integer"
+          },
+          "target_days": {
+            "title": "Target Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_days",
+          "days_remaining",
+          "progress_pct"
+        ],
+        "title": "NextMilestoneDTO",
         "type": "object"
       },
       "PackAdminDTO": {
@@ -376,6 +441,40 @@
           "deleted_count"
         ],
         "title": "ProgressResetDTO",
+        "type": "object"
+      },
+      "ProgressSummaryDTO": {
+        "properties": {
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/DailyActivityDTO"
+            },
+            "title": "Activity",
+            "type": "array"
+          },
+          "best_streak": {
+            "title": "Best Streak",
+            "type": "integer"
+          },
+          "current_streak": {
+            "title": "Current Streak",
+            "type": "integer"
+          },
+          "daily_goal": {
+            "$ref": "#/components/schemas/DailyGoalDTO"
+          },
+          "next_milestone": {
+            "$ref": "#/components/schemas/NextMilestoneDTO"
+          }
+        },
+        "required": [
+          "current_streak",
+          "best_streak",
+          "daily_goal",
+          "activity",
+          "next_milestone"
+        ],
+        "title": "ProgressSummaryDTO",
         "type": "object"
       },
       "ValidationError": {
@@ -875,6 +974,51 @@
           }
         },
         "summary": "Get Pack Progress",
+        "tags": [
+          "progress"
+        ]
+      }
+    },
+    "/api/v1/progress/summary": {
+      "get": {
+        "operationId": "get_progress_summary_api_v1_progress_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tz_offset_minutes",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 900,
+              "minimum": -900,
+              "title": "Tz Offset Minutes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressSummaryDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Progress Summary",
         "tags": [
           "progress"
         ]

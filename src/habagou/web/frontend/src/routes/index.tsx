@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
-import { listPacks } from "../lib/api";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { getProgressSummary, listPacks } from "../lib/api";
+import type { ProgressSummary } from "../lib/api";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -9,6 +9,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const packs = useQuery({ queryKey: ["packs"], queryFn: listPacks });
+  const progress = useQuery({ queryKey: ["progress"], queryFn: getProgressSummary });
 
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
@@ -29,7 +30,9 @@ function Index() {
           </div>
         </header>
 
-        <section className="mt-8 rounded-lg border border-white/10 bg-panel shadow-panel">
+        {progress.data ? <HomeProgress progress={progress.data} /> : null}
+
+        <section className="mt-4 rounded-lg border border-white/10 bg-panel shadow-panel">
           <div className="flex items-center gap-5 border-b border-white/10 p-5">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-jade/10 font-hanzi text-6xl text-jade">
               你
@@ -84,6 +87,36 @@ function Index() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function HomeProgress({ progress }: { progress: ProgressSummary }) {
+  const completed = progress.daily_goal.completed;
+  const target = progress.daily_goal.target;
+  const pct = target > 0 ? Math.min(100, Math.round((completed / target) * 100)) : 0;
+
+  return (
+    <Link
+      aria-label={`Progress today, ${completed} of ${target} complete, ${progress.current_streak}-day streak`}
+      className="mt-6 block rounded-lg border border-white/10 bg-panel p-4 transition-colors hover:border-jade/30 hover:bg-white/[0.035]"
+      to="/progress"
+    >
+      <span className="flex items-center justify-between gap-4">
+        <span>
+          <span className="block text-xs uppercase tracking-[0.16em] text-mist">Today</span>
+          <span className="mt-1 block text-base font-bold">
+            {completed}/{target} goal
+          </span>
+        </span>
+        <span className="rounded-full border border-jade/30 bg-jade/10 px-3 py-1 text-sm text-jade">
+          <span className="font-hanzi">火</span> {progress.current_streak}-day
+        </span>
+      </span>
+      <span className="mt-3 block h-1.5 rounded-full bg-panel2">
+        <span className="block h-1.5 rounded-full bg-jade" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="mt-3 block text-right text-xs font-semibold text-jade">View progress ›</span>
+    </Link>
   );
 }
 

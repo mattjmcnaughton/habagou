@@ -29,3 +29,6 @@ workflows:
   - id: WF-10
     title: Deploy and serve
     minimum_layers: [e2e]
+  - id: WF-11
+    title: Review dashboard
+    minimum_layers: [unit, integration, e2e]

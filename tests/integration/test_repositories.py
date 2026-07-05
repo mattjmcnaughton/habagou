@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
 from habagou import db
-from habagou.models import ActivityType, Pack, PackStatus
+from habagou.models import ActivityCompletion, ActivityType, Pack, PackStatus
 from habagou.repositories import (
     CharacterRepository,
     PackRepository,
@@ -145,6 +147,53 @@ async def test_progress_repository_records_aggregates_and_deletes() -> None:
 
     assert deleted == 3
     assert all(not progress.completed for progress in reset.values())
+
+
+@pytest.mark.workflow("WF-11")
+@pytest.mark.anyio
+async def test_progress_repository_groups_daily_counts_by_timezone_offset() -> None:
+    async with db.async_session() as session:
+        user = await UserRepository(session).get_guest()
+        pack = await PackRepository(session).get_by_slug("greetings")
+        assert user is not None
+        assert pack is not None
+
+        repository = ProgressRepository(session)
+        await repository.delete_by_user_pack(user_id=user.id, pack_id=pack.id)
+        session.add_all(
+            [
+                ActivityCompletion(
+                    user_id=user.id,
+                    pack_id=pack.id,
+                    activity=ActivityType.TRACE,
+                    duration_ms=1000,
+                    completed_at=datetime(2026, 7, 5, 1, 30, tzinfo=UTC),
+                ),
+                ActivityCompletion(
+                    user_id=user.id,
+                    pack_id=pack.id,
+                    activity=ActivityType.MATCH,
+                    duration_ms=1000,
+                    completed_at=datetime(2026, 7, 5, 12, 0, tzinfo=UTC),
+                ),
+            ]
+        )
+        await session.flush()
+
+        utc_counts = await repository.daily_completion_counts(
+            user_id=user.id,
+            tz_offset_minutes=0,
+        )
+        eastern_counts = await repository.daily_completion_counts(
+            user_id=user.id,
+            tz_offset_minutes=300,
+        )
+
+    assert utc_counts == {datetime(2026, 7, 5, tzinfo=UTC).date(): 2}
+    assert eastern_counts == {
+        datetime(2026, 7, 4, tzinfo=UTC).date(): 1,
+        datetime(2026, 7, 5, tzinfo=UTC).date(): 1,
+    }
 
 
 def _seed_slugs() -> set[str]:

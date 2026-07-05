@@ -11,6 +11,7 @@ export default {
         porcelain: "#e8ecee",
         mist: "#8a949a",
         jade: "#5fb89a",
+        "jade-bright": "#6fc7a8",
         clay: "#c4633f",
         brass: "#b5852e",
         indigo: "#5b5fa8",

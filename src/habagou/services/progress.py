@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from habagou.dtos.packs import ActivityProgressDTO, PackProgressDTO
 from habagou.dtos.progress import (
     CompletionCreateDTO,
     CompletionResponseDTO,
+    DailyActivityDTO,
+    DailyGoalDTO,
+    NextMilestoneDTO,
     PackProgressResponseDTO,
     ProgressResetDTO,
+    ProgressSummaryDTO,
 )
 from habagou.models import ActivityType, Pack, PackStatus, User
 from habagou.repositories import ActivityProgress, PackRepository, ProgressRepository
+from habagou.streaks import (
+    DAILY_GOAL_TARGET,
+    bucket_level,
+    compute_streaks,
+    next_milestone,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,6 +94,43 @@ class ProgressService:
             pack_slug=pack.slug,
             deleted_count=deleted_count,
             progress=await self._progress(user=user, pack=pack),
+        )
+
+    async def get_summary(
+        self,
+        *,
+        user: User,
+        tz_offset_minutes: int = 0,
+    ) -> ProgressSummaryDTO:
+        daily_counts = await self.progress_repository.daily_completion_counts(
+            user_id=user.id,
+            tz_offset_minutes=tz_offset_minutes,
+        )
+        today = (datetime.now(UTC) - timedelta(minutes=tz_offset_minutes)).date()
+        streaks = compute_streaks(daily_counts, today=today)
+        milestone = next_milestone(streaks.current)
+        activity = [
+            DailyActivityDTO(
+                date=day,
+                count=(count := daily_counts.get(day, 0)),
+                level=bucket_level(count),
+            )
+            for day in (today - timedelta(days=offset) for offset in range(44, -1, -1))
+        ]
+
+        return ProgressSummaryDTO(
+            current_streak=streaks.current,
+            best_streak=streaks.best,
+            daily_goal=DailyGoalDTO(
+                completed=daily_counts.get(today, 0),
+                target=DAILY_GOAL_TARGET,
+            ),
+            activity=activity,
+            next_milestone=NextMilestoneDTO(
+                target_days=milestone.target_days,
+                days_remaining=milestone.days_remaining,
+                progress_pct=milestone.progress_pct,
+            ),
         )
 
     async def _published_pack(self, slug: str) -> Pack | None:

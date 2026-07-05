@@ -30,6 +30,7 @@ src/habagou/
   db.py                # async engine/session factory
   dependencies.py      # current-user resolver
   events.py            # workflow event logging and metrics
+  streaks.py           # pure daily-goal streak and milestone calculations
   routers/
     health.py          # healthz/readyz
     v1/                # packs, characters, progress, admin
@@ -61,7 +62,7 @@ the production data checks post-deploy or on cron.
 
 The React app lives in `src/habagou/web/frontend`.
 
-- TanStack Router defines pack, trace, match, and sentence routes.
+- TanStack Router defines home, progress, pack, trace, match, and sentence routes.
 - TanStack Query owns API fetching, cache updates, and retry/refetch paths.
 - Hanzi Writer renders trace canvases using API-provided stroke JSON.
 - Vitest covers state machines/components; Playwright covers full browser
