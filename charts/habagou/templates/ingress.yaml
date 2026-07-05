@@ -16,9 +16,15 @@ spec:
     - hosts:
         - {{ .Values.ingress.hostname | quote }}
   {{- end }}
-  defaultBackend:
-    service:
-      name: {{ include "habagou.fullname" . }}
-      port:
-        number: {{ .Values.service.port }}
+  rules:
+    - host: {{ .Values.ingress.hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "habagou.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
 {{- end }}
