@@ -31,10 +31,9 @@ src/habagou/
   logging.py           # structlog setup
   db.py                # Async engine/session factory
   routers/             # HTTP endpoints (health, packs, strokes, progress)
-  controllers/         # Request orchestration
   services/            # Business logic
-  repositories/        # Data access (SQLAlchemy)
-  models/              # SQLAlchemy models
+  repositories.py      # Data access (SQLAlchemy)
+  models.py            # SQLAlchemy models
   dtos/                # Pydantic request/response models
   web/
     serve.py           # Static file serving in production

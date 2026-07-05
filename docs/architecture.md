@@ -29,14 +29,14 @@ src/habagou/
   config.py            # environment-driven settings
   db.py                # async engine/session factory
   dependencies.py      # current-user resolver
-  events.py            # workflow event logging and metrics
+  events.py            # workflow event logging
   streaks.py           # pure daily-goal streak and milestone calculations
   routers/
     health.py          # healthz/readyz
     v1/                # packs, characters, progress, admin
   services/            # business logic
-  repositories/        # SQLAlchemy data access
-  models/              # SQLAlchemy models
+  repositories.py      # SQLAlchemy data access
+  models.py            # SQLAlchemy models
   dtos/                # Pydantic API DTOs
   web/serve.py         # production static frontend serving
 ```
