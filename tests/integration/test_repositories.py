@@ -5,14 +5,19 @@ from datetime import UTC, datetime
 import pytest
 
 from habagou import db
-from habagou.models import ActivityCompletion, ActivityType, Pack, PackStatus
+from habagou.models import (
+    GUEST_USER_ID,
+    ActivityCompletion,
+    ActivityType,
+    Pack,
+    PackStatus,
+    User,
+)
 from habagou.repositories import (
     CharacterRepository,
     PackRepository,
     ProgressRepository,
-    UserRepository,
 )
-from habagou.seed_data import GUEST_USER_ID
 
 
 @pytest.mark.anyio
@@ -83,20 +88,9 @@ async def test_character_repository_reads_strokes_and_missing_set() -> None:
 
 
 @pytest.mark.anyio
-async def test_user_repository_gets_guest_user() -> None:
-    async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
-
-    assert user is not None
-    assert user.id == GUEST_USER_ID
-    assert user.username == "guest"
-    assert user.is_guest is True
-
-
-@pytest.mark.anyio
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
     async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
+        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug("greetings")
         assert user is not None
         assert pack is not None
@@ -153,7 +147,7 @@ async def test_progress_repository_records_aggregates_and_deletes() -> None:
 @pytest.mark.anyio
 async def test_progress_repository_groups_daily_counts_by_timezone_offset() -> None:
     async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
+        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug("greetings")
         assert user is not None
         assert pack is not None

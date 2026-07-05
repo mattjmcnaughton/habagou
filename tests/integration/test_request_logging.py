@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from habagou.app import create_app
-from habagou.seed_data import GUEST_USER_ID
+from habagou.models import GUEST_USER_ID
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator

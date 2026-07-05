@@ -11,6 +11,7 @@ from sqlalchemy import delete, or_, select
 from habagou import db
 from habagou.events import emit_workflow_event
 from habagou.models import (
+    GUEST_USER_ID,
     Character,
     Pack,
     PackCharacter,
@@ -18,7 +19,6 @@ from habagou.models import (
     PackStatus,
     User,
 )
-from habagou.seed_data import GUEST_USER_ID
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence

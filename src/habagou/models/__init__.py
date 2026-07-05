@@ -26,6 +26,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from habagou.db import Base
 
+GUEST_USER_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
+
 
 class PackStatus(StrEnum):
     """Lifecycle status for a pack."""
@@ -226,6 +228,7 @@ __all__ = [
     "ActivityCompletion",
     "ActivityType",
     "Character",
+    "GUEST_USER_ID",
     "Pack",
     "PackCharacter",
     "PackSentence",

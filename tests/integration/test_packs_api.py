@@ -8,8 +8,15 @@ from sqlalchemy import select
 
 from habagou import db
 from habagou.app import create_app
-from habagou.models import ActivityCompletion, ActivityType, Pack, PackStatus
-from habagou.repositories import PackRepository, UserRepository
+from habagou.models import (
+    GUEST_USER_ID,
+    ActivityCompletion,
+    ActivityType,
+    Pack,
+    PackStatus,
+    User,
+)
+from habagou.repositories import PackRepository
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -143,7 +150,7 @@ async def _record_completion(
     slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
     async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
+        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug(slug)
         assert user is not None
         assert pack is not None

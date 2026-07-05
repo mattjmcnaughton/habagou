@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 
 from habagou.db import get_session
 from habagou.events import emit_workflow_event
-from habagou.graphemes import is_single_grapheme
 from habagou.repositories import CharacterRepository
 
 router = APIRouter(prefix="/api/v1/characters", tags=["characters"])
@@ -32,7 +31,7 @@ async def get_character_strokes(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> dict:
     started_at = time.perf_counter()
-    if not is_single_grapheme(hanzi):
+    if len(hanzi) != 1:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="hanzi must be exactly one grapheme",

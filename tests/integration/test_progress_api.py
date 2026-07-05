@@ -10,8 +10,8 @@ from sqlalchemy import delete, func, select
 
 from habagou import db
 from habagou.app import create_app
-from habagou.models import ActivityCompletion, ActivityType, User
-from habagou.repositories import PackRepository, UserRepository
+from habagou.models import GUEST_USER_ID, ActivityCompletion, ActivityType, User
+from habagou.repositories import PackRepository
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -328,7 +328,7 @@ async def _record_other_user_completion(
 
 async def _record_guest_completions(completed_at_values: list[datetime]) -> None:
     async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
+        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug("greetings")
         assert user is not None
         assert pack is not None
@@ -349,7 +349,7 @@ async def _record_guest_completions(completed_at_values: list[datetime]) -> None
 
 async def _clear_guest_progress() -> None:
     async with db.async_session() as session:
-        user = await UserRepository(session).get_guest()
+        user = await session.get(User, GUEST_USER_ID)
         assert user is not None
         for slug in ("greetings", "numbers", "family", "food-drink"):
             pack = await PackRepository(session).get_by_slug(slug)

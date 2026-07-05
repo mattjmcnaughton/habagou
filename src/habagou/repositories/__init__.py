@@ -16,9 +16,7 @@ from habagou.models import (
     PackCharacter,
     PackSentence,
     PackStatus,
-    User,
 )
-from habagou.seed_data import GUEST_USER_ID
 
 if TYPE_CHECKING:
     import datetime
@@ -123,17 +121,6 @@ class CharacterRepository:
         return required - existing
 
 
-class UserRepository:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get_guest(self) -> User | None:
-        result = await self.session.execute(
-            select(User).where(User.id == GUEST_USER_ID, User.username == "guest")
-        )
-        return result.scalar_one_or_none()
-
-
 class ProgressRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -225,5 +212,4 @@ __all__ = [
     "PackRepository",
     "PackWithCounts",
     "ProgressRepository",
-    "UserRepository",
 ]
