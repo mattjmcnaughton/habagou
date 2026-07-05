@@ -37,15 +37,14 @@ src/habagou/
   telemetry.py              # OpenTelemetry setup
   routers/                  # HTTP endpoint definitions
     health.py               # /healthz, /readyz
-  controllers/              # Request orchestration
   services/                 # Business logic
   dtos/                     # Pydantic request/response models
   web/                      # Frontend integration
     serve.py                # Static file serving for production
     frontend/               # Frontend application (scaffolded separately)
   db.py                     # Async engine/session setup
-  models/                   # SQLAlchemy models
-  repositories/             # Data access layer
+  models.py                 # SQLAlchemy models
+  repositories.py           # Data access layer
 tests/
   unit/                     # Unit tests
   integration/              # Integration tests
@@ -55,7 +54,7 @@ tests/
 ## Key Conventions
 
 - Source code lives in `src/habagou/` (src layout).
-- **Layering:** routers -> controllers -> services -> repositories.
+- **Layering:** routers -> services -> repositories.
 - **DTOs** are Pydantic models for API I/O, always separate from DB models.
 - **Frontend** is scaffolded separately into `src/habagou/web/frontend/` using the `frontend-react` template.
 - Tests are organized by type in `tests/unit/`, `tests/integration/`, `tests/e2e/`.

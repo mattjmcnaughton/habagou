@@ -16,7 +16,7 @@ Habagou is a single deployable FastAPI service with an embedded React frontend a
 Browser (React + Hanzi Writer)
    │  /api/*
    ▼
-FastAPI (routers → controllers → services → repositories)
+FastAPI (routers → services → repositories)
    ▼
 PostgreSQL (users, packs, characters/stroke corpus, activity completions)
 ```
@@ -120,7 +120,7 @@ Notes:
 
 ### 4.2 Endpoints
 
-All under `/api/v1`, DTOs in `dtos/`, thin routers → controllers → services per template layering. The current user is resolved by a `get_current_user` dependency (v1: always guest).
+All under `/api/v1`, DTOs in `dtos/`, thin routers → services per template layering. The current user is resolved by a `get_current_user` dependency (v1: always guest).
 
 | Method & path | Purpose |
 |---|---|
