@@ -142,26 +142,23 @@ test-external:
 # Export the committed OpenAPI artifact
 openapi-export:
     uv run python scripts/export_openapi.py
-    uv run python scripts/generate_openapi_types.py
+    cd {{fe_dir}} && pnpm exec openapi-typescript ../../../../docs/api/openapi-v1.json -o src/lib/api-types.ts
 
 # Check the committed OpenAPI artifact for drift
 openapi-check:
     uv run python scripts/export_openapi.py --check
-    uv run python scripts/generate_openapi_types.py --check
+    cd {{fe_dir}} && pnpm exec openapi-typescript ../../../../docs/api/openapi-v1.json -o src/lib/api-types.ts
+    git diff --exit-code src/habagou/web/frontend/src/lib/api-types.ts
 
 # Verify workflow test coverage from JUnit/Playwright report artifacts
 verify-traceability:
     uv run python scripts/verify_traceability.py
 
-# Validate the machine-readable workflow catalog
-verify-workflows:
-    uv run python scripts/verify_workflow_catalog.py
-
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
 
 # Backend gate
-gate-be: fmt-be lint-be typecheck-be verify-workflows test-unit-be
+gate-be: fmt-be lint-be typecheck-be test-unit-be
 
 # Frontend gate
 gate-fe: fmt-fe lint-fe typecheck-fe test-unit-fe

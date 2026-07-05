@@ -12,7 +12,7 @@ from scripts.verify_traceability import (
 
 
 def test_parse_workflows_reads_catalog() -> None:
-    workflows = parse_workflows(Path("docs/workflows.yml"))
+    workflows = parse_workflows(Path("src/habagou/workflows.yml"))
 
     assert workflows[0] == Workflow(
         id="WF-01",

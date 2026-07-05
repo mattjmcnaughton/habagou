@@ -187,6 +187,22 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev --frozen
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/habagou/web/frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: src/habagou/web/frontend
+        run: pnpm install --frozen-lockfile
+
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
 

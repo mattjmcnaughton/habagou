@@ -12,11 +12,11 @@ _WORKFLOW_ID = re.compile(r"^\s*-\s*id:\s*(WF-\d{2})\s*$")
 _WORKFLOW_LITERAL = re.compile(r'workflow="(WF-\d{2})"')
 
 
-def test_packaged_workflow_catalog_matches_docs_catalog() -> None:
-    packaged = files("habagou").joinpath("workflows.yml").read_text(encoding="utf-8")
-    docs = Path("docs/workflows.yml").read_text(encoding="utf-8")
+def test_packaged_workflow_catalog_loads_expected_ids() -> None:
+    workflow_ids = _workflow_ids_from_catalog()
 
-    assert packaged == docs
+    assert "WF-01" in workflow_ids
+    assert "WF-11" in workflow_ids
 
 
 def test_workflow_literals_are_declared_in_packaged_catalog() -> None:

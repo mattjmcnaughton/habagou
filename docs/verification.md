@@ -18,19 +18,9 @@ This gives one vocabulary from PRD → test → prod dashboard: "is tracing work
 
 ## 2. Workflow catalog
 
-| ID | Workflow | Actor | Postcondition (the thing we can assert) |
-|----|----------|-------|------------------------------------------|
-| WF-01 | Bootstrap | Operator | Empty DB → migrated schema, ≥9 000 corpus chars, guest user, 4 published packs; idempotent on re-run |
-| WF-02 | Browse library | Learner | Home shows all published packs with correct counts and the user's completion badges |
-| WF-03 | Trace a pack | Learner | All chars traced stroke-by-stroke → done screen → `activity_completions` row (trace) → badge visible |
-| WF-04 | Match a pack | Learner | All pairs matched → elapsed time shown → completion row (match) → badge visible |
-| WF-05 | Sentence a pack | Learner | All sentences traced, **including non-pack chars** (很) → completion row (sentence) → badge visible |
-| WF-06 | Serve strokes | System | Any corpus char returns valid Hanzi Writer JSON < 150 ms p95, immutable-cached; unknown char → 404 |
-| WF-07 | Review progress | Learner | Pack screen shows per-activity completed/best-duration truthfully from the event log |
-| WF-08 | Reset progress | Learner | Confirmed reset → completions for (user, pack) deleted → badges cleared |
-| WF-09 | Admin curate | Admin | Retire/publish/reorder takes effect in WF-02 output; unauthorized → 401 |
-| WF-10 | Deploy & serve | Operator | Clean `docker compose up` → WF-01 runs → app healthy → WF-03 passes end-to-end |
-| WF-11 | Review dashboard | Learner | Progress screen shows streak, daily goal, heatmap and milestone truthfully derived from the event log |
+The machine-readable catalog lives at `src/habagou/workflows.yml` and is
+packaged with the application. It is the single source of truth for workflow
+IDs, titles, and minimum required verification layers.
 
 Each workflow gets a short spec section in this doc as it's implemented (steps, invariants, edge cases). The catalog is the contract; PRD FRs map into it (e.g. FR-4..7 ⊂ WF-03).
 
@@ -57,7 +47,7 @@ Cross-cutting rules:
 
 Enforced mechanically, kept lightweight:
 
-1. `docs/workflows.yml` — machine-readable catalog (ID, title, minimum required layers, e.g. WF-03 requires unit+integration+e2e; WF-10 requires the compose smoke).
+1. `src/habagou/workflows.yml` — machine-readable catalog (ID, title, minimum required layers, e.g. WF-03 requires unit+integration+e2e; WF-10 requires the compose smoke).
 2. Tests declare workflows via marks/tags.
 3. CI job `verify-traceability`: parses test reports (pytest junit + Playwright JSON), joins against the catalog, fails if any workflow misses its minimum layer or any tagged test failed; emits a matrix artifact (workflow × layer → pass/fail/missing) on every PR.
 
@@ -116,9 +106,9 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable.
 
-### 5.2 Traces & metrics (OpenTelemetry — scaffolded in, exports when configured)
+### 5.2 Traces (OpenTelemetry — scaffolded in, exports when configured)
 
-Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instrumentation, OTLP exporter active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no-op locally). `events.py` additionally increments counters `habagou_workflow_total{workflow,outcome}` and records `habagou_workflow_duration_ms{workflow}` — giving rate/error/duration per workflow, the prod mirror of the CI traceability matrix.
+Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instrumentation, OTLP exporter active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no-op locally). Workflow outcomes are emitted as structured events from `events.py`, giving a log-stream mirror of the CI traceability matrix.
 
 ### 5.3 Environment tiers & live validation loops
 
@@ -129,7 +119,7 @@ Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instr
 | Production | `just smoke BASE_URL=…` (read-only: health, WF-02, WF-06) + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | No |
 
 - **Staging deploy gate**: a staging deploy is done when the full e2e matrix passes against it; a prod deploy is done when smoke + invariants pass against it. Both runnable on cron thereafter.
-- **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by `habagou_workflow_total`/`duration` — deliberately the same shape as the CI matrix. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
+- **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by structured workflow events — deliberately the same shape as the CI matrix. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
 - **Mutating verification lives in staging** (above), not prod: driving WF-03 against prod would pollute the shared guest user's real progress. Revisit prod synthetics when v2 accounts allow a dedicated synthetic user.
 
 ## 6. Verification gate summary

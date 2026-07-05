@@ -83,7 +83,7 @@ async def test_all_workflows_emit_verification_events(
     )
     await _ok(await client.get("/readyz"))
 
-    assert set(EXPECTED_EVENTS) == _workflow_ids_from_docs()
+    assert set(EXPECTED_EVENTS) == _workflow_ids_from_catalog()
     for workflow, (event_names, extra_fields) in EXPECTED_EVENTS.items():
         matches = [
             (event, fields)
@@ -101,10 +101,12 @@ async def _ok(response, *, status_code: int = 200) -> None:
     assert response.status_code == status_code, response.text
 
 
-def _workflow_ids_from_docs() -> set[str]:
+def _workflow_ids_from_catalog() -> set[str]:
     pattern = re.compile(r"^\s*-\s*id:\s*(WF-\d{2})\s*$")
     ids: set[str] = set()
-    for line in Path("docs/workflows.yml").read_text(encoding="utf-8").splitlines():
+    for line in (
+        Path("src/habagou/workflows.yml").read_text(encoding="utf-8").splitlines()
+    ):
         match = pattern.match(line)
         if match:
             ids.add(match.group(1))

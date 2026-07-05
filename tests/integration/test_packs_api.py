@@ -38,7 +38,7 @@ async def test_list_packs_returns_published_sorted_summaries(
     await _record_completion("greetings", ActivityType.MATCH, 1500)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.packs.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
@@ -93,7 +93,7 @@ async def test_get_pack_returns_detail_with_progress(
     await _record_completion("greetings", ActivityType.TRACE, 800)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.packs.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
@@ -136,7 +136,7 @@ async def test_get_pack_404s_for_unknown_or_unpublished(
     await _retire_pack("greetings")
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
-        "habagou.routers.v1.packs.emit_workflow_event",
+        "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 

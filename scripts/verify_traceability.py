@@ -31,7 +31,9 @@ class TaggedTest:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--workflows", type=Path, default=Path("docs/workflows.yml"))
+    parser.add_argument(
+        "--workflows", type=Path, default=Path("src/habagou/workflows.yml")
+    )
     parser.add_argument("--reports", type=Path, default=Path(".artifacts/test-results"))
     parser.add_argument(
         "--output",
