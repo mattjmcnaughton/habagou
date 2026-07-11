@@ -12,6 +12,8 @@ export type CompletionResponse = components["schemas"]["CompletionResponseDTO"];
 export type ProgressReset = components["schemas"]["ProgressResetDTO"];
 export type ProgressSummary = components["schemas"]["ProgressSummaryDTO"];
 export type StrokeData = CharacterJson;
+export type AuthUser = components["schemas"]["UserDTO"];
+export type AuthSession = components["schemas"]["SessionDTO"];
 
 type ErrorEnvelope = {
   error?: {
@@ -49,6 +51,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       envelope.error?.details,
     );
   }
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -66,6 +71,14 @@ export function apiV1Path(path: `/${string}`): string {
 
 export function listPacks(): Promise<PackSummary[]> {
   return apiFetch<PackSummary[]>(apiV1Path("/packs"));
+}
+
+export function getAuthSession(): Promise<AuthSession> {
+  return apiFetch<AuthSession>(apiV1Path("/auth/session"));
+}
+
+export async function logout(): Promise<void> {
+  await apiFetch<void>("/auth/logout", { method: "POST" });
 }
 
 export function getPack(slug: string): Promise<PackDetail> {

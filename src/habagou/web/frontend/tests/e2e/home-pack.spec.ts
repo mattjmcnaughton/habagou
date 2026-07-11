@@ -1,16 +1,18 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
+import { signIn } from "./auth-helpers";
 
 const packsUnderTest = ["greetings", "numbers"] as const;
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeEach(async ({ request }) => {
-  await resetPacks(request);
+test.beforeEach(async ({ page }) => {
+  await signIn(page);
+  await resetPacks(page.request);
 });
 
-test.afterEach(async ({ request }) => {
-  await resetPacks(request);
+test.afterEach(async ({ page }) => {
+  await resetPacks(page.request);
 });
 
 test("[WF-02] navigates from home to pack detail", async ({ page }) => {
@@ -120,8 +122,8 @@ test("[WF-05] traces a sentence with a sentence-only character", async ({ page }
   ).toBeVisible();
 });
 
-test("[WF-06] serves stroke data through the running app", async ({ request }) => {
-  const response = await request.get("/api/v1/characters/你/strokes");
+test("[WF-06] serves stroke data through the running app", async ({ page }) => {
+  const response = await page.request.get("/api/v1/characters/你/strokes");
 
   expect(response.ok()).toBe(true);
   expect(response.headers()["cache-control"]).toContain("immutable");
@@ -130,8 +132,8 @@ test("[WF-06] serves stroke data through the running app", async ({ request }) =
   expect(body.medians.length).toBe(body.strokes.length);
 });
 
-test("[WF-07] shows recorded progress on the pack screen", async ({ page, request }) => {
-  await recordCompletion(request, "numbers", "match");
+test("[WF-07] shows recorded progress on the pack screen", async ({ page }) => {
+  await recordCompletion(page.request, "numbers", "match");
 
   await page.goto("/packs/numbers");
 
@@ -144,9 +146,9 @@ test("[WF-07] shows recorded progress on the pack screen", async ({ page, reques
   ).toBeVisible();
 });
 
-test("[WF-08] resets guest progress for a pack", async ({ page, request }) => {
-  await recordCompletion(request, "numbers", "trace");
-  await recordCompletion(request, "numbers", "match");
+test("[WF-08] resets progress for a pack", async ({ page }) => {
+  await recordCompletion(page.request, "numbers", "trace");
+  await recordCompletion(page.request, "numbers", "match");
 
   await page.goto("/packs/numbers");
   await expect(

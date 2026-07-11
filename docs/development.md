@@ -42,7 +42,8 @@ uv run alembic upgrade head
 ## Running Locally
 
 ```sh
-# Start both dev servers
+# Start Postgres and Keycloak through devenv, then start both dev servers
+devenv up -d
 just bootstrap
 just dev
 
@@ -51,7 +52,20 @@ just dev-be   # Backend at the port shown by just info
 just dev-fe   # Frontend dev server
 ```
 
-Run `just info` for this checkout's exact backend/frontend URLs. Interactive docs are available at `/docs` on the backend URL.
+Run `just info` for this checkout's exact backend/frontend/Keycloak URLs.
+Interactive docs are available at `/docs` on the backend URL.
+
+Local auth uses the Keycloak realm rendered from
+`docker/keycloak/habagou-realm.template.json` into
+`.devenv/state/keycloak/habagou-realm.json`. `devenv shell` and `just
+bootstrap` render this file. If Keycloak was started before the file existed,
+restart the Keycloak service after entering the shell. The seeded local login is
+`dev` / `dev`.
+
+Auth-related env values are derived by `scripts/dev_env.py`: `SESSION_SECRET_KEY`,
+`OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET`.
+`SESSION_SECRET_KEY` is required; the app fails fast when
+it is unset.
 
 ## Common Tasks
 
@@ -92,6 +106,9 @@ Tests are organized by type:
 
 Use `@pytest.mark.external` for tests that hit external services. These run via `just test-external`.
 
+Frontend e2e tests drive the real Keycloak form. `just test-e2e-fe` fails fast
+if the derived Keycloak issuer is not reachable; start devenv services first.
+
 ## Docker
 
 ```sh
@@ -104,6 +121,10 @@ docker run -p 8000:8000 habagou
 # Or use the project wrapper
 just compose-up
 ```
+
+`just compose-up` renders the dev Keycloak realm and starts app, Postgres, and
+Keycloak. `just compose-smoke` verifies health, the SPA shell, the anonymous
+session probe, and that data APIs return 401 without a session.
 
 Release images are published by GitHub Actions after successful CI on `main`
 when semantic-release creates a new release. The workflow pushes

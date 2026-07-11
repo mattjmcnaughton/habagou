@@ -9,7 +9,6 @@ from sqlalchemy import select
 from habagou import db
 from habagou.app import create_app
 from habagou.models import (
-    GUEST_USER_ID,
     ActivityCompletion,
     ActivityType,
     Pack,
@@ -17,15 +16,25 @@ from habagou.models import (
     User,
 )
 from habagou.repositories import PackRepository
+from tests.integration.conftest import auth_cookies, create_user
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 
 @pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient]:
+async def current_user() -> User:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        await session.commit()
+        return user
+
+
+@pytest.fixture
+async def client(current_user: User) -> AsyncGenerator[AsyncClient]:
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(current_user.id))
         yield client
 
 
@@ -33,9 +42,10 @@ async def client() -> AsyncGenerator[AsyncClient]:
 @pytest.mark.anyio
 async def test_list_packs_returns_published_sorted_summaries(
     client: AsyncClient,
+    current_user: User,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _record_completion("greetings", ActivityType.MATCH, 1500)
+    await _record_completion(current_user.id, "greetings", ActivityType.MATCH, 1500)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
@@ -87,10 +97,11 @@ async def test_list_packs_returns_published_sorted_summaries(
 @pytest.mark.anyio
 async def test_get_pack_returns_detail_with_progress(
     client: AsyncClient,
+    current_user: User,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _record_completion("greetings", ActivityType.TRACE, 1200)
-    await _record_completion("greetings", ActivityType.TRACE, 800)
+    await _record_completion(current_user.id, "greetings", ActivityType.TRACE, 1200)
+    await _record_completion(current_user.id, "greetings", ActivityType.TRACE, 800)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
@@ -146,17 +157,25 @@ async def test_get_pack_404s_for_unknown_or_unpublished(
     assert [fields["outcome"] for _event, fields in events] == ["error", "error"]
 
 
+@pytest.mark.anyio
+async def test_packs_require_authentication() -> None:
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/packs")
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "unauthenticated"
+
+
 async def _record_completion(
-    slug: str, activity: ActivityType, duration_ms: int
+    user_id: object, slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
     async with db.async_session() as session:
-        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug(slug)
-        assert user is not None
         assert pack is not None
         session.add(
             ActivityCompletion(
-                user_id=user.id,
+                user_id=user_id,
                 pack_id=pack.id,
                 activity=activity,
                 duration_ms=duration_ms,

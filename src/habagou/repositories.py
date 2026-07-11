@@ -16,6 +16,7 @@ from habagou.models import (
     PackCharacter,
     PackSentence,
     PackStatus,
+    User,
 )
 
 if TYPE_CHECKING:
@@ -39,6 +40,47 @@ class ActivityProgress:
     completed: bool
     completion_count: int
     best_duration_ms: int | None
+
+
+class UserRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get_by_identity(self, issuer: str, subject: str) -> User | None:
+        result = await self.session.execute(
+            select(User).where(
+                User.auth_issuer == issuer,
+                User.auth_subject == subject,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def username_exists(self, username: str) -> bool:
+        result = await self.session.execute(
+            select(User.id).where(User.username == username)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def create(
+        self,
+        *,
+        username: str,
+        display_name: str,
+        auth_issuer: str,
+        auth_subject: str,
+        email: str | None,
+    ) -> User:
+        user = User(
+            username=username,
+            display_name=display_name,
+            is_guest=False,
+            auth_issuer=auth_issuer,
+            auth_subject=auth_subject,
+            email=email,
+        )
+        self.session.add(user)
+        await self.session.flush()
+        return user
 
 
 class PackRepository:
@@ -212,4 +254,5 @@ __all__ = [
     "PackRepository",
     "PackWithCounts",
     "ProgressRepository",
+    "UserRepository",
 ]

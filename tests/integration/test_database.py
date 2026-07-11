@@ -25,7 +25,6 @@ from scripts.import_stroke_data import (
     read_subset,
 )
 from scripts.seed import (
-    GUEST_USER_ID,
     SEED_PACKS,
     MissingCharactersError,
     SeedCharacter,
@@ -142,10 +141,6 @@ async def test_seed_database_is_idempotent() -> None:
 
     seed_slugs = [pack.slug for pack in SEED_PACKS]
     async with db.async_session() as session:
-        guest_count = await session.scalar(
-            select(func.count()).select_from(User).where(User.username == "guest")
-        )
-        guest = await session.scalar(select(User).where(User.username == "guest"))
         result = await session.execute(
             select(Pack)
             .where(Pack.slug.in_(seed_slugs))
@@ -167,12 +162,6 @@ async def test_seed_database_is_idempotent() -> None:
             .select_from(PackSentence)
             .where(PackSentence.pack_id.in_(seeded_pack_ids))
         )
-
-    assert guest_count == 1
-    assert guest is not None
-    assert guest.id == GUEST_USER_ID
-    assert guest.display_name == "Guest"
-    assert guest.is_guest is True
 
     assert [pack.slug for pack in packs] == seed_slugs
     assert [pack.title for pack in packs] == [
@@ -214,9 +203,7 @@ async def test_seed_validation_aborts_when_referenced_character_is_missing() -> 
     )
 
     async with db.async_session() as session:
-        guest_count_before = await session.scalar(
-            select(func.count()).select_from(User).where(User.username == "guest")
-        )
+        user_count_before = await session.scalar(select(func.count()).select_from(User))
         broken_pack_count_before = await session.scalar(
             select(func.count()).select_from(Pack).where(Pack.slug == "broken-pack")
         )
@@ -225,13 +212,11 @@ async def test_seed_validation_aborts_when_referenced_character_is_missing() -> 
         await seed_database((broken_pack,))
 
     async with db.async_session() as session:
-        guest_count_after = await session.scalar(
-            select(func.count()).select_from(User).where(User.username == "guest")
-        )
+        user_count_after = await session.scalar(select(func.count()).select_from(User))
         broken_pack_count_after = await session.scalar(
             select(func.count()).select_from(Pack).where(Pack.slug == "broken-pack")
         )
 
     assert error.value.missing == ("☂",)
-    assert guest_count_after == guest_count_before
+    assert user_count_after == user_count_before
     assert broken_pack_count_after == broken_pack_count_before

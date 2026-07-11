@@ -8,10 +8,15 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 )
 
 from habagou.db import get_session
+from habagou.dependencies import get_current_user
 from habagou.events import workflow_event
 from habagou.repositories import CharacterRepository
 
-router = APIRouter(prefix="/api/v1/characters", tags=["characters"])
+router = APIRouter(
+    prefix="/api/v1/characters",
+    tags=["characters"],
+    dependencies=[Depends(get_current_user)],
+)
 
 CACHE_CONTROL_IMMUTABLE = "public, max-age=31536000, immutable"
 

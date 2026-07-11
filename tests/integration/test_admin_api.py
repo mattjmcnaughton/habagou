@@ -5,8 +5,10 @@ from typing import TYPE_CHECKING
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from habagou import db
 from habagou.app import create_app
 from habagou.config import settings
+from tests.integration.conftest import auth_cookies, create_user
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -14,8 +16,12 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient]:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        await session.commit()
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(user.id))
         yield client
 
 

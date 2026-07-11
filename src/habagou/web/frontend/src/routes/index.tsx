@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { getProgressSummary, listPacks } from "../lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { getAuthSession, getProgressSummary, listPacks, logout } from "../lib/api";
 import type { ProgressSummary } from "../lib/api";
 
 export const Route = createFileRoute("/")({
@@ -8,8 +8,22 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useQuery({ queryKey: ["auth", "session"], queryFn: getAuthSession });
   const packs = useQuery({ queryKey: ["packs"], queryFn: listPacks });
   const progress = useQuery({ queryKey: ["progress"], queryFn: getProgressSummary });
+  const displayName = session.data?.user?.display_name ?? session.data?.user?.username ?? "Learner";
+
+  async function handleLogout() {
+    await logout();
+    queryClient.setQueryData(["auth", "session"], {
+      authenticated: false,
+      provider: session.data?.provider ?? "keycloak",
+      user: null,
+    });
+    await navigate({ to: "/login" });
+  }
 
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
@@ -24,9 +38,18 @@ function Index() {
               Learn to write Chinese characters, stroke by stroke.
             </p>
           </div>
-          <div className="flex h-8 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-panel px-3 text-sm text-mist">
-            <span className="h-2 w-2 rounded-full bg-jade" />
-            Guest
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex h-8 max-w-[8rem] items-center gap-2 rounded-full border border-white/10 bg-panel px-3 text-sm text-mist">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-jade" />
+              <span className="truncate">{displayName}</span>
+            </div>
+            <button
+              className="h-8 rounded-md border border-white/10 bg-panel px-3 text-sm text-mist transition-colors hover:border-clay/40 hover:text-porcelain"
+              onClick={() => void handleLogout()}
+              type="button"
+            >
+              Sign out
+            </button>
           </div>
         </header>
 

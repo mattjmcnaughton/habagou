@@ -1,16 +1,18 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
+import { signIn } from "./auth-helpers";
 
 const packsUnderTest = ["greetings", "numbers", "family", "food-drink"] as const;
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeEach(async ({ request }) => {
-  await resetPacks(request);
+test.beforeEach(async ({ page }) => {
+  await signIn(page);
+  await resetPacks(page.request);
 });
 
-test.afterEach(async ({ request }) => {
-  await resetPacks(request);
+test.afterEach(async ({ page }) => {
+  await resetPacks(page.request);
 });
 
 test("[WF-11] progress dashboard reflects a completed activity in goal and heatmap", async ({

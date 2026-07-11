@@ -21,6 +21,21 @@ describe("App", () => {
     expect(screen.getByText("✓ trace")).toBeTruthy();
   });
 
+  it("[WF-AUTH-SIGN-IN] redirects unauthenticated visitors to login", async () => {
+    server.use(
+      http.get(`${API_V1_BASE}/auth/session`, () =>
+        HttpResponse.json({ authenticated: false, provider: "keycloak", user: null }),
+      ),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Sign in to keep your streak" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Continue with Keycloak (dev)" })).toBeTruthy();
+  });
+
   it("[WF-11] shows a compact progress link on the home page", async () => {
     render(<App />);
 

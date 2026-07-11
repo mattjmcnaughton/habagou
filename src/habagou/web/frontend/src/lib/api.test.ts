@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type ApiError, apiFetch, createCompletion, getProgressSummary, listPacks } from "./api";
+import {
+  type ApiError,
+  apiFetch,
+  createCompletion,
+  getProgressSummary,
+  listPacks,
+  logout,
+} from "./api";
 
 describe("apiFetch", () => {
   afterEach(() => {
@@ -72,6 +79,18 @@ describe("apiFetch", () => {
     await listPacks();
 
     expect(fetch).toHaveBeenCalledWith("/api/v1/packs", undefined);
+  });
+
+  it("handles empty 204 responses", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(logout()).resolves.toBeUndefined();
+
+    expect(fetch).toHaveBeenCalledWith("/auth/logout", { method: "POST" });
   });
 
   it("posts typed completion requests as JSON", async () => {

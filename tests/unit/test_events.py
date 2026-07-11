@@ -8,8 +8,8 @@ import pytest
 
 from habagou import events
 
-_WORKFLOW_ID = re.compile(r"^\s*-\s*id:\s*(WF-\d{2})\s*$")
-_WORKFLOW_LITERAL = re.compile(r'workflow="(WF-\d{2})"')
+_WORKFLOW_ID = re.compile(r"^\s*-\s*id:\s*(WF-[A-Z0-9-]+)\s*$")
+_WORKFLOW_LITERAL = re.compile(r'workflow="(WF-[A-Z0-9-]+)"')
 
 
 def test_packaged_workflow_catalog_loads_expected_ids() -> None:

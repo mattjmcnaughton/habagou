@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 import type {
+  AuthSession,
   CompletionResponse,
   PackDetail,
   PackSummary,
@@ -8,6 +9,17 @@ import type {
 } from "../lib/api";
 
 const API_V1 = "/api/v1";
+
+export const authenticatedSession: AuthSession = {
+  authenticated: true,
+  provider: "keycloak",
+  user: {
+    id: "99999999-9999-4999-8999-999999999999",
+    username: "dev",
+    display_name: "Dev User",
+    email: "dev@example.com",
+  },
+};
 
 export const packSummaries: PackSummary[] = [
   {
@@ -100,6 +112,12 @@ function mockProgressSummary(): ProgressSummary {
 }
 
 export const handlers = [
+  http.get(`${API_V1}/auth/session`, () => {
+    return HttpResponse.json<AuthSession>(authenticatedSession);
+  }),
+  http.post("/auth/logout", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
   http.get(`${API_V1}/packs`, () => {
     return HttpResponse.json<PackSummary[]>(packSummaries);
   }),

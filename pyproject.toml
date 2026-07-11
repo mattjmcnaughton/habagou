@@ -25,6 +25,9 @@ dependencies = [
     "alembic>=1.13",
     "asyncpg>=0.29",
     "opentelemetry-instrumentation-sqlalchemy>=0.44b0",
+    "authlib>=1.7.2",
+    "itsdangerous>=2.2.0",
+    "httpx>=0.28.1",
 ]
 
 [project.urls]
@@ -39,7 +42,6 @@ exclude-newer = "1 week"
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28",
     "pytest>=8.0",
     "pytest-xdist>=3.6",
     "ruff>=0.8",

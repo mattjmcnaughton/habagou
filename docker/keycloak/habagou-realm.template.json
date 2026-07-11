@@ -1,0 +1,47 @@
+{
+  "realm": "habagou",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "habagou",
+      "name": "Habagou",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "__OIDC_CLIENT_SECRET__",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:__HABAGOU_PORT__/auth/callback",
+        "http://127.0.0.1:__VITE_PORT__/auth/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:__HABAGOU_PORT__",
+        "http://127.0.0.1:__VITE_PORT__"
+      ],
+      "defaultClientScopes": ["web-origins", "acr", "profile", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "email": "dev@example.com",
+      "firstName": "Dev",
+      "lastName": "User",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { getProgressSummary, listPacks } from "../lib/api";
+import { getAuthSession, getProgressSummary, listPacks } from "../lib/api";
 import type { PackSummary, ProgressSummary } from "../lib/api";
 import {
   currentMonth,
@@ -17,8 +17,10 @@ export const Route = createFileRoute("/progress")({
 });
 
 function ProgressScreen() {
+  const session = useQuery({ queryKey: ["auth", "session"], queryFn: getAuthSession });
   const progress = useQuery({ queryKey: ["progress"], queryFn: getProgressSummary });
   const packs = useQuery({ queryKey: ["packs"], queryFn: listPacks });
+  const displayName = session.data?.user?.display_name ?? session.data?.user?.username ?? "Learner";
 
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
@@ -39,8 +41,8 @@ function ProgressScreen() {
             <p className="mt-2 text-xs uppercase tracking-[0.16em] text-mist">Your progress</p>
           </div>
           <div className="flex h-8 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-panel px-3 text-sm text-mist">
-            <span className="h-2 w-2 rounded-full bg-jade" />
-            Guest
+            <span className="h-2 w-2 shrink-0 rounded-full bg-jade" />
+            <span className="max-w-[8rem] truncate">{displayName}</span>
           </div>
         </header>
 

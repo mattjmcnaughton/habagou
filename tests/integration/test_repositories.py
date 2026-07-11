@@ -6,18 +6,18 @@ import pytest
 
 from habagou import db
 from habagou.models import (
-    GUEST_USER_ID,
     ActivityCompletion,
     ActivityType,
     Pack,
     PackStatus,
-    User,
 )
 from habagou.repositories import (
     CharacterRepository,
     PackRepository,
     ProgressRepository,
+    UserRepository,
 )
+from tests.integration.conftest import create_user
 
 
 @pytest.mark.anyio
@@ -90,9 +90,8 @@ async def test_character_repository_reads_strokes_and_missing_set() -> None:
 @pytest.mark.anyio
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
     async with db.async_session() as session:
-        user = await session.get(User, GUEST_USER_ID)
+        user = await create_user(session)
         pack = await PackRepository(session).get_by_slug("greetings")
-        assert user is not None
         assert pack is not None
 
         repository = ProgressRepository(session)
@@ -147,9 +146,8 @@ async def test_progress_repository_records_aggregates_and_deletes() -> None:
 @pytest.mark.anyio
 async def test_progress_repository_groups_daily_counts_by_timezone_offset() -> None:
     async with db.async_session() as session:
-        user = await session.get(User, GUEST_USER_ID)
+        user = await create_user(session)
         pack = await PackRepository(session).get_by_slug("greetings")
-        assert user is not None
         assert pack is not None
 
         repository = ProgressRepository(session)
@@ -188,6 +186,28 @@ async def test_progress_repository_groups_daily_counts_by_timezone_offset() -> N
         datetime(2026, 7, 4, tzinfo=UTC).date(): 1,
         datetime(2026, 7, 5, tzinfo=UTC).date(): 1,
     }
+
+
+@pytest.mark.anyio
+async def test_user_repository_round_trips_identity() -> None:
+    async with db.async_session() as session:
+        repository = UserRepository(session)
+        created = await repository.create(
+            username="identity-user",
+            display_name="Identity User",
+            auth_issuer="https://issuer.example.test",
+            auth_subject="subject-1",
+            email="identity@example.com",
+        )
+        await session.flush()
+
+        found = await repository.get_by_identity(
+            "https://issuer.example.test", "subject-1"
+        )
+        username_exists = await repository.username_exists("identity-user")
+
+    assert found is created
+    assert username_exists is True
 
 
 def _seed_slugs() -> set[str]:

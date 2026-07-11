@@ -32,9 +32,9 @@ Each workflow gets a short spec section in this doc as it's implemented (steps, 
 | **Unit (FE)** | Activity state machines (trace idx/stroke/complete; match select/wrong/lock; sentence advance), component wiring against **MSW handlers derived from the OpenAPI schema** | Real network, real writer rendering | ms; every `just gate` |
 | **Integration (BE)** | Repositories + migrations against real Postgres; API contracts at the ASGI level with real DB; import/seed scripts incl. failure paths | Browser behavior | s; `just gate-expensive`, CI |
 | **E2E (Playwright)** | Full workflows through the real stack (real backend, real DB, real hanzi-writer in a real browser), desktop + mobile viewports | — | 10s–min; CI on PRs to main |
-| **E2E (staging)** | The **full** Playwright suite, mutating workflows included (WF-03/04/05/08), against the staging deployment: `just e2e BASE_URL=…` | — (staging guest data is disposable; suite may reset progress freely) | every staging deploy |
-| **Smoke (prod)** | Read-only subset of e2e against **production** (`just smoke BASE_URL=…`): healthz/readyz, WF-02, WF-06 | Mutating workflows (prod guest progress is real data) | post-deploy, cron |
-| **Invariant checks** | Data-level truths in any live DB: every published pack's chars **and sentence chars** exist in corpus; guest user exists; no completion rows reference retired users/packs | Behavior | `scripts/check_invariants.py`; post-deploy, cron |
+| **E2E (staging)** | The **full** Playwright suite, mutating workflows included (WF-03/04/05/08), against the staging deployment: `just e2e BASE_URL=…` | — (staging authenticated test data is disposable; suite may reset progress freely) | every staging deploy |
+| **Smoke (prod)** | Read-only subset of e2e against **production** (`just smoke BASE_URL=…`): healthz/readyz, login screen, anonymous session probe, unauthenticated API gate | Mutating workflows and provider login | post-deploy, cron |
+| **Invariant checks** | Data-level truths in any live DB: every published pack's chars **and sentence chars** exist in corpus; no completion rows reference missing users/packs | Behavior | `scripts/check_invariants.py`; post-deploy, cron |
 
 Cross-cutting rules:
 
@@ -104,6 +104,9 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `admin_action` | WF-09 | `action`, `pack_slug`, `authorized` |
 | `deploy_ready` | WF-10 | `database` |
 | `progress_summary_viewed` | WF-11 | `user_id`, `current_streak` |
+| `auth_signed_in` | WF-AUTH-SIGN-IN | `user_id`, `provider` |
+| `auth_signed_out` | WF-AUTH-SIGN-OUT | `user_id`, `provider` |
+| `auth_gate_rejected` | WF-AUTH-GATE | `path` |
 | `invariant_check` | — | `check`, `outcome`, `violations` |
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable.
@@ -117,12 +120,14 @@ Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instr
 | Environment | Verification | Mutations allowed |
 |---|---|---|
 | Local / CI | Full suite against ephemeral per-test databases | Yes (ephemeral) |
-| **Staging** | **Full e2e suite** (`just e2e BASE_URL=…`) after every staging deploy — same tagged workflows, real deployed stack | Yes — staging guest progress is disposable; the suite resets it |
-| Production | `just smoke BASE_URL=…` (read-only: health, WF-02, WF-06) + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | No |
+| **Staging** | **Full e2e suite** (`just e2e BASE_URL=…`) after every staging deploy — same tagged workflows, real deployed stack | Yes — staging authenticated test data is disposable; the suite resets it |
+| Production | `just smoke BASE_URL=…` (read-only: health, login, anonymous auth/session gate) + `uv run python scripts/check_invariants.py --dsn "$DATABASE_URL"` | No |
 
 - **Staging deploy gate**: a staging deploy is done when the full e2e suite passes against it; a prod deploy is done when smoke + invariants pass against it. Both runnable on cron thereafter.
 - **Dashboards** (whatever the sink — Grafana/Loki or hosted): one row per workflow, fed by structured workflow events. "Is WF-03 working in prod?" = nonzero ok-rate, ~zero error-rate, sane p95, zero `strokes_missing`.
-- **Mutating verification lives in staging** (above), not prod: driving WF-03 against prod would pollute the shared guest user's real progress. Revisit prod synthetics when v2 accounts allow a dedicated synthetic user.
+- **Mutating verification lives in staging** (above), not prod: driving WF-03
+  against prod would require a dedicated synthetic account and provider
+  credentials. Revisit prod synthetics when that account exists.
 
 ## 6. Verification gate summary
 
