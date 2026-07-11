@@ -12,7 +12,8 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
     AsyncSession,
 )
 
-from habagou.auth import PROVIDER_NAME, fetch_identity, oauth
+from habagou.auth import fetch_identity, oauth
+from habagou.config import settings
 from habagou.db import get_session
 from habagou.dependencies import get_optional_current_user
 from habagou.dtos.auth import SessionDTO, UserDTO
@@ -25,9 +26,9 @@ logger = structlog.get_logger()
 
 @router.get("/auth/login")
 async def login(request: Request) -> Response:
-    client = oauth.create_client(PROVIDER_NAME)
+    client = oauth.create_client(settings.oidc_provider)
     if client is None:
-        raise RuntimeError(f"auth provider is not registered: {PROVIDER_NAME}")
+        raise RuntimeError(f"auth provider is not registered: {settings.oidc_provider}")
     callback_url = str(request.url_for("auth_callback"))
     return await client.authorize_redirect(request, callback_url)
 
@@ -38,9 +39,11 @@ async def auth_callback(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> Response:
     try:
-        client = oauth.create_client(PROVIDER_NAME)
+        client = oauth.create_client(settings.oidc_provider)
         if client is None:
-            raise RuntimeError(f"auth provider is not registered: {PROVIDER_NAME}")
+            raise RuntimeError(
+                f"auth provider is not registered: {settings.oidc_provider}"
+            )
         token = await client.authorize_access_token(request)
         identity = fetch_identity(token)
         user = await AuthService(session).sign_in(identity)
@@ -53,7 +56,7 @@ async def auth_callback(
         "auth_signed_in",
         workflow="WF-AUTH-SIGN-IN",
         user_id=str(user.id),
-        provider=PROVIDER_NAME,
+        provider=settings.oidc_provider,
     ):
         return RedirectResponse(url="/", status_code=303)
 
@@ -66,7 +69,7 @@ async def logout(request: Request) -> Response:
         "auth_signed_out",
         workflow="WF-AUTH-SIGN-OUT",
         user_id=str(user_id or ""),
-        provider=PROVIDER_NAME,
+        provider=settings.oidc_provider,
     ):
         response = Response(status_code=204)
         response.delete_cookie("session", path="/")
@@ -80,11 +83,11 @@ async def get_auth_session(
 ) -> SessionDTO:
     user = await get_optional_current_user(request, session)
     if user is None:
-        return SessionDTO(authenticated=False, provider=PROVIDER_NAME)
+        return SessionDTO(authenticated=False, provider=settings.oidc_provider)
 
     return SessionDTO(
         authenticated=True,
-        provider=PROVIDER_NAME,
+        provider=settings.oidc_provider,
         user=UserDTO(
             id=user.id,
             username=user.username,

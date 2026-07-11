@@ -63,9 +63,17 @@ restart the Keycloak service after entering the shell. The seeded local login is
 `dev` / `dev`.
 
 Auth-related env values are derived by `scripts/dev_env.py`: `SESSION_SECRET_KEY`,
-`OIDC_ISSUER`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET`.
-`SESSION_SECRET_KEY` is required; the app fails fast when
+`OIDC_PROVIDER=keycloak`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and
+`OIDC_CLIENT_SECRET`. `SESSION_SECRET_KEY` is required; the app fails fast when
 it is unset.
+
+## Using Auth0 or another OIDC provider
+
+Set `OIDC_PROVIDER` to a display name such as `auth0`, set `OIDC_ISSUER` to the
+provider's issuer URL, and provide that application's `OIDC_CLIENT_ID` and
+`OIDC_CLIENT_SECRET`. The application discovers standard OIDC metadata from the
+issuer and continues to identify users by the stable `iss` and `sub` claims.
+Register Habagou's `/auth/callback` URL with the provider.
 
 ## Common Tasks
 

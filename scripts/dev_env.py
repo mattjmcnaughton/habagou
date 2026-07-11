@@ -53,6 +53,8 @@ def derive() -> dict[str, str]:
         "SESSION_SECRET_KEY": os.environ.get(
             "SESSION_SECRET_KEY", f"habagou-dev-session-{instance}"
         ),
+        "OIDC_PROVIDER": os.environ.get("OIDC_PROVIDER", "keycloak"),
+        "OIDC_SCOPES": os.environ.get("OIDC_SCOPES", "openid profile email"),
         "OIDC_ISSUER": os.environ.get(
             "OIDC_ISSUER", f"http://127.0.0.1:{keycloak_port}/realms/habagou"
         ),

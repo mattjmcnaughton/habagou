@@ -36,6 +36,18 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: "Continue with Keycloak (dev)" })).toBeTruthy();
   });
 
+  it("[WF-AUTH-SIGN-IN] names the configured OIDC provider", async () => {
+    server.use(
+      http.get(`${API_V1_BASE}/auth/session`, () =>
+        HttpResponse.json({ authenticated: false, provider: "auth0", user: null }),
+      ),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("link", { name: "Continue with Auth0" })).toBeTruthy();
+  });
+
   it("[WF-11] shows a compact progress link on the home page", async () => {
     render(<App />);
 

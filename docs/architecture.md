@@ -22,9 +22,10 @@ flowchart LR
 - Production/Compose: FastAPI serves the built frontend and `/api/v1`.
 - Health probes are unversioned: `/healthz` and `/readyz`.
 - API resources are versioned under `/api/v1`.
-- Authentication uses an OAuth2/OIDC authorization-code flow and a signed
-  session cookie. Local development uses Keycloak; production can swap provider
-  identity extraction without changing the current-user resolver.
+- Authentication uses a configurable OIDC authorization-code flow and a signed
+  session cookie. Local development uses Keycloak; deployment can select any
+  standards-compliant OIDC provider, including Auth0, without changing the
+  current-user resolver.
 
 ## Backend Modules
 

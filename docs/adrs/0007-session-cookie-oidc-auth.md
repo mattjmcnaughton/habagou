@@ -12,10 +12,11 @@ user, which created a dev/prod fork in the most security-sensitive boundary.
 
 ## Decision
 
-Use authlib's Starlette integration with Keycloak for OIDC sign-in. After the
-callback, Habagou
-provisions or loads a `users` row by `(auth_issuer, auth_subject)` and stores the
-user id in Starlette's signed session cookie.
+Use Authlib's Starlette integration with a configurable OIDC provider. Keycloak
+is the local provider; Auth0 and other standards-compliant OIDC providers use
+their discovery metadata. After the callback, Habagou provisions or loads a
+`users` row by `(auth_issuer, auth_subject)` and stores the user id in
+Starlette's signed session cookie.
 
 All `/api/v1` data endpoints require that session. Health, readiness, auth
 routes, and SPA static files remain open. Admin endpoints continue to use
