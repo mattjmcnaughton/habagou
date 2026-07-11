@@ -50,6 +50,13 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://localhost:5432/habagou"
 
+    session_secret_key: str = ""
+    session_cookie_secure: bool = False
+    oidc_issuer: str = ""
+    oidc_metadata_url: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")

@@ -15,7 +15,6 @@ from sqlalchemy.orm import selectinload
 
 from habagou.events import emit_workflow_event
 from habagou.models import (
-    GUEST_USER_ID,
     ActivityCompletion,
     Character,
     Pack,
@@ -53,7 +52,6 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                     )
                 )
             ).all()
-            guest = await session.get(User, GUEST_USER_ID)
             completions_missing_users = (
                 await session.execute(
                     select(ActivityCompletion.id, ActivityCompletion.user_id)
@@ -72,14 +70,6 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
         await engine.dispose()
 
     violations: list[InvariantViolation] = []
-    if guest is None or guest.username != "guest" or not guest.is_guest:
-        violations.append(
-            InvariantViolation(
-                code="guest_user_missing",
-                message=f"guest user missing or invalid: id={GUEST_USER_ID}",
-            )
-        )
-
     for pack in packs:
         for pack_character in pack.characters:
             if pack_character.character is None:

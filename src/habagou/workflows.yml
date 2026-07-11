@@ -21,3 +21,9 @@ workflows:
     title: Deploy and serve
   - id: WF-11
     title: Review dashboard
+  - id: WF-AUTH-SIGN-IN
+    title: Sign in
+  - id: WF-AUTH-SIGN-OUT
+    title: Sign out
+  - id: WF-AUTH-GATE
+    title: Gate unauthenticated data access

@@ -1,4 +1,4 @@
-"""Seed the guest user and prototype learning packs."""
+"""Seed prototype learning packs."""
 
 from __future__ import annotations
 
@@ -6,18 +6,16 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 
 from habagou import db
 from habagou.events import emit_workflow_event
 from habagou.models import (
-    GUEST_USER_ID,
     Character,
     Pack,
     PackCharacter,
     PackSentence,
     PackStatus,
-    User,
 )
 
 if TYPE_CHECKING:
@@ -66,10 +64,6 @@ class MissingCharactersError(RuntimeError):
             "seed data references characters missing from corpus: "
             f"{''.join(self.missing)}"
         )
-
-
-class GuestUserConflictError(RuntimeError):
-    """Raised when an existing guest row conflicts with the fixed seed UUID."""
 
 
 SEED_PACKS: tuple[SeedPack, ...] = (
@@ -177,33 +171,6 @@ async def validate_required_characters(
     return characters
 
 
-async def upsert_guest(session: AsyncSession) -> None:
-    result = await session.execute(
-        select(User).where(or_(User.id == GUEST_USER_ID, User.username == "guest"))
-    )
-    users = result.scalars().all()
-    by_id = next((user for user in users if user.id == GUEST_USER_ID), None)
-    by_username = next((user for user in users if user.username == "guest"), None)
-
-    if by_username is not None and by_username.id != GUEST_USER_ID:
-        raise GuestUserConflictError(
-            "guest user already exists with id "
-            f"{by_username.id}; expected {GUEST_USER_ID}"
-        )
-    if by_id is not None and by_id.username != "guest":
-        raise GuestUserConflictError(
-            f"user id {GUEST_USER_ID} already belongs to username {by_id.username}"
-        )
-
-    user = by_id or by_username
-    if user is None:
-        user = User(id=GUEST_USER_ID, username="guest", display_name="Guest")
-        session.add(user)
-
-    user.display_name = "Guest"
-    user.is_guest = True
-
-
 async def upsert_pack(
     session: AsyncSession,
     seed_pack: SeedPack,
@@ -252,7 +219,6 @@ async def seed_database(packs: Sequence[SeedPack] = SEED_PACKS) -> SeedResult:
     async with db.async_session() as session:
         required = required_hanzi(packs)
         characters = await validate_required_characters(session, required)
-        await upsert_guest(session)
         for seed_pack in packs:
             await upsert_pack(session, seed_pack, characters)
         await session.commit()

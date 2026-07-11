@@ -9,6 +9,28 @@
 
 ## Endpoints
 
+All `/api/v1` data endpoints require a valid signed session cookie. Missing or
+invalid sessions return the standard error envelope with HTTP 401:
+
+```json
+{
+  "error": {
+    "code": "unauthenticated",
+    "message": "authentication required",
+    "request_id": "..."
+  }
+}
+```
+
+### Auth
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/auth/login` | Start the configured provider login flow |
+| GET | `/auth/callback` | Complete provider callback, provision/load user, and set the session cookie |
+| POST | `/auth/logout` | Clear the local session cookie |
+| GET | `/api/v1/auth/session` | Probe the current session; always returns 200 with `authenticated`, `provider`, and optional `user` |
+
 ### Progress
 
 | Method | Path | Description |

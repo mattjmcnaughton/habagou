@@ -9,11 +9,14 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.sessions import SessionMiddleware
 
+from habagou.auth import register_provider
+from habagou.config import settings
 from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
-from habagou.routers import health
+from habagou.routers import auth, health
 from habagou.routers.v1 import admin, characters, packs, progress
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
@@ -30,6 +33,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    _ensure_session_configured()
+    register_provider(settings)
     app = FastAPI(
         title="habagou",
         description=DESCRIPTION,
@@ -37,11 +42,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret_key,
+        same_site="lax",
+        https_only=settings.session_cookie_secure,
+    )
     setup_telemetry(app)
     _install_request_logging(app)
     _install_error_handlers(app)
 
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(admin.router)
     app.include_router(characters.router)
     app.include_router(packs.router)
@@ -51,6 +63,11 @@ def create_app() -> FastAPI:
     mount_frontend(app)
 
     return app
+
+
+def _ensure_session_configured() -> None:
+    if not settings.session_secret_key:
+        raise RuntimeError("SESSION_SECRET_KEY must be configured")
 
 
 def _install_request_logging(app: FastAPI) -> None:
@@ -124,7 +141,7 @@ def _install_error_handlers(app: FastAPI) -> None:
 
 def _http_error_code(status_code: int) -> str:
     return {
-        401: "unauthorized",
+        401: "unauthenticated",
         404: "not_found",
         422: "validation_error",
         503: "service_unavailable",

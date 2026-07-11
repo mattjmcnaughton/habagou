@@ -8,6 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from habagou.app import create_app
+from habagou.auth import AuthIdentity
 from habagou.config import settings
 from scripts.seed import SeedResult, emit_bootstrap_completed
 
@@ -15,21 +16,25 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 
-EXPECTED_EVENTS: dict[str, tuple[set[str], set[str]]] = {
+EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-01": (
         {"bootstrap_completed"},
         {"chars_imported", "packs_seeded", "migrations_applied"},
+        "ok",
     ),
-    "WF-02": ({"pack_list_served", "pack_served"}, {"pack_count"}),
-    "WF-03": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}),
-    "WF-04": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}),
-    "WF-05": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}),
-    "WF-06": ({"strokes_served", "strokes_missing"}, {"hanzi", "found"}),
-    "WF-07": ({"progress_viewed"}, {"pack_slug", "user_id"}),
-    "WF-08": ({"progress_reset"}, {"pack_slug", "deleted_count", "user_id"}),
-    "WF-09": ({"admin_action"}, {"action", "pack_slug", "authorized"}),
-    "WF-10": ({"deploy_ready"}, {"database"}),
-    "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}),
+    "WF-02": ({"pack_list_served", "pack_served"}, {"pack_count"}, "ok"),
+    "WF-03": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
+    "WF-04": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
+    "WF-05": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
+    "WF-06": ({"strokes_served", "strokes_missing"}, {"hanzi", "found"}, "ok"),
+    "WF-07": ({"progress_viewed"}, {"pack_slug", "user_id"}, "ok"),
+    "WF-08": ({"progress_reset"}, {"pack_slug", "deleted_count", "user_id"}, "ok"),
+    "WF-09": ({"admin_action"}, {"action", "pack_slug", "authorized"}, "ok"),
+    "WF-10": ({"deploy_ready"}, {"database"}, "ok"),
+    "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}, "ok"),
+    "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),
+    "WF-AUTH-SIGN-OUT": ({"auth_signed_out"}, {"user_id", "provider"}, "ok"),
+    "WF-AUTH-GATE": ({"auth_gate_rejected"}, {"path"}, "error"),
 }
 
 
@@ -55,8 +60,22 @@ async def test_all_workflows_emit_verification_events(
         "habagou.events.structlog.get_logger", lambda _name: StubLogger()
     )
     monkeypatch.setattr(settings, "admin_token", "secret")
+    monkeypatch.setattr(
+        "habagou.routers.auth.oauth.create_client",
+        lambda _provider: StubOAuthClient(),
+    )
+    monkeypatch.setattr(
+        "habagou.routers.auth.fetch_identity",
+        lambda *_args: AuthIdentity(
+            issuer="https://issuer.example.test",
+            subject="workflow-subject",
+            username="workflow-user",
+            display_name="Workflow User",
+        ),
+    )
 
     emit_bootstrap_completed(SeedResult(chars=20, packs=4))
+    await _ok(await client.get("/auth/callback"), status_code=303)
     await _ok(await client.get("/api/v1/packs"))
     for activity in ("trace", "match", "sentence"):
         await _ok(
@@ -82,9 +101,15 @@ async def test_all_workflows_emit_verification_events(
         )
     )
     await _ok(await client.get("/readyz"))
+    await _ok(await client.post("/auth/logout"), status_code=204)
+    await _ok(await client.get("/api/v1/packs"), status_code=401)
 
     assert set(EXPECTED_EVENTS) == _workflow_ids_from_catalog()
-    for workflow, (event_names, extra_fields) in EXPECTED_EVENTS.items():
+    for workflow, (
+        event_names,
+        extra_fields,
+        expected_outcome,
+    ) in EXPECTED_EVENTS.items():
         matches = [
             (event, fields)
             for event, fields in emitted
@@ -92,7 +117,7 @@ async def test_all_workflows_emit_verification_events(
         ]
         assert matches, f"{workflow} did not emit one of {sorted(event_names)}"
         event, fields = matches[0]
-        assert fields["outcome"] == "ok", event
+        assert fields["outcome"] == expected_outcome, event
         assert isinstance(fields["duration_ms"], int), event
         assert extra_fields <= fields.keys(), event
 
@@ -102,7 +127,7 @@ async def _ok(response, *, status_code: int = 200) -> None:
 
 
 def _workflow_ids_from_catalog() -> set[str]:
-    pattern = re.compile(r"^\s*-\s*id:\s*(WF-\d{2})\s*$")
+    pattern = re.compile(r"^\s*-\s*id:\s*(WF-[A-Z0-9-]+)\s*$")
     ids: set[str] = set()
     for line in (
         Path("src/habagou/workflows.yml").read_text(encoding="utf-8").splitlines()
@@ -111,3 +136,8 @@ def _workflow_ids_from_catalog() -> set[str]:
         if match:
             ids.add(match.group(1))
     return ids
+
+
+class StubOAuthClient:
+    async def authorize_access_token(self, _request):
+        return {"access_token": "stub"}

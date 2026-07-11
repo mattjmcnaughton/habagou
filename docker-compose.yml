@@ -10,6 +10,10 @@ services:
       LOG_LEVEL: INFO
       LOG_FORMAT: console
       REQUIRE_FRONTEND: "true"
+      SESSION_SECRET_KEY: habagou-compose-session-secret
+      OIDC_ISSUER: http://keycloak:8080/realms/habagou
+      OIDC_CLIENT_ID: habagou
+      OIDC_CLIENT_SECRET: habagou-dev-secret
       XDG_CACHE_HOME: /home/app/.cache
     ports:
       - "8000:8000"
@@ -17,6 +21,8 @@ services:
       - corpus-cache:/home/app/.cache/habagou
     depends_on:
       db:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     healthcheck:
       test:
@@ -35,13 +41,36 @@ services:
       POSTGRES_USER: habagou
       POSTGRES_PASSWORD: habagou
     ports:
-      - "5432:5432"
+      - "${HABAGOU_DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U habagou -d habagou"]
       interval: 2s
       timeout: 5s
+      retries: 30
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./.devenv/state/keycloak/habagou-realm.json:/opt/keycloak/data/import/habagou-realm.json:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /realms/habagou/.well-known/openid-configuration HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3",
+        ]
+      interval: 5s
+      timeout: 10s
       retries: 30
 
 volumes:

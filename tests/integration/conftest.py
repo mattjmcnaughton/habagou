@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import os
 import uuid
 from pathlib import Path
@@ -9,11 +11,13 @@ from typing import TYPE_CHECKING
 import asyncpg
 import pytest
 from alembic.config import Config
+from itsdangerous import TimestampSigner
 from sqlalchemy.engine import URL, make_url
 
 from alembic import command
 from habagou import db
 from habagou.config import settings
+from habagou.models import User
 from scripts.import_stroke_data import archive_path, import_corpus
 from scripts.seed import seed_database
 
@@ -22,6 +26,8 @@ RUN_ID = uuid.uuid4().hex[:12]
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.fixture(scope="session")
@@ -174,3 +180,29 @@ def _database_name(url: URL) -> str:
 
 def _render_url(url: URL) -> str:
     return url.render_as_string(hide_password=False)
+
+
+async def create_user(
+    session: AsyncSession,
+    *,
+    username: str = "test-user",
+    display_name: str = "Test User",
+    email: str | None = "test@example.com",
+) -> User:
+    user = User(
+        username=username,
+        display_name=display_name,
+        is_guest=False,
+        auth_issuer="https://issuer.example.test",
+        auth_subject=uuid.uuid4().hex,
+        email=email,
+    )
+    session.add(user)
+    await session.flush()
+    return user
+
+
+def auth_cookies(user_id: uuid.UUID, secret: str | None = None) -> dict[str, str]:
+    payload = base64.b64encode(json.dumps({"user_id": str(user_id)}).encode("utf-8"))
+    signer = TimestampSigner(str(secret or settings.session_secret_key))
+    return {"session": signer.sign(payload).decode("utf-8")}

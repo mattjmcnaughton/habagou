@@ -12,38 +12,27 @@ test("[WF-10] @smoke verifies health and readiness probes", async ({ request }) 
   await expect(ready.json()).resolves.toEqual({ status: "ready" });
 });
 
-test("[WF-02] @smoke browses the published pack library", async ({ page }) => {
+test("[WF-AUTH-SIGN-IN] @smoke renders the login screen", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Greetings pack, 5 characters, 3 sentences" }),
-  ).toBeVisible();
-  await page.getByRole("link", { name: "Greetings pack, 5 characters, 3 sentences" }).click();
-
-  await expect(page).toHaveURL("/packs/greetings");
-  await expect(page.getByRole("heading", { name: "Greetings" })).toBeVisible();
-  await expect(page.getByTitle("nǐ · you")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to keep your streak" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Continue with/ })).toBeVisible();
 });
 
-test("[WF-06] @smoke fetches immutable stroke data", async ({ request }) => {
+test("[WF-AUTH-GATE] @smoke gates data APIs", async ({ request }) => {
   const response = await request.get("/api/v1/characters/你/strokes");
 
-  expect(response.ok(), await responseText(response)).toBe(true);
-  expect(response.headers()["cache-control"]).toContain("immutable");
-  const body = (await response.json()) as { medians: unknown[]; strokes: unknown[] };
-  expect(body.strokes.length).toBeGreaterThan(0);
-  expect(body.medians.length).toBe(body.strokes.length);
+  expect(response.status(), await responseText(response)).toBe(401);
+  await expect(response.json()).resolves.toMatchObject({
+    error: { code: "unauthenticated" },
+  });
 });
 
-test("[WF-11] @smoke renders the progress dashboard", async ({ page, request }) => {
-  const response = await request.get("/api/v1/progress/summary");
+test("[WF-AUTH-SIGN-IN] @smoke reports an anonymous session", async ({ request }) => {
+  const response = await request.get("/api/v1/auth/session");
+
   expect(response.ok(), await responseText(response)).toBe(true);
-
-  await page.goto("/progress");
-
-  await expect(page.getByText("Activity")).toBeVisible();
-  await expect(page.getByText("Practice now")).toBeVisible();
+  await expect(response.json()).resolves.toMatchObject({ authenticated: false });
 });
 
 async function responseText(response: { text(): Promise<string> }) {

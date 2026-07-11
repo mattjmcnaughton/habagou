@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Superseded in part by [ADR 0007](0007-session-cookie-oidc-auth.md).
 
 ## Context
 
@@ -13,6 +13,9 @@ real accounts arrive.
 
 Model users from day one and resolve all v1 requests to a fixed seeded guest
 user through `get_current_user`.
+
+ADR 0007 replaces the resolver half of this decision with signed session-cookie
+authentication. The user-centric schema decision remains in force.
 
 ## Consequences
 

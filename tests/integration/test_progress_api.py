@@ -10,17 +10,27 @@ from sqlalchemy import delete, func, select
 
 from habagou import db
 from habagou.app import create_app
-from habagou.models import GUEST_USER_ID, ActivityCompletion, ActivityType, User
+from habagou.models import ActivityCompletion, ActivityType, User
 from habagou.repositories import PackRepository
+from tests.integration.conftest import auth_cookies, create_user
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 
 @pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient]:
+async def current_user() -> User:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        await session.commit()
+        return user
+
+
+@pytest.fixture
+async def client(current_user: User) -> AsyncGenerator[AsyncClient]:
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(current_user.id))
         yield client
 
 
@@ -169,9 +179,10 @@ async def test_completion_emits_activity_workflow_events(
 @pytest.mark.workflow("WF-11")
 @pytest.mark.anyio
 async def test_progress_summary_returns_zero_state_for_fresh_user(
+    current_user: User,
     client: AsyncClient,
 ) -> None:
-    await _clear_guest_progress()
+    await _clear_user_progress(current_user.id)
 
     response = await client.get("/api/v1/progress/summary")
 
@@ -192,12 +203,14 @@ async def test_progress_summary_returns_zero_state_for_fresh_user(
 @pytest.mark.workflow("WF-11")
 @pytest.mark.anyio
 async def test_progress_summary_current_streak_anchors_at_yesterday(
+    current_user: User,
     client: AsyncClient,
 ) -> None:
-    await _clear_guest_progress()
+    await _clear_user_progress(current_user.id)
     now = datetime.now(UTC)
     today = now.date()
-    await _record_guest_completions(
+    await _record_user_completions(
+        current_user.id,
         [
             now - timedelta(days=2),
             now - timedelta(days=2, minutes=1),
@@ -206,7 +219,7 @@ async def test_progress_summary_current_streak_anchors_at_yesterday(
             now - timedelta(days=1, minutes=1),
             now - timedelta(days=1, minutes=2),
             now,
-        ]
+        ],
     )
 
     response = await client.get("/api/v1/progress/summary")
@@ -224,11 +237,13 @@ async def test_progress_summary_current_streak_anchors_at_yesterday(
 @pytest.mark.workflow("WF-11")
 @pytest.mark.anyio
 async def test_progress_summary_best_streak_can_exceed_current_streak(
+    current_user: User,
     client: AsyncClient,
 ) -> None:
-    await _clear_guest_progress()
+    await _clear_user_progress(current_user.id)
     now = datetime.now(UTC)
-    await _record_guest_completions(
+    await _record_user_completions(
+        current_user.id,
         [
             now - timedelta(days=8),
             now - timedelta(days=8, minutes=1),
@@ -239,7 +254,7 @@ async def test_progress_summary_best_streak_can_exceed_current_streak(
             now - timedelta(days=1),
             now - timedelta(days=1, minutes=1),
             now - timedelta(days=1, minutes=2),
-        ]
+        ],
     )
 
     response = await client.get("/api/v1/progress/summary")
@@ -253,10 +268,13 @@ async def test_progress_summary_best_streak_can_exceed_current_streak(
 @pytest.mark.workflow("WF-11")
 @pytest.mark.anyio
 async def test_progress_summary_timezone_offset_shifts_today_bucket(
+    current_user: User,
     client: AsyncClient,
 ) -> None:
-    await _clear_guest_progress()
-    await _record_guest_completions([datetime(2026, 7, 5, 1, 30, tzinfo=UTC)])
+    await _clear_user_progress(current_user.id)
+    await _record_user_completions(
+        current_user.id, [datetime(2026, 7, 5, 1, 30, tzinfo=UTC)]
+    )
 
     response = await client.get("/api/v1/progress/summary?tz_offset_minutes=300")
 
@@ -270,7 +288,6 @@ async def test_progress_summary_timezone_offset_shifts_today_bucket(
 @pytest.mark.workflow("WF-11")
 @pytest.mark.anyio
 async def test_progress_summary_scopes_to_current_user(client: AsyncClient) -> None:
-    await _clear_guest_progress()
     await _record_other_user_completion("greetings", ActivityType.TRACE, 400)
 
     response = await client.get("/api/v1/progress/summary")
@@ -302,6 +319,16 @@ async def test_progress_summary_emits_workflow_event(
     assert "current_streak" in events[0][1]
 
 
+@pytest.mark.anyio
+async def test_progress_requires_authentication() -> None:
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/progress/summary")
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "unauthenticated"
+
+
 async def _record_other_user_completion(
     slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
@@ -326,16 +353,16 @@ async def _record_other_user_completion(
         await session.commit()
 
 
-async def _record_guest_completions(completed_at_values: list[datetime]) -> None:
+async def _record_user_completions(
+    user_id: uuid.UUID, completed_at_values: list[datetime]
+) -> None:
     async with db.async_session() as session:
-        user = await session.get(User, GUEST_USER_ID)
         pack = await PackRepository(session).get_by_slug("greetings")
-        assert user is not None
         assert pack is not None
         session.add_all(
             [
                 ActivityCompletion(
-                    user_id=user.id,
+                    user_id=user_id,
                     pack_id=pack.id,
                     activity=ActivityType.TRACE,
                     duration_ms=1000,
@@ -347,16 +374,14 @@ async def _record_guest_completions(completed_at_values: list[datetime]) -> None
         await session.commit()
 
 
-async def _clear_guest_progress() -> None:
+async def _clear_user_progress(user_id: uuid.UUID) -> None:
     async with db.async_session() as session:
-        user = await session.get(User, GUEST_USER_ID)
-        assert user is not None
         for slug in ("greetings", "numbers", "family", "food-drink"):
             pack = await PackRepository(session).get_by_slug(slug)
             assert pack is not None
             result = await session.execute(
                 delete(ActivityCompletion).where(
-                    ActivityCompletion.user_id == user.id,
+                    ActivityCompletion.user_id == user_id,
                     ActivityCompletion.pack_id == pack.id,
                 )
             )

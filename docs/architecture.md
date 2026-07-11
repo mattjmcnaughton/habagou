@@ -10,6 +10,8 @@ production image.
 ```mermaid
 flowchart LR
   Browser["Browser / React app"] --> API["FastAPI app"]
+  Browser --> IdP["OIDC provider (Keycloak in dev)"]
+  API --> IdP
   API --> DB[("Postgres")]
   API --> Static["Built frontend assets"]
   Bootstrap["entrypoint / just bootstrap"] --> DB
@@ -20,6 +22,9 @@ flowchart LR
 - Production/Compose: FastAPI serves the built frontend and `/api/v1`.
 - Health probes are unversioned: `/healthz` and `/readyz`.
 - API resources are versioned under `/api/v1`.
+- Authentication uses an OAuth2/OIDC authorization-code flow and a signed
+  session cookie. Local development uses Keycloak; production can swap provider
+  identity extraction without changing the current-user resolver.
 
 ## Backend Modules
 
@@ -29,6 +34,7 @@ src/habagou/
   config.py            # environment-driven settings
   db.py                # async engine/session factory
   dependencies.py      # current-user resolver
+  auth.py              # authlib provider registration and identity extraction
   events.py            # workflow event logging
   streaks.py           # pure daily-goal streak and milestone calculations
   routers/
@@ -51,7 +57,7 @@ models.
 - `packs`: curated learning packs with lifecycle status and sort order.
 - `pack_characters`: pack-specific pinyin/meaning metadata.
 - `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
-- `users`: v1 has one fixed seeded guest user.
+- `users`: authenticated learner accounts keyed by provider issuer + subject.
 - `activity_completions`: append-only progress events aggregated at read time.
 
 The corpus import and seed pipeline validates that every curated pack and
@@ -94,8 +100,8 @@ on start and serves alongside a Compose Postgres service.
 - `just gate`: formatting, linting, typechecking, and unit tests.
 - `just test-integration`: real Postgres with per-test databases.
 - `just test-e2e`: Playwright browser journeys for WF-02 through WF-08.
-- `just smoke BASE_URL=...`: read-only production smoke for health, WF-02, and
-  WF-06.
+- `just smoke BASE_URL=...`: read-only production smoke for health, login, and
+  anonymous auth/session behavior.
 - `scripts/check_invariants.py --dsn ...`: production data invariant check.
 
 See [docs/verification.md](verification.md) for the workflow catalog and

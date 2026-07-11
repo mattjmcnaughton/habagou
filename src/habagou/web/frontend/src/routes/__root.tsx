@@ -1,6 +1,17 @@
-import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
+import { Link, Outlet, createRootRouteWithContext, redirect } from "@tanstack/react-router";
+import type { RouterContext } from "../app/app";
+import { getAuthSession } from "../lib/api";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ context, location }) => {
+    const session = await context.queryClient.ensureQueryData({
+      queryKey: ["auth", "session"],
+      queryFn: getAuthSession,
+    });
+    if (!session.authenticated && location.pathname !== "/login") {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: () => <Outlet />,
   errorComponent: () => (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">

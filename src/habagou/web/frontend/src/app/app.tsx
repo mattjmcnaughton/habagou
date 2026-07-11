@@ -14,21 +14,29 @@ export function makeQueryClient() {
   });
 }
 
-export const router = createRouter({ routeTree });
+export type RouterContext = {
+  queryClient: QueryClient;
+};
+
+function createAppRouter(queryClient: QueryClient) {
+  return createRouter({ routeTree, context: { queryClient } });
+}
+
+type AppRouter = ReturnType<typeof createAppRouter>;
 
 declare module "@tanstack/react-router" {
   interface Register {
-    router: typeof router;
+    router: AppRouter;
   }
 }
 
 export function App() {
   const [queryClient] = useState(makeQueryClient);
-  const [appRouter] = useState(() => createRouter({ routeTree }));
+  const [router] = useState(() => createAppRouter(queryClient));
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={appRouter} />
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

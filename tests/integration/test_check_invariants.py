@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import delete
 
 from habagou import db
-from habagou.models import GUEST_USER_ID, Character, User
+from habagou.models import Character
 from scripts import check_invariants
 
 
@@ -61,22 +61,6 @@ async def test_missing_sentence_only_character_names_pack_and_character(
     assert events[0][1]["workflow"] == "WF-10"
     assert events[0][1]["outcome"] == "error"
     assert events[0][1]["issue_count"] == 1
-
-
-@pytest.mark.anyio
-async def test_missing_guest_user_fails_invariant_check() -> None:
-    async with db.async_session() as session:
-        await session.execute(delete(User).where(User.id == GUEST_USER_ID))
-        await session.commit()
-
-    violations = await check_invariants.check_invariants(_dsn())
-
-    assert violations == [
-        check_invariants.InvariantViolation(
-            code="guest_user_missing",
-            message=f"guest user missing or invalid: id={GUEST_USER_ID}",
-        )
-    ]
 
 
 def _dsn() -> str:

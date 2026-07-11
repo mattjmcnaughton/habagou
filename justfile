@@ -11,6 +11,7 @@ info:
 
 # Migrate, import corpus data, and seed the local database
 bootstrap:
+    {{_python}} scripts/dev_env.py render-keycloak-realm
     {{_env}} && uv run alembic upgrade head
     {{_env}} && uv run python scripts/import_stroke_data.py
     {{_env}} && uv run python scripts/seed.py
@@ -86,7 +87,7 @@ test-unit-fe:
 
 # Run integration tests
 test-integration:
-    uv run pytest -n auto tests/integration
+    {{_env}} && uv run pytest -n auto tests/integration
 
 # Run e2e tests
 test-e2e: test-e2e-be test-e2e-fe
@@ -97,7 +98,11 @@ test-e2e-be:
 
 # Run frontend browser e2e tests
 test-e2e-fe:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p .artifacts/test-results
+    eval "$({{_python}} scripts/dev_env.py env)"
+    curl -fsS "$OIDC_ISSUER/.well-known/openid-configuration" >/dev/null
     cd {{fe_dir}} && pnpm exec playwright test
 
 # Run the mutating browser suite against an ephemeral local instance or BASE_URL
@@ -115,6 +120,8 @@ e2e BASE_URL_ARG="":
     if [ -n "$base_url" ]; then
         cd {{fe_dir}} && BASE_URL="$base_url" pnpm exec playwright test
     else
+        eval "$({{_python}} scripts/dev_env.py env)"
+        curl -fsS "$OIDC_ISSUER/.well-known/openid-configuration" >/dev/null
         cd {{fe_dir}} && pnpm exec playwright test
     fi
 
@@ -141,12 +148,12 @@ test-external:
 
 # Export the committed OpenAPI artifact
 openapi-export:
-    uv run python scripts/export_openapi.py
+    {{_env}} && uv run python scripts/export_openapi.py
     cd {{fe_dir}} && pnpm exec openapi-typescript ../../../../docs/api/openapi-v1.json -o src/lib/api-types.ts
 
 # Check the committed OpenAPI artifact for drift
 openapi-check:
-    uv run python scripts/export_openapi.py --check
+    {{_env}} && uv run python scripts/export_openapi.py --check
     cd {{fe_dir}} && pnpm exec openapi-typescript ../../../../docs/api/openapi-v1.json -o src/lib/api-types.ts
     git diff --exit-code src/habagou/web/frontend/src/lib/api-types.ts
 
@@ -191,12 +198,15 @@ compose-db-up:
 
 # Start the production-like Compose stack
 compose-up:
+    {{_python}} scripts/dev_env.py render-keycloak-realm
     docker compose up --build
 
 # Run the production-like Compose stack until it is healthy, then verify HTTP serving
 compose-smoke:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_python}} scripts/dev_env.py render-keycloak-realm
+    export HABAGOU_DB_PORT="${HABAGOU_DB_PORT:-15432}"
     docker compose down -v --remove-orphans
     docker compose up --build -d
     cleanup() {
@@ -211,13 +221,8 @@ compose-smoke:
     done
     curl -fsS http://127.0.0.1:8000/readyz | grep -q '"status":"ready"'
     curl -fsS http://127.0.0.1:8000/ | grep -q '<div id="root">'
-    curl -fsS http://127.0.0.1:8000/packs/greetings/trace | grep -q '<div id="root">'
-    curl -fsS http://127.0.0.1:8000/api/v1/packs | grep -q '"slug":"greetings"'
-    curl -fsS http://127.0.0.1:8000/api/v1/characters/%E4%BD%A0/strokes | grep -q '"strokes"'
-    curl -fsS \
-        -H 'content-type: application/json' \
-        -d '{"pack_slug":"greetings","activity":"trace","duration_ms":1000}' \
-        http://127.0.0.1:8000/api/v1/progress/completions | grep -q '"completed":true'
+    curl -fsS http://127.0.0.1:8000/api/v1/auth/session | grep -q '"authenticated":false'
+    curl -sS http://127.0.0.1:8000/api/v1/packs | grep -q '"code":"unauthenticated"'
     docker compose restart app
     for _ in {1..90}; do
         if curl -fsS http://127.0.0.1:8000/readyz >/dev/null; then
@@ -225,7 +230,7 @@ compose-smoke:
         fi
         sleep 2
     done
-    curl -fsS http://127.0.0.1:8000/api/v1/packs/greetings | grep -q '"trace":{"completed":true'
+    curl -fsS http://127.0.0.1:8000/api/v1/auth/session | grep -q '"authenticated":false'
 
 # Stop Compose services
 compose-down:
