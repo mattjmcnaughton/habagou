@@ -5,7 +5,7 @@
 | Status | **Final v1.0** — approved for implementation |
 | Author | Generated from validated [prototype](../prototype/Habagou.html) |
 | Last updated | 2026-07-03 |
-| Changes from v1 | AI pack generation moved to v2 roadmap; anonymous sessions replaced by user-centric model with a shared guest user; Docker Compose confirmed as v1 deploy target |
+| Changes from v1 | AI pack generation moved to v2 roadmap; anonymous sessions replaced by user-centric model with a shared guest user; Fly.io + Neon confirmed as production deploy target |
 
 ## 1. Summary
 
@@ -20,7 +20,7 @@ Most Chinese-learning apps emphasize recognition (flashcards, listening). Handwr
 1. Ship the three prototype activities (Trace, Match, Sentence) with production quality and parity with the validated prototype UX.
 2. Move pack content and the stroke corpus from hardcoded/bundled JS to Postgres, served via API.
 3. Track progress (activity completions) per user. v1 has no login; all traffic maps to a shared **guest user**, but the schema and APIs are user-scoped so accounts drop in later without rework.
-4. Deployable via Docker Compose (single app image + Postgres), with a clean path to Kubernetes later.
+4. Deployable on Fly.io (single app image + managed Postgres), with Docker Compose for local prod-like smoke.
 
 ## 4. Non-goals (v1)
 
@@ -101,5 +101,4 @@ Most Chinese-learning apps emphasize recognition (flashcards, listening). Handwr
 
 - **AI pack generation**: pydantic-ai + OpenAI generates themed packs (characters + pinyin + meanings + sentences), validated against the stroke corpus before publication. The v1 stroke-corpus-in-Postgres decision exists partly to enable this validation.
 - **Accounts**: real users replace the guest default; progress model already user-scoped.
-- **Kubernetes deployment** following Docker Compose v1.
 - Traditional characters; spaced repetition; audio.

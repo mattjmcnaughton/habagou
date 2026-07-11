@@ -124,13 +124,18 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 
 ## Deployment
 
-`docker compose up` builds a single image containing the FastAPI backend serving the built frontend, alongside Postgres. Migrations, corpus import, and seeding run idempotently on startup. Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions builds and pushes `ghcr.io/mattjmcnaughton/habagou` with semver and `latest` tags. A packaged Helm chart lives in [`charts/habagou`](charts/habagou) for Kubernetes deployment (12-factor config, stateless app image, standard Postgres).
+Production runs on [Fly.io](https://fly.io/) with Postgres on [Neon](https://neon.tech/) (Neon project **`habagou`**). The production image is a single container: FastAPI serves the built frontend and `/api/v1`. Migrations, corpus import, and seeding run once per deploy via Fly's `release_command` (not on every app-machine boot).
+
+Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions pushes `ghcr.io/mattjmcnaughton/habagou` (for artifact retention) and runs `flyctl deploy --remote-only` so Fly builds from the release tag. See [docs/deploy.md](docs/deploy.md) for one-time cutover (Neon, `fly secrets`, custom domain + DNS) and ongoing CD.
+
+Locally, `docker compose up` still builds the same image alongside Postgres and bootstraps on container start — useful for a prod-like smoke without Fly.
 
 ## Documentation
 
 - [Product Requirements (PRD)](docs/product/prd.md)
 - [Technical Design (TDD)](docs/technical/tdd.md)
 - [Ticket breakdown](docs/tickets.md)
+- [Deploy runbook](docs/deploy.md) — Fly.io cutover, secrets, DNS/certs, CD
 - [Developer experience](docs/devex.md) — running N local instances, devenv
 - [Verification & validation](docs/verification.md) — workflow catalog, testing strategy, prod instrumentation
 

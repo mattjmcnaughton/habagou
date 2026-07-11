@@ -108,4 +108,6 @@ just compose-up
 Release images are published by GitHub Actions after successful CI on `main`
 when semantic-release creates a new release. The workflow pushes
 `ghcr.io/mattjmcnaughton/habagou` with full semver, major/minor, and `latest`
-tags.
+tags, and (in parallel) deploys to Fly.io via `flyctl deploy --remote-only`
+so Fly builds from the release tag. See [deploy.md](deploy.md) for
+production cutover, secrets, DNS/certs, and how CD works.

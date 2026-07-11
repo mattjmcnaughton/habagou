@@ -81,9 +81,13 @@ The justfile is the stable interface for native, Compose, CI, staging, and
 production validation commands. Agents use `Dockerfile.dev` for a Docker-hosted
 devenv shell so Nix is not installed on the host without explicit approval.
 
-Deployment uses Docker Compose today: one production image for the app plus a
-Postgres service. The app container runs migrations, imports the corpus, seeds
-data idempotently, and starts Uvicorn.
+Deployment uses Fly.io in production: one production image for the app, Postgres
+on Neon (project **`habagou`**, external, SSL). Migrations, corpus import, and seeding run once per
+deploy on the Fly release machine (`release_command`); app machines skip
+bootstrap. See [docs/deploy.md](deploy.md).
+
+Docker Compose remains the local prod-like stack: the app container bootstraps
+on start and serves alongside a Compose Postgres service.
 
 ## Verification
 
