@@ -5,7 +5,7 @@
 | Status | **Final v1.0** — approved for implementation |
 | Depends on | [PRD](../product/prd.md) |
 | Last updated | 2026-07-03 |
-| Changes from v1 | Removed AI generation (agents module, generation jobs, rate limiting, OpenAI config); replaced anonymous sessions with a users table + shared guest user; deployment confirmed Docker Compose with k8s as follow-on |
+| Changes from v1 | Removed AI generation (agents module, generation jobs, rate limiting, OpenAI config); replaced anonymous sessions with a users table + shared guest user; deployment confirmed Docker Compose locally with Fly.io + Neon for production |
 | Changes from v2 | Added devex (see [DEVEX](../devex.md)) and verification strategy (see [VERIFICATION](../verification.md)); OTel scaffolded via template flag; testing section superseded by VERIFICATION |
 
 ## 1. Overview
@@ -182,14 +182,14 @@ Superseded by [VERIFICATION.md](../verification.md), which defines the workflow 
 
 ## 8. Deployment & ops
 
-Human local development does not require Docker — see [DEVEX.md](../devex.md) (devenv, per-checkout Postgres, N instances). Agents use a Docker dev image that installs Nix/devenv inside the image, and Docker Compose remains the deployment packaging.
+Human local development does not require Docker — see [DEVEX.md](../devex.md) (devenv, per-checkout Postgres, N instances). Agents use a Docker dev image that installs Nix/devenv inside the image. Production deploys to Fly.io with Postgres on Neon (project **`habagou`**); Docker Compose remains the local prod-like packaging. See [deploy.md](../deploy.md).
 
 - **Dockerfile** (from template): multi-stage — pnpm build of frontend → uv-installed backend serving `web/frontend/dist` via `serve.py`.
-- **docker-compose.yml**: `app` + `db` (postgres:16, named volume). App entrypoint: `alembic upgrade head` → `import_stroke_data.py` → `seed.py` → uvicorn.
-- **Config**: 12-factor via env (`DATABASE_URL`, `ADMIN_TOKEN`, `LOG_LEVEL`); `.env.example` enumerates everything. No secrets beyond `ADMIN_TOKEN` in v1.
-- **k8s later**: the app is already stateless with env-only config and standard health probes (`/healthz`, `/readyz`); the entrypoint's migrate+seed step becomes an init container/Job. No v1 design change required.
-- **Logging & metrics**: structlog JSON (template default) with request logging including resolved user id; workflow events and OTel counters via `events.py` per VERIFICATION §5. OTLP export active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
-- **CI**: template GitHub Actions — fmt, lint, typecheck (ruff/ty/Biome/tsc), unit on every PR; integration with a Postgres service container; e2e on PRs to main.
+- **docker-compose.yml**: `app` + `db` (postgres:16, named volume). App entrypoint bootstraps (migrate → import → seed) when `HABAGOU_RUN_BOOTSTRAP` defaults to `1`, then uvicorn.
+- **Fly.io**: `fly.toml` scale-to-zero public HTTP service; `release_command` runs bootstrap once per deploy; app machines set `HABAGOU_RUN_BOOTSTRAP=0`. Secrets via `fly secrets` (`DATABASE_URL`, optional `ADMIN_TOKEN`).
+- **Config**: 12-factor via env (`DATABASE_URL`, `ADMIN_TOKEN`, `LOG_LEVEL`); `.env.example` enumerates everything. No secrets beyond `ADMIN_TOKEN` / `DATABASE_URL` in v1.
+- **Logging & metrics**: structlog JSON (template default) with request logging including resolved user id; workflow events and OTel counters via `events.py` per VERIFICATION §5. OTLP export active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (left empty in production for now).
+- **CI**: GitHub Actions — fmt, lint, typecheck (ruff/ty/Biome/tsc), unit on every PR; integration with a Postgres service container; e2e on PRs to main. Release workflow publishes a GHCR image and `flyctl deploy --remote-only`s (Fly builds).
 
 ## 9. Licensing
 

@@ -1,6 +1,39 @@
 """Application configuration via environment variables."""
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine.url import make_url
+
+# libpq/Neon query params that SQLAlchemy passes through as asyncpg connect()
+# kwargs — asyncpg rejects them (TypeError: unexpected keyword argument).
+_ASYNCPG_UNSUPPORTED_QUERY_KEYS = ("channel_binding", "sslmode")
+
+
+def normalize_database_url(url: str) -> str:
+    """Rewrite Neon/libpq-style URLs for SQLAlchemy asyncpg.
+
+    - ``postgresql://`` / ``postgres://`` → ``postgresql+asyncpg://``
+    - ``sslmode=`` → ``ssl=`` (asyncpg rejects ``sslmode``)
+    - drop ``channel_binding`` (Neon default; asyncpg rejects it)
+    """
+    parsed = make_url(url)
+    if parsed.drivername in ("postgresql", "postgres"):
+        parsed = parsed.set(drivername="postgresql+asyncpg")
+
+    query = dict(parsed.query)
+    ssl_value: str | None = None
+    raw_ssl = query.get("ssl")
+    if raw_ssl is not None:
+        ssl_value = raw_ssl[0] if isinstance(raw_ssl, (list, tuple)) else raw_ssl
+    if "sslmode" in query:
+        raw_mode = query["sslmode"]
+        ssl_value = raw_mode[0] if isinstance(raw_mode, (list, tuple)) else raw_mode
+
+    parsed = parsed.difference_update_query(list(_ASYNCPG_UNSUPPORTED_QUERY_KEYS))
+    if ssl_value is not None and "ssl" not in dict(parsed.query):
+        parsed = parsed.update_query_dict({"ssl": ssl_value})
+
+    return parsed.render_as_string(hide_password=False)
 
 
 class Settings(BaseSettings):
@@ -18,6 +51,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://localhost:5432/habagou"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_database_url(cls, value: str) -> str:
+        return normalize_database_url(value)
 
 
 settings = Settings()

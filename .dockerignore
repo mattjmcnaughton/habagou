@@ -53,6 +53,12 @@ tests/
 docs/
 .github/
 
+# Local / agent scratch (keep Fly remote-build context small)
+.agentic/
+.devenv/
+.artifacts/
+.pnpm-store/
+
 # Frontend
 **/node_modules/
 **/.vite/
