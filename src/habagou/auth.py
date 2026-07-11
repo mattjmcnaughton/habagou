@@ -1,4 +1,4 @@
-"""OAuth/OIDC provider configuration and identity extraction."""
+"""Configurable OIDC provider registration and identity extraction."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from habagou.config import Settings
 
 oauth = OAuth()
-PROVIDER_NAME = "keycloak"
 
 
 @dataclass(frozen=True)
@@ -24,25 +23,25 @@ class AuthIdentity:
 
 
 def register_provider(settings: Settings) -> None:
-    """Register Habagou's Keycloak OIDC provider."""
+    """Register the configured OIDC provider through discovery metadata."""
     metadata_url = settings.oidc_metadata_url or (
         f"{settings.oidc_issuer.rstrip('/')}/.well-known/openid-configuration"
     )
     oauth.register(
-        name=PROVIDER_NAME,
+        name=settings.oidc_provider,
         server_metadata_url=metadata_url,
         client_id=settings.oidc_client_id,
         client_secret=settings.oidc_client_secret,
-        client_kwargs={"scope": "openid profile email"},
+        client_kwargs={"scope": settings.oidc_scopes},
     )
 
 
 def fetch_identity(token: dict[str, Any]) -> AuthIdentity:
-    """Map a Keycloak OIDC token to the app's stable identity shape."""
-    return _keycloak_identity(token)
+    """Map standard OIDC claims to the app's stable identity shape."""
+    return _oidc_identity(token)
 
 
-def _keycloak_identity(token: dict[str, Any]) -> AuthIdentity:
+def _oidc_identity(token: dict[str, Any]) -> AuthIdentity:
     claims = token.get("userinfo") or token.get("id_token") or {}
     issuer = str(claims.get("iss") or "")
     subject = str(claims.get("sub") or "")

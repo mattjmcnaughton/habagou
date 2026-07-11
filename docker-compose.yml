@@ -11,6 +11,7 @@ services:
       LOG_FORMAT: console
       REQUIRE_FRONTEND: "true"
       SESSION_SECRET_KEY: habagou-compose-session-secret
+      OIDC_PROVIDER: keycloak
       OIDC_ISSUER: http://keycloak:8080/realms/habagou
       OIDC_CLIENT_ID: habagou
       OIDC_CLIENT_SECRET: habagou-dev-secret

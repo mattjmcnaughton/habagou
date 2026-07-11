@@ -20,6 +20,8 @@ function Login() {
     return undefined;
   }, [navigate, session.data?.authenticated]);
 
+  const providerLabel = formatProviderLabel(session.data?.provider ?? "keycloak");
+
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[440px] flex-col justify-center">
@@ -52,7 +54,7 @@ function Login() {
                 className="mt-6 inline-flex w-full items-center justify-center rounded-md border border-white/15 bg-ink px-4 py-3 text-sm font-bold text-porcelain transition hover:-translate-y-0.5 hover:border-jade/40 hover:bg-white/[0.04]"
                 href="/auth/login"
               >
-                Continue with Keycloak (dev)
+                Continue with {providerLabel}
               </a>
               <p className="mx-auto mt-4 max-w-[18rem] text-xs leading-5 text-mist">
                 We only read your public profile and email. No repos, no writes.
@@ -65,6 +67,14 @@ function Login() {
       </div>
     </main>
   );
+}
+
+function formatProviderLabel(provider: string) {
+  const labels: Record<string, string> = {
+    auth0: "Auth0",
+    keycloak: "Keycloak (dev)",
+  };
+  return labels[provider.toLowerCase()] ?? provider;
 }
 
 function SignedInState({ username }: { username: string }) {

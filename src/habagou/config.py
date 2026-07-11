@@ -52,6 +52,8 @@ class Settings(BaseSettings):
 
     session_secret_key: str = ""
     session_cookie_secure: bool = False
+    oidc_provider: str = "keycloak"
+    oidc_scopes: str = "openid profile email"
     oidc_issuer: str = ""
     oidc_metadata_url: str = ""
     oidc_client_id: str = ""
