@@ -51,6 +51,21 @@ tests/
   e2e/                      # End-to-end tests
 ```
 
+## Local Development: devenv vs Docker Compose
+
+- **Default = devenv.** Day-to-day work, bootstrap, `just dev`, and local e2e
+  (`just test-e2e` / `just e2e` without `BASE_URL`) use devenv for Postgres +
+  Keycloak. Typical loop: `devenv up -d` → `devenv shell` → `just bootstrap` →
+  `just dev`. See `docs/devex.md` and `docs/development.md`.
+- **Docker Compose is not the daily loop.** Use it only for production-image
+  smoke: `just compose-up` / `just compose-smoke` (and the CI `compose-smoke`
+  job). That path builds the real app image with Compose Postgres + Keycloak.
+- Do **not** start Compose for ordinary development or default local e2e.
+  Optional escape hatches (`just compose-db-up`, pointing `just e2e BASE_URL=…`
+  at a Compose stack) exist, but devenv is the supported default.
+- Agents without host Nix: `just dev-shell-docker` (still devenv inside
+  `Dockerfile.dev`), not Compose.
+
 ## Key Conventions
 
 - Source code lives in `src/habagou/` (src layout).
@@ -66,4 +81,5 @@ tests/
 
 - `docs/architecture.md` — read before adding new modules or changing project structure
 - `docs/development.md` — read for environment setup, debugging, or common tasks
+- `docs/devex.md` — devenv primary loop vs Compose smoke role
 - `docs/api.md` — API endpoint reference

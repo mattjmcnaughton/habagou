@@ -112,10 +112,12 @@ just bootstrap           # inside the container: migrate/import/seed
 just dev                 # inside the container: backend + frontend
 ```
 
-And the full prod-like stack (built image + db):
+And the full prod-like stack (built image + db) — **smoke only**, not the
+daily loop or default local e2e:
 
 ```sh
 just compose-up             # wraps docker compose up --build
+just compose-smoke          # CI-style probes against that stack
 ```
 
 Details that make this pleasant:
@@ -127,14 +129,16 @@ Details that make this pleasant:
 
 ## 5. Relationship to Docker Compose
 
-Compose is a **supported peer**, not just deploy packaging. Three sanctioned modes, all sharing the justfile:
+Compose is **not** the primary development loop. Day-to-day work and default
+local e2e use devenv. Compose exists for **production-image smoke** and a couple
+of optional escape hatches — all still sharing the justfile:
 
 | Mode | Database | App processes | Use |
 |---|---|---|---|
-| devenv (default) | devenv per-checkout cluster, Unix socket | native, `just dev` | day-to-day human dev, N instances |
+| devenv (default) | devenv per-checkout cluster, Unix socket | native, `just dev` | day-to-day human dev, N instances, default local e2e |
 | Docker dev shell | devenv per-checkout cluster, Unix socket | container shell, `just dev` | agent dev without host Nix |
-| Compose db + native app | `docker compose up -d db` (TCP :5432) | native, `just dev` | devs who prefer Docker over Nix; one instance at a time unless the port is remapped |
-| Full Compose | Compose | Compose (built backend image) | prod-like verification scaffold; frontend bundling and startup import/seed land in HAB-040 |
+| Full Compose | Compose Postgres + Keycloak | Compose (built backend image) | local / CI prod-image smoke (`just compose-up` / `compose-smoke`) |
+| Compose db + native app | `docker compose up -d db` (TCP :5432) | native, `just dev` | optional escape hatch when preferring Docker over Nix |
 
 Nothing in the devenv setup leaks into the image; the app only ever reads `DATABASE_URL`.
 

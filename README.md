@@ -73,7 +73,8 @@ Agent/container path:
 just dev-shell-docker   # builds Dockerfile.dev, then enters devenv shell
 ```
 
-Prefer Docker for the database? Same targets, different `DATABASE_URL`:
+Prefer Docker for the database instead of devenv? Optional escape hatch (not
+the default; day-to-day and local e2e stay on devenv):
 
 ```sh
 just compose-db-up
@@ -113,8 +114,9 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 | `just bootstrap` | Migrate, import corpus data, and seed |
 | `just dev` | Backend + frontend dev servers |
 | `just dev-shell-docker` | Docker-based devenv shell for agents |
-| `just compose-db-up` | Compose Postgres for native app development |
-| `just compose-up` | Full prod-like stack via Docker Compose |
+| `just compose-db-up` | Optional Docker Postgres (escape hatch; not default) |
+| `just compose-up` | Prod-image smoke stack (not day-to-day / default e2e) |
+| `just compose-smoke` | CI-style Compose health/SPA/auth smoke |
 | `just gate` | Fast pre-push check (fmt + lint + typecheck + unit tests) |
 | `just gate-expensive` | gate + integration + e2e tests |
 | `just info` | Show this instance's ports and database |
@@ -128,7 +130,9 @@ Production runs on [Fly.io](https://fly.io/) with Postgres on [Neon](https://neo
 
 Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions pushes `ghcr.io/mattjmcnaughton/habagou` (for artifact retention) and runs `flyctl deploy --remote-only` so Fly builds from the release tag. See [docs/deploy.md](docs/deploy.md) for one-time cutover (Neon, `fly secrets`, custom domain + DNS) and ongoing CD.
 
-Locally, `docker compose up` still builds the same image alongside Postgres and bootstraps on container start — useful for a prod-like smoke without Fly.
+Locally, `just compose-up` / `just compose-smoke` build the same production
+image alongside Postgres and Keycloak for **prod-image smoke** without Fly —
+not for ordinary development or default local e2e (those use devenv).
 
 ## Documentation
 
