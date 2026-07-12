@@ -93,8 +93,10 @@ on Neon (project **`habagou`**, external, SSL). Migrations, corpus import, and s
 deploy on the Fly release machine (`release_command`); app machines skip
 bootstrap. See [docs/deploy.md](deploy.md).
 
-Docker Compose remains the local prod-like stack: the app container bootstraps
-on start and serves alongside a Compose Postgres service.
+Docker Compose remains available only as the local **production-image smoke**
+stack (`just compose-up` / `just compose-smoke`): the app container bootstraps
+on start alongside Compose Postgres and Keycloak. It is not the day-to-day or
+default local e2e path — that stays on devenv.
 
 ## Verification
 

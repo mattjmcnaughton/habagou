@@ -187,7 +187,7 @@ dev:
     just dev-fe &
     wait
 
-# Start the Compose-managed database for native app development
+# Start the Compose-managed database for native app development (optional escape hatch)
 compose-db-up:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -196,12 +196,12 @@ compose-db-up:
         sleep 1
     done
 
-# Start the production-like Compose stack
+# Start the production-image Compose smoke stack (not day-to-day / default e2e)
 compose-up:
     {{_python}} scripts/dev_env.py render-keycloak-realm
     docker compose up --build
 
-# Run the production-like Compose stack until it is healthy, then verify HTTP serving
+# Run the production-image Compose stack until it is healthy, then verify HTTP serving
 compose-smoke:
     #!/usr/bin/env bash
     set -euo pipefail

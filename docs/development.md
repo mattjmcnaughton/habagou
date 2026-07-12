@@ -2,24 +2,25 @@
 
 ## Prerequisites
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- [just](https://just.systems/)
-- [Docker](https://www.docker.com/) (optional: Compose database and production-like stack)
-- [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/) (for frontend)
+- [Nix](https://nixos.org/) + [devenv](https://devenv.sh/) (primary local path)
+- Python 3.12+, [uv](https://docs.astral.sh/uv/), [just](https://just.systems/),
+  Node 22 + [pnpm](https://pnpm.io/) — provided by `devenv shell` when using
+  the primary path
+- [Docker](https://www.docker.com/) — only for production-image smoke
+  (`just compose-smoke` / `just compose-up`) or the optional Compose-db escape
+  hatch; not required for day-to-day development or default local e2e
 
-## Setup
+## Setup (devenv — default)
 
 ```sh
-# Install backend dependencies
-uv sync --dev
-
-# Copy environment file
-cp .env.example .env
-
-# Install frontend dependencies (after scaffolding)
-cd src/habagou/web/frontend && pnpm install
+devenv up -d          # Postgres + Keycloak for this checkout
+devenv shell          # pinned toolchain
+just bootstrap        # migrate → import → seed
+just info             # ports, DATABASE_URL, Keycloak issuer
 ```
+
+Dependencies install inside the devenv shell (`uv sync`, frontend `pnpm
+install`) as part of bootstrap / first use. Prefer this path over Compose.
 
 ## Frontend Scaffolding
 
@@ -31,13 +32,10 @@ copier copy --trust path/to/templates/frontend-react src/habagou/web/frontend
 
 ## Database
 
-```sh
-# Start Postgres through Compose
-just compose-db-up
-
-# Run migrations
-uv run alembic upgrade head
-```
+devenv owns the per-checkout Postgres cluster (Unix socket). `just bootstrap`
+runs migrations against `DATABASE_URL` from the devenv shell. Do not use
+`just compose-db-up` unless you intentionally want Docker Postgres without Nix
+— see [devex.md](devex.md).
 
 ## Running Locally
 
@@ -115,24 +113,29 @@ Tests are organized by type:
 Use `@pytest.mark.external` for tests that hit external services. These run via `just test-external`.
 
 Frontend e2e tests drive the real Keycloak form. `just test-e2e-fe` fails fast
-if the derived Keycloak issuer is not reachable; start devenv services first.
+if the derived Keycloak issuer is not reachable; start **devenv** services
+first (`devenv up -d`). Default local e2e does not use Docker Compose.
 
-## Docker
+## Docker Compose (production-image smoke only)
+
+Compose is **not** the daily development or default e2e path. Use it when you
+need to exercise the built production image locally (same role as the CI
+`compose-smoke` job):
 
 ```sh
-# Build image
-docker build -t habagou .
-
-# Run container
-docker run -p 8000:8000 habagou
-
-# Or use the project wrapper
-just compose-up
+just compose-up       # build + run app image with Compose Postgres + Keycloak
+just compose-smoke    # up, health/SPA/auth probes, restart check, tear down
 ```
 
 `just compose-up` renders the dev Keycloak realm and starts app, Postgres, and
 Keycloak. `just compose-smoke` verifies health, the SPA shell, the anonymous
 session probe, and that data APIs return 401 without a session.
+
+To build the image alone (without Compose orchestration):
+
+```sh
+docker build -t habagou .
+```
 
 Release images are published by GitHub Actions after successful CI on `main`
 when semantic-release creates a new release. The workflow pushes
