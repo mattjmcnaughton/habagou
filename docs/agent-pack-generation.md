@@ -169,72 +169,167 @@ list_visible, ADR              offline test tiers, external test, ADR
 
 Ordered for an implementing agent. Every ticket passes `just gate` before merge; feature tests carry workflow tags. **[FE]**/**[BE]** touch one side. Continues numbering from HAB-053.
 
+Each ticket is one logical change with its own AC; where two must land in the same commit to keep `just gate` green, that's stated in Deps. Numbers are contiguous within an epic but PRs merge per-epic.
+
 ### Epic 6 — Pack ownership cleanup (PR 1)
 
-#### HAB-060 — [BE] `Pack.owner_id` + migration
-Deps: none (builds on shipped schema).
-Add nullable `owner_id` FK → `users.id` on `packs` (`NULL` = global). Alembic migration with clean downgrade. Backfill existing rows to `NULL`.
-**AC:** upgrade + downgrade clean; existing four packs are `owner_id IS NULL`; integration test round-trips a global pack and an owned pack.
+**Admin removal** (first — admin is the only runtime writer of non-`PUBLISHED` status, so it must go before status can be dropped).
 
-#### HAB-061 — [BE] Drop `PackStatus`
-Deps: HAB-060, HAB-063 (admin removal — the other status writer).
-Remove `status` column + `pack_status` enum type (migration). Delete `PackStatus` from `models.py`. Update `seed.py` to stop setting status.
-**AC:** migration drops column + enum type with clean downgrade; `grep PackStatus src/` returns nothing; seed still idempotent; suite green.
+#### HAB-060 — [BE] Remove admin HTTP API
+Deps: none.
+Delete `routers/v1/admin.py` and unregister the router in `app.py`. Delete `tests/integration/test_admin_api.py` in the same commit (its endpoints are gone).
+**AC:** no `/api/v1/admin/*` routes in the OpenAPI schema; app boots; suite green.
 
-#### HAB-062 — [BE] Ownership-based visibility & UUID addressing
-Deps: HAB-060, HAB-061.
-`list_published` → `list_visible(user)` = `owner_id IS NULL OR owner_id == user.id`. `get_by_slug` → `get_by_id`; add `get_visible(pack_id, user)`. Rewrite the `packs.py` / `progress.py` gates from status to ownership. Route params slug → `{pack_id}` on `/api/v1/packs/*` and `/api/v1/progress/packs/*`. Demote `slug` to nullable + partial unique index `WHERE slug IS NOT NULL`.
-**AC:** a user sees global + own packs, not others'; requesting another user's pack by id → 404; progress on an unowned/foreign pack rejected; OpenAPI drift check updated.
+#### HAB-061 — [BE] Remove admin service, DTOs, and config
+Deps: HAB-060.
+Delete `services/admin.py`, `dtos/admin.py`; remove `admin_token` from `config.py` and `.env.example`.
+**AC:** `grep -rin admin_token src scripts` clean; `grep -rin AdminService src` clean; suite green.
 
-#### HAB-063 — [BE] Remove admin subsystem
-Deps: none (can land early in the PR).
-Delete `dtos/admin.py`, `services/admin.py`, `routers/v1/admin.py`, `test_admin_api.py`; remove `admin_token` from `config.py` + `.env.example`; unwire from `app.py`; drop `WF-09` from `test_workflow_event_coverage.py`.
-**AC:** `grep -ri admin_token src tests scripts` clean (except generated types, regenerated); no `/api/v1/admin/*` routes in OpenAPI; suite green.
+#### HAB-062 — [BE] Retire the WF-09 admin workflow event
+Deps: HAB-061.
+Remove the `WF-09` admin_action expectation from `test_workflow_event_coverage.py` and any lingering event references.
+**AC:** workflow-event coverage test passes without WF-09; no `WF-09`/`admin_action` references remain.
 
-#### HAB-064 — [FE] UUID pack addressing
-Deps: HAB-062.
-Regenerate `api-types.ts`; switch pack navigation/links/progress calls from slug to `pack_id`. Remove any admin-API surface if referenced.
-**AC:** catalog + trace + progress flows work addressing by id; e2e green; no slug in pack routes.
+**Ownership column & write path.**
 
-#### HAB-065 — ADR: pack ownership & status removal
-Deps: HAB-060–064.
-Write `docs/adrs/00NN-pack-ownership.md`: two-tier ownership, UUID addressing, `PackStatus` removal, admin removal. Note it supersedes the `packs.status` forward-compat obligation in `tickets.md`.
+#### HAB-063 — [BE] Add `Pack.owner_id` column + migration
+Deps: none.
+Add nullable `owner_id` FK → `users.id` on `packs` (`NULL` = global). Alembic migration, clean downgrade, existing rows backfilled `NULL`. Add the ORM relationship. No behavior change yet.
+**AC:** upgrade + downgrade clean; existing four packs are `owner_id IS NULL`; model round-trips a global and an owned pack.
+
+#### HAB-064 — [BE] `PackRepository.create(owner_id=...)` write path
+Deps: HAB-063.
+Add a create method that persists a pack + its `PackCharacter`/`PackSentence` rows with an `owner_id` (mirrors the seed write path). Not yet wired to any endpoint.
+**AC:** integration test creates an owned pack with characters + sentences and reads it back.
+
+**Status removal** (gates must move to ownership *before* the column is dropped).
+
+#### HAB-065 — [BE] Rewrite visibility gates from status → ownership
+Deps: HAB-063.
+In `packs.py` and `progress.py`, replace `status == PUBLISHED` checks with "global (`owner_id IS NULL`) or owned by caller". Status column stays for now.
+**AC:** a user can view/trace global packs and their own; a foreign owned pack → 404; progress on a foreign pack rejected.
+
+#### HAB-066 — [BE] `list_published` → `list_visible(user)`
+Deps: HAB-065.
+Rename/replace the catalog query to return global ∪ caller-owned packs. Update `PackService` + callers.
+**AC:** catalog returns global + own, excludes other users' packs; existing catalog integration tests updated and green.
+
+#### HAB-067 — [BE] Drop `status` column + `pack_status` enum + `PackStatus`
+Deps: HAB-065, HAB-066, HAB-062 (last status writer gone).
+Migration drops the column and the `pack_status` Postgres enum type (clean downgrade). Delete `PackStatus` from `models.py`; drop it from `__all__`; update `seed.py` to stop setting status.
+**AC:** `grep -rn PackStatus src` clean; migration up/down clean; seed idempotent; suite green.
+
+**UUID addressing & slug demotion.**
+
+#### HAB-068 — [BE] Repository: address packs by id
+Deps: HAB-063.
+`get_by_slug` → `get_by_id(pack_id)`; add owner-scoped `get_visible(pack_id, user)`. Update `set_sort_order` and other slug-keyed methods that survive.
+**AC:** repo fetches by id; `get_visible` returns global/own, `None` for foreign; unit/integration green.
+
+#### HAB-069 — [BE] Route params slug → `{pack_id}`
+Deps: HAB-068.
+Change `/api/v1/packs/{pack_id}` and `/api/v1/progress/packs/{pack_id}` route params and handlers to UUID. Regenerate OpenAPI; update the drift check.
+**AC:** endpoints resolve by id; foreign/unknown id → 404; OpenAPI drift check green.
+
+#### HAB-070 — [BE] Demote `slug` to nullable seed key
+Deps: HAB-069.
+Migration: `slug` nullable + partial unique index `WHERE slug IS NOT NULL`. Confirm `seed.py` still upserts by slug and stays idempotent. Slug no longer appears in any route.
+**AC:** migration up/down clean; seed re-run idempotent; a user pack with `slug IS NULL` persists; no slug in the API surface.
+
+**Frontend & ADR.**
+
+#### HAB-071 — [FE] Address packs by id
+Deps: HAB-069.
+Regenerate `api-types.ts`; switch pack navigation/links/progress calls from slug to `pack_id`. Confirm no hand-written admin-API references remain (only generated types referenced admin).
+**AC:** catalog + trace + progress flows work by id; e2e green; no slug in pack routes.
+
+#### HAB-072 — ADR: pack ownership & status removal
+Deps: HAB-060–071.
+Write `docs/adrs/00NN-pack-ownership.md`: two-tier ownership, UUID addressing, `PackStatus` removal, admin removal — one coherent decision. Note it supersedes the `packs.status` forward-compat obligation in `tickets.md`.
 **AC:** ADR merged; `tickets.md` scope note updated.
 
 ### Epic 7 — Agent pack generation (PR 2)
 
-#### HAB-070 — [BE] pydantic-ai + provider config
-Deps: HAB-062. Also revises ADR 0004 (HAB-076).
-Add `pydantic-ai` dependency; provider/model + API-key settings in `config.py` (env-driven, no key in repo). No generation logic yet.
-**AC:** `uv sync` resolves; app boots without a key configured (generation endpoint returns a clear "disabled" error, mirroring how admin returned 503 when unconfigured).
+**Foundations.**
 
-#### HAB-071 — [BE] Corpus-grounding tool + `PackDraft` schema
-Deps: HAB-070, HAB-013 (`CharacterRepository.bulk_exists`).
-Define `PackDraft` `output_type`. Implement the `find_characters` agent tool over `bulk_exists`, returning matches + the dropped set. Output validator rejects non-corpus hanzi.
-**AC (unit, `TestModel`/`FunctionModel`, no network):** validator strips/errrors on a non-corpus hanzi and the model retries; tool returns only real rows; coverage shortfall surfaced in the draft.
+#### HAB-073 — [BE] Add `pydantic-ai` dependency
+Deps: HAB-066 (ownership visibility landed).
+Add `pydantic-ai` to `pyproject.toml`; `uv lock`. No app code yet.
+**AC:** `uv sync --frozen` resolves; import smoke test passes; `just gate` green.
 
-#### HAB-072 — [BE] Generation service + injected agent
-Deps: HAB-071.
-`services/pack_generation.py` holding `Agent[GenerationDeps, PackDraft]`, exposed via FastAPI dependency `get_generation_agent`. Multi-turn: accept prior message history.
-**AC:** service returns a valid `PackDraft` under a stubbed model; dependency is overridable in tests.
-
-#### HAB-073 — [BE] Generation + save endpoints
-Deps: HAB-072.
-`routers/v1/generation.py`: a generate/chat endpoint (topic + history → draft) and a save endpoint (draft → persisted owned pack via `PackRepository.create(owner_id=current_user.id)`). Current-user gated; rate-limited. New workflow event for the generate/save actions.
-**AC (integration, Postgres, stubbed model via `dependency_overrides`):** generate returns a corpus-valid draft; save persists pack + characters + sentences owned by the caller; saved pack then appears in that user's `list_visible` and is traceable; a second user cannot see it.
-
-#### HAB-074 — [BE] `ALLOW_MODEL_REQUESTS=False` guard + external contract test
+#### HAB-074 — [BE] Provider/model/key config
 Deps: HAB-073.
-Set `models.ALLOW_MODEL_REQUESTS = False` in shared conftest. Add one `@pytest.mark.external` test running the real provider against the real prompt + `output_type`.
-**AC:** any un-stubbed model request in the normal suite raises; `just test-external` exercises the real call; PR CI (`just gate` + integration + e2e) makes zero real calls.
+Add provider, model, and API-key settings to `config.py` (env-driven, no key in repo). A helper reports whether generation is configured.
+**AC:** app boots with keys unset; the "configured?" helper returns false when unset, true when set; no secret committed.
 
-#### HAB-075 — [FE] Generation chat UI
-Deps: HAB-073, HAB-064.
-Chat surface: topic input, streamed/rendered draft preview, "make it harder"-style refinement turns carrying history, Save. Saved pack lands in the user's catalog.
-**AC:** e2e (agent stubbed via dependency override) drives generate → refine → save → trace; deterministic, no network.
+#### HAB-075 — [BE] `PackDraft` output schema
+Deps: HAB-073.
+Define the `PackDraft` `output_type` DTO (title, characters[hanzi/pinyin/meaning], optional sentences, coverage note).
+**AC:** schema validates a well-formed draft and rejects malformed input; unit test covers both.
 
-#### HAB-076 — ADR: revise 0004 (AI generation shipped)
-Deps: HAB-070–075.
+**Grounding.**
+
+#### HAB-076 — [BE] `find_characters` grounding tool
+Deps: HAB-075, HAB-013 (`CharacterRepository.bulk_exists`).
+Implement the agent tool over `bulk_exists`: given candidate hanzi, return real matches (with pinyin/meaning) plus the dropped set.
+**AC (unit):** tool returns only corpus rows and surfaces the dropped candidates; no network.
+
+#### HAB-077 — [BE] Output validator rejects non-corpus hanzi
+Deps: HAB-075, HAB-076.
+Add an `output_validator` on the agent that fails validation for any hanzi absent from `Character`, triggering a model retry.
+**AC (unit, `FunctionModel`):** a draft containing a non-corpus hanzi is rejected and retried; a valid draft passes; no network.
+
+**Service & endpoints.**
+
+#### HAB-078 — [BE] Generation service + injected agent dependency
+Deps: HAB-074, HAB-077.
+`services/pack_generation.py` holding `Agent[GenerationDeps, PackDraft]` with the grounding tool + validator; exposed via FastAPI dependency `get_generation_agent`.
+**AC:** service returns a valid `PackDraft` under `TestModel`; the dependency is overridable via `app.dependency_overrides`.
+
+#### HAB-079 — [BE] Multi-turn message history
+Deps: HAB-078.
+Accept prior message history in the service so refinement turns ("make it harder") carry context; thread it through pydantic-ai.
+**AC (unit):** a second turn with history produces a refined draft; history is passed to the model (asserted via `FunctionModel`).
+
+#### HAB-080 — [BE] Generate/chat endpoint
+Deps: HAB-079.
+`routers/v1/generation.py` generate endpoint: `(topic, history) → PackDraft`. Current-user gated; returns the "disabled" error when generation is unconfigured (HAB-074).
+**AC (integration, stubbed model):** returns a corpus-valid draft; unauthenticated → 401; unconfigured → clear disabled error.
+
+#### HAB-081 — [BE] Save endpoint
+Deps: HAB-080, HAB-064.
+Save endpoint: `PackDraft → PackRepository.create(owner_id=current_user.id)`. Current-user gated.
+**AC (integration):** save persists pack + characters + sentences owned by the caller; the pack then appears in that user's `list_visible` and is traceable; a second user cannot see it.
+
+#### HAB-082 — [BE] Rate limit + generation workflow event
+Deps: HAB-080, HAB-081.
+Per-user rate limit on generate/save; emit a workflow event for both actions (new WF id).
+**AC:** exceeding the limit → 429; workflow-event coverage test asserts the new event.
+
+**Test infra & FE.**
+
+#### HAB-083 — [BE] `ALLOW_MODEL_REQUESTS=False` guard
+Deps: HAB-078.
+Set `models.ALLOW_MODEL_REQUESTS = False` in the shared conftest.
+**AC:** any un-stubbed model request anywhere in the normal suite raises; `just gate` + integration + e2e make zero real calls.
+
+#### HAB-084 — [BE] External contract test
+Deps: HAB-081, HAB-083.
+One `@pytest.mark.external` test running the real provider against the real prompt + `output_type`, gated behind `just test-external` (not on PRs).
+**AC:** `just test-external` exercises a real call and validates the schema; the test is excluded from `just gate`/integration/e2e.
+
+#### HAB-085 — [FE] Chat scaffold + draft preview
+Deps: HAB-080, HAB-071.
+Chat surface: topic input, send, rendered draft preview (characters + coverage note).
+**AC (e2e, agent stubbed):** entering a topic renders a draft; deterministic, no network.
+
+#### HAB-086 — [FE] Refinement turns + Save
+Deps: HAB-085, HAB-081.
+History-carrying refinement turns and a Save action that lands the pack in the user's catalog.
+**AC (e2e, agent stubbed):** generate → refine → save → the pack appears in the catalog and is traceable.
+
+#### HAB-087 — ADR: revise 0004 (AI generation shipped)
+Deps: HAB-073–086.
 Supersede/amend ADR 0004: generation is no longer deferred; record corpus-grounding + private-by-ownership as the realized shape.
 **AC:** ADR merged; 0004 marked superseded with a pointer.
 
