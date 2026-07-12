@@ -1,3 +1,12 @@
+# [1.2.0](https://github.com/mattjmcnaughton/habagou/compare/v1.1.2...v1.2.0) (2026-07-12)
+
+
+### Features
+
+* **auth:** add Keycloak OIDC login ([bc3e2d0](https://github.com/mattjmcnaughton/habagou/commit/bc3e2d0361bbf1f239ba238d5913a9b7d0df0763))
+* **auth:** configure OIDC deployment ([9680552](https://github.com/mattjmcnaughton/habagou/commit/9680552fda9cee8bc0184a51a99e13e0dc911785))
+* **auth:** support configurable OIDC providers ([6bf52a0](https://github.com/mattjmcnaughton/habagou/commit/6bf52a0662122a0ebb64b00fc80ec6b3aa52a827))
+
 ## [1.1.2](https://github.com/mattjmcnaughton/habagou/compare/v1.1.1...v1.1.2) (2026-07-05)
 
 
