@@ -15,8 +15,8 @@ test.afterEach(async ({ page }) => {
   await resetPacks(page.request);
 });
 
-test("[WF-02] navigates from home to pack detail", async ({ page }) => {
-  await page.goto("/");
+test("[WF-02] navigates from the pack library to pack detail", async ({ page }) => {
+  await page.goto("/packs");
 
   await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
   await expect(
@@ -173,6 +173,9 @@ test("[WF-08] resets progress for a pack", async ({ page }) => {
 async function completeTraceCharacter(page: Page, hanzi: string) {
   const canvas = page.getByTestId("trace-canvas");
   await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
+  // The scripted-stroke listener is attached in the same effect that renders the
+  // HanziWriter <svg>; wait for it so a freshly-mounted canvas doesn't drop the event.
+  await expect(canvas.locator("svg")).toBeAttached();
   await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
   await expect(page.getByText(`Nice. That is ${hanzi}.`)).toBeVisible();
 }
@@ -180,6 +183,8 @@ async function completeTraceCharacter(page: Page, hanzi: string) {
 async function completeSentenceCharacter(page: Page, hanzi: string, doneText?: string) {
   const canvas = page.getByTestId("trace-canvas");
   await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
+  // See completeTraceCharacter: wait for the writer <svg> before scripting a stroke.
+  await expect(canvas.locator("svg")).toBeAttached();
   await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
   await expect(page.getByText(doneText ?? `Nice. That is ${hanzi}.`)).toBeVisible();
 }

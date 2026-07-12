@@ -123,6 +123,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Path */
+        get: operations["get_path_api_v1_path_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/path/items/{item_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Path Item */
+        post: operations["complete_path_item_api_v1_path_items__item_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/progress/completions": {
         parameters: {
             query?: never;
@@ -437,6 +471,120 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** PathCharDTO */
+        PathCharDTO: {
+            /** Hanzi */
+            hanzi: string;
+            /** Meaning */
+            meaning: string;
+            /** Pinyin */
+            pinyin: string;
+        };
+        PathContentDTO: {
+            [key: string]: unknown;
+        };
+        /** PathDailyDTO */
+        PathDailyDTO: {
+            /** Completed */
+            completed: number;
+            /** Target */
+            target: number;
+        };
+        /** PathDueDTO */
+        PathDueDTO: {
+            /** New */
+            new: number;
+            /** Review */
+            review: number;
+        };
+        /** PathItemCompleteDTO */
+        PathItemCompleteDTO: {
+            /** Duration Ms */
+            duration_ms: number;
+        };
+        /** PathItemCompleteResponseDTO */
+        PathItemCompleteResponseDTO: {
+            daily: components["schemas"]["PathDailyDTO"];
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Next Item Id */
+            next_item_id: string | null;
+            /** Streak */
+            streak: number;
+        };
+        /** PathItemDTO */
+        PathItemDTO: {
+            /**
+             * Activity
+             * @enum {string}
+             */
+            activity: "trace" | "match" | "sentence";
+            content: components["schemas"]["PathContentDTO"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "new" | "review";
+            pack: components["schemas"]["PathPackDTO"];
+            /** Position */
+            position: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "done" | "current" | "locked";
+            /** Unit Label */
+            unit_label: string | null;
+        };
+        /** PathMatchContentDTO */
+        PathMatchContentDTO: {
+            /** Pairs */
+            pairs: components["schemas"]["PathCharDTO"][];
+        };
+        /** PathPackDTO */
+        PathPackDTO: {
+            /** Color */
+            color: string;
+            /** Glyph */
+            glyph: string;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        };
+        /** PathResponseDTO */
+        PathResponseDTO: {
+            daily: components["schemas"]["PathDailyDTO"];
+            due: components["schemas"]["PathDueDTO"];
+            /** Items */
+            items: components["schemas"]["PathItemDTO"][];
+            /** Next Cursor */
+            next_cursor: number | null;
+            /** Streak */
+            streak: number;
+        };
+        /** PathSentenceContentDTO */
+        PathSentenceContentDTO: {
+            /** Hanzi */
+            hanzi: string;
+            /** Pinyin */
+            pinyin: string;
+            /** Translation */
+            translation: string;
+        };
+        /** PathTraceContentDTO */
+        PathTraceContentDTO: {
+            /** Chars */
+            chars: components["schemas"]["PathCharDTO"][];
+        };
         /** ProgressResetDTO */
         ProgressResetDTO: {
             /** Deleted Count */
@@ -451,10 +599,16 @@ export interface components {
             activity: components["schemas"]["DailyActivityDTO"][];
             /** Best Streak */
             best_streak: number;
+            /** Characters Traced */
+            characters_traced: number;
             /** Current Streak */
             current_streak: number;
             daily_goal: components["schemas"]["DailyGoalDTO"];
             next_milestone: components["schemas"]["NextMilestoneDTO"];
+            /** Packs Completed */
+            packs_completed: number;
+            /** Packs Total */
+            packs_total: number;
         };
         /** SessionDTO */
         SessionDTO: {
@@ -766,6 +920,87 @@ export interface operations {
             };
             /** @description Pack not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_path_api_v1_path_get: {
+        parameters: {
+            query?: {
+                cursor?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_path_item_api_v1_path_items__item_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PathItemCompleteDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PathItemCompleteResponseDTO"];
+                };
+            };
+            /** @description Path item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Path item already completed */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -17,7 +16,7 @@ from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
-from habagou.routers.v1 import admin, characters, packs, progress
+from habagou.routers.v1 import admin, characters, packs, path, progress
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
 
@@ -57,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(characters.router)
     app.include_router(packs.router)
+    app.include_router(path.router)
     app.include_router(progress.router)
 
     # Mount frontend static files (only serves if dist/ exists)
@@ -120,15 +120,6 @@ def _install_error_handlers(app: FastAPI) -> None:
             details=exc.errors(),
         )
 
-    @app.exception_handler(SQLAlchemyError)
-    async def database_exception_handler(request: Request, _exc: SQLAlchemyError):
-        return error_response(
-            request,
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            code="database_unavailable",
-            message="database is unavailable",
-        )
-
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, _exc: Exception):
         return error_response(
@@ -143,6 +134,7 @@ def _http_error_code(status_code: int) -> str:
     return {
         401: "unauthenticated",
         404: "not_found",
+        409: "conflict",
         422: "validation_error",
         503: "service_unavailable",
     }.get(status_code, f"http_{status_code}")

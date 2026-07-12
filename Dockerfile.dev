@@ -11,6 +11,12 @@ RUN apt-get update \
     xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
+ARG UID=1000
+ARG GID=1000
+
+RUN if ! getent group "${GID}" >/dev/null; then groupadd --gid "${GID}" habagou; fi \
+  && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /bin/bash habagou
+
 RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
   | sh -s -- install linux \
     --extra-conf "sandbox = false" \
@@ -19,8 +25,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/
 
 ENV PATH="/nix/var/nix/profiles/default/bin:${PATH}"
 ENV DEVENV_STATE=/workspace/.devenv/state
+ENV HOME=/home/habagou
 
 RUN nix profile install nixpkgs#devenv
+
+RUN mkdir -p /nix/var/nix/profiles/per-user/habagou \
+  && chown -R "${UID}:${GID}" /nix /home/habagou
 
 WORKDIR /workspace
 

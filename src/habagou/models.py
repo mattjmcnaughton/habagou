@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
@@ -42,6 +43,27 @@ class ActivityType(StrEnum):
     TRACE = "trace"
     MATCH = "match"
     SENTENCE = "sentence"
+
+
+class PathItemKind(StrEnum):
+    """Whether a path item introduces new material or resurfaces due units."""
+
+    NEW = "new"
+    REVIEW = "review"
+
+
+class ReviewUnitType(StrEnum):
+    """The kind of reviewable unit tracked by a review state row."""
+
+    CHARACTER = "character"
+    SENTENCE = "sentence"
+
+
+class CompletionSource(StrEnum):
+    """Origin of a completion event: a whole-pack activity or a path item."""
+
+    PACK = "pack"
+    PATH = "path"
 
 
 class User(Base):
@@ -205,7 +227,13 @@ class ActivityCompletion(Base):
     """Append-only activity completion event."""
 
     __tablename__ = "activity_completions"
-    __table_args__ = (Index("ix_activity_completions_user_pack", "user_id", "pack_id"),)
+    __table_args__ = (
+        Index("ix_activity_completions_user_pack", "user_id", "pack_id"),
+        CheckConstraint(
+            "source <> 'path' OR path_item_id IS NOT NULL",
+            name="ck_activity_completions_path_source",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -227,6 +255,20 @@ class ActivityCompletion(Base):
         nullable=False,
     )
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    source: Mapped[CompletionSource] = mapped_column(
+        Enum(
+            CompletionSource,
+            name="completion_source",
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        nullable=False,
+        default=CompletionSource.PACK,
+    )
+    path_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("path_items.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     completed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -235,15 +277,130 @@ class ActivityCompletion(Base):
 
     user: Mapped[User] = relationship(back_populates="completions")
     pack: Mapped[Pack] = relationship(back_populates="completions")
+    path_item: Mapped[PathItem | None] = relationship(back_populates="completions")
+
+
+class PathItem(Base):
+    """Materialized, append-only lesson in a learner's Path.
+
+    Created by the generator and never mutated or deleted. Display state
+    (done/current/locked) is derived at read time, not stored. The lesson's
+    content snapshot is pinned in the ``content`` JSONB column at generation
+    time.
+    """
+
+    __tablename__ = "path_items"
+    __table_args__ = (
+        UniqueConstraint("user_id", "position", name="uq_path_items_user_position"),
+        Index("ix_path_items_user", "user_id", "position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    activity: Mapped[ActivityType] = mapped_column(
+        Enum(
+            ActivityType,
+            name="activity_type",
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        nullable=False,
+    )
+    kind: Mapped[PathItemKind] = mapped_column(
+        Enum(
+            PathItemKind,
+            name="path_item_kind",
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        nullable=False,
+    )
+    pack_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("packs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    pack: Mapped[Pack] = relationship()
+    completions: Mapped[list[ActivityCompletion]] = relationship(
+        back_populates="path_item"
+    )
+
+
+class ReviewState(Base):
+    """Spaced-repetition state for one reviewable unit.
+
+    Derived cache over the append-only completion event log: updated
+    transactionally on completion and fully rebuildable by replaying events
+    (see ADR-0008). Identity is the five-column tuple
+    ``(user, pack, unit_type, unit_ref, activity)``.
+    """
+
+    __tablename__ = "review_states"
+    __table_args__ = (Index("ix_review_states_user_due", "user_id", "due_at"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    pack_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("packs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    unit_type: Mapped[ReviewUnitType] = mapped_column(
+        Enum(
+            ReviewUnitType,
+            name="review_unit_type",
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        primary_key=True,
+    )
+    unit_ref: Mapped[str] = mapped_column(String, primary_key=True)
+    activity: Mapped[ActivityType] = mapped_column(
+        Enum(
+            ActivityType,
+            name="activity_type",
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        primary_key=True,
+    )
+    reps: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Nullable: a reviewable unit is recorded at generation time with
+    # ``reps=0, last_seen_at=None, due_at=None`` ("introduced, not yet
+    # practiced"). ``apply_completion`` populates both on first completion.
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
 
 __all__ = [
     "ActivityCompletion",
     "ActivityType",
     "Character",
+    "CompletionSource",
     "Pack",
     "PackCharacter",
     "PackSentence",
     "PackStatus",
+    "PathItem",
+    "PathItemKind",
+    "ReviewState",
+    "ReviewUnitType",
     "User",
 ]

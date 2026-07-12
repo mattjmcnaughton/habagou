@@ -174,11 +174,11 @@ gate-external: gate-expensive test-external
 
 # Start backend dev server
 dev-be:
-    {{_env}} && uv run uvicorn habagou.app:app --reload --host 127.0.0.1 --port "$HABAGOU_PORT"
+    {{_env}} && uv run uvicorn habagou.app:app --reload --host "${HABAGOU_BIND_HOST:-127.0.0.1}" --port "$HABAGOU_PORT"
 
 # Start frontend dev server
 dev-fe:
-    {{_env}} && cd {{fe_dir}} && pnpm run dev -- --host 127.0.0.1 --port "$VITE_PORT"
+    {{_env}} && cd {{fe_dir}} && pnpm exec vite --host "${HABAGOU_BIND_HOST:-127.0.0.1}" --port "$VITE_PORT"
 
 # Start both dev servers
 dev:
@@ -238,7 +238,10 @@ compose-down:
 
 # Build the Docker-based agent development image
 dev-image:
-    docker build -f Dockerfile.dev -t {{dev_image}} .
+    docker build \
+        --build-arg UID="$(id -u)" \
+        --build-arg GID="$(id -g)" \
+        -f Dockerfile.dev -t {{dev_image}} .
 
 # Enter the Docker-based development shell
 dev-shell-docker: dev-image
@@ -246,12 +249,17 @@ dev-shell-docker: dev-image
     set -euo pipefail
     eval "$({{_python}} scripts/dev_env.py env)"
     docker run --rm -it \
+        --user "$(id -u):$(id -g)" \
         -v "$PWD:/workspace" \
         -w /workspace \
         -e HABAGOU_INSTANCE \
         -e HABAGOU_PORT \
         -e VITE_PORT \
+        -e HABAGOU_KEYCLOAK_PORT \
+        -e HABAGOU_BIND_HOST=0.0.0.0 \
+        -e HOME=/home/habagou \
         -e DEVENV_STATE=/workspace/.devenv/state \
         -p "$HABAGOU_PORT:$HABAGOU_PORT" \
         -p "$VITE_PORT:$VITE_PORT" \
+        -p "$HABAGOU_KEYCLOAK_PORT:$HABAGOU_KEYCLOAK_PORT" \
         {{dev_image}}

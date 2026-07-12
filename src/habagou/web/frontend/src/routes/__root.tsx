@@ -1,5 +1,12 @@
-import { Link, Outlet, createRootRouteWithContext, redirect } from "@tanstack/react-router";
+import {
+  Link,
+  Outlet,
+  createRootRouteWithContext,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { RouterContext } from "../app/app";
+import { TabBar, isTabBarHidden } from "../components/tab-bar";
 import { getAuthSession } from "../lib/api";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -12,7 +19,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       throw redirect({ to: "/login" });
     }
   },
-  component: () => <Outlet />,
+  component: RootLayout,
   errorComponent: () => (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[440px] flex-col justify-center">
@@ -22,10 +29,24 @@ export const Route = createRootRouteWithContext<RouterContext>()({
             className="mt-6 inline-flex w-full justify-center rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
             to="/"
           >
-            Back to packs
+            Back to Path
           </Link>
         </section>
       </div>
     </main>
   ),
 });
+
+function RootLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const showTabBar = !isTabBarHidden(pathname);
+
+  return (
+    <>
+      <div className={showTabBar ? "pb-[62px]" : undefined}>
+        <Outlet />
+      </div>
+      {showTabBar ? <TabBar pathname={pathname} /> : null}
+    </>
+  );
+}

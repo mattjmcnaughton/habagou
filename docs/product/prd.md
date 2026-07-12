@@ -27,7 +27,8 @@ Most Chinese-learning apps emphasize recognition (flashcards, listening). Handwr
 - **AI pack generation** — explicitly deferred to v2 (see § 10). The v1 architecture must not preclude it (pack schema supports future `source`/provenance fields).
 - Authentication, signup, or multi-user identity. (The guest user is a data-model convention, not a login feature.)
 - Native mobile apps (the web app must be responsive and touch-friendly, per the prototype's mobile-first layout).
-- Spaced-repetition scheduling.
+- Spaced-repetition scheduling. **Superseded:** this deferral is lifted by the
+  Learning Path feature — see [prd-path.md](prd-path.md).
 - Handwriting recognition of free-form writing (stroke-by-stroke tracing via Hanzi Writer only).
 - Audio/pronunciation, tones practice, listening exercises.
 - Traditional characters (v1 is simplified-only; the stroke corpus supports traditional, so this is a natural extension).
@@ -101,4 +102,5 @@ Most Chinese-learning apps emphasize recognition (flashcards, listening). Handwr
 
 - **AI pack generation**: pydantic-ai + OpenAI generates themed packs (characters + pinyin + meanings + sentences), validated against the stroke corpus before publication. The v1 stroke-corpus-in-Postgres decision exists partly to enable this validation.
 - **Accounts**: real users replace the guest default; progress model already user-scoped.
-- Traditional characters; spaced repetition; audio.
+- Traditional characters; audio. (Spaced repetition moved out of the roadmap
+  and shipped — see [prd-path.md](prd-path.md).)

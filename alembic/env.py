@@ -12,8 +12,9 @@ from habagou.config import settings
 from habagou.db import Base
 
 config = context.config
-# Escape '%' so ConfigParser does not treat percent-encoded values (e.g. a
-# socket host like host=%2Ftmp%2F... in a Unix-socket DSN) as interpolation.
+# ConfigParser treats percent signs as interpolation markers. Database URLs for
+# Unix sockets contain percent-encoded paths, so escape them before handing the
+# URL to Alembic's configuration object.
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:

@@ -4,7 +4,8 @@ import { signIn } from "./auth-helpers";
 test("[WF-AUTH-SIGN-IN] signs in through Keycloak", async ({ page }) => {
   await signIn(page);
 
-  await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByTestId("path-shell")).toBeVisible();
   await expect(page.getByText("Dev User")).toBeVisible();
 });
 

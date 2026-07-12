@@ -1,8 +1,12 @@
 import type { components } from "./api-types";
+import type { CompletePathItemResponse, PathResponse } from "./path-types";
 import type { CharacterJson } from "hanzi-writer";
 
 const API_BASE = import.meta.env?.VITE_API_URL ?? "";
 export const API_V1_BASE = "/api/v1";
+
+// Page size for paginated Path reads (GET /path cursor pages).
+export const PATH_PAGE_LIMIT = 6;
 
 export type PackSummary = components["schemas"]["PackSummaryDTO"];
 export type PackDetail = components["schemas"]["PackDetailDTO"];
@@ -14,6 +18,22 @@ export type ProgressSummary = components["schemas"]["ProgressSummaryDTO"];
 export type StrokeData = CharacterJson;
 export type AuthUser = components["schemas"]["UserDTO"];
 export type AuthSession = components["schemas"]["SessionDTO"];
+
+export type {
+  CompletePathItemBody,
+  CompletePathItemResponse,
+  DailyGoal,
+  PathActivity,
+  PathCharacter,
+  PathContent,
+  PathDue,
+  PathItem,
+  PathItemKind,
+  PathItemState,
+  PathPack,
+  PathResponse,
+  PathSentence,
+} from "./path-types";
 
 type ErrorEnvelope = {
   error?: {
@@ -112,4 +132,33 @@ export function resetPackProgress(slug: string): Promise<ProgressReset> {
   return apiFetch<ProgressReset>(apiV1Path(`/progress/packs/${encodeURIComponent(slug)}`), {
     method: "DELETE",
   });
+}
+
+export function getPath({
+  cursor,
+  limit,
+}: { cursor?: number; limit?: number } = {}): Promise<PathResponse> {
+  const params = new URLSearchParams();
+  if (cursor !== undefined) {
+    params.set("cursor", String(cursor));
+  }
+  if (limit !== undefined) {
+    params.set("limit", String(limit));
+  }
+  const query = params.toString();
+  return apiFetch<PathResponse>(apiV1Path(query ? `/path?${query}` : "/path"));
+}
+
+export function completePathItem(
+  itemId: string,
+  body: { duration_ms: number },
+): Promise<CompletePathItemResponse> {
+  return apiFetch<CompletePathItemResponse>(
+    apiV1Path(`/path/items/${encodeURIComponent(itemId)}/complete`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
 }

@@ -1,9 +1,12 @@
 import { HttpResponse, http } from "msw";
 import type {
   AuthSession,
+  CompletePathItemResponse,
   CompletionResponse,
   PackDetail,
   PackSummary,
+  PathItem,
+  PathResponse,
   ProgressReset,
   ProgressSummary,
 } from "../lib/api";
@@ -108,6 +111,176 @@ function mockProgressSummary(): ProgressSummary {
       days_remaining: 2,
       progress_pct: 86,
     },
+    characters_traced: 7,
+    packs_completed: 1,
+    packs_total: 4,
+  };
+}
+
+const GREETINGS_PACK: PathItem["pack"] = {
+  slug: "greetings",
+  title: "Greetings",
+  glyph: "你",
+  color: "#c4633f",
+};
+
+const NUMBERS_PACK: PathItem["pack"] = {
+  slug: "numbers",
+  title: "Numbers",
+  glyph: "三",
+  color: "#3f8a86",
+};
+
+// ~8 items across 2 packs: a done/current/locked mix, one review item, and a
+// unit label on the first item.
+const pathItems: PathItem[] = [
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000001",
+    position: 1,
+    activity: "trace",
+    kind: "new",
+    state: "done",
+    unit_label: "UNIT 1 · WARMING UP",
+    pack: NUMBERS_PACK,
+    content: {
+      trace: {
+        chars: [
+          { hanzi: "一", pinyin: "yī", meaning: "one" },
+          { hanzi: "二", pinyin: "èr", meaning: "two" },
+          { hanzi: "三", pinyin: "sān", meaning: "three" },
+        ],
+      },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000002",
+    position: 2,
+    activity: "match",
+    kind: "new",
+    state: "done",
+    unit_label: null,
+    pack: NUMBERS_PACK,
+    content: {
+      match: {
+        pairs: [
+          { hanzi: "一", pinyin: "yī", meaning: "one" },
+          { hanzi: "二", pinyin: "èr", meaning: "two" },
+          { hanzi: "三", pinyin: "sān", meaning: "three" },
+          { hanzi: "四", pinyin: "sì", meaning: "four" },
+        ],
+      },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000003",
+    position: 3,
+    activity: "trace",
+    kind: "new",
+    state: "current",
+    unit_label: null,
+    pack: GREETINGS_PACK,
+    content: {
+      trace: {
+        chars: [
+          { hanzi: "你", pinyin: "nǐ", meaning: "you" },
+          { hanzi: "好", pinyin: "hǎo", meaning: "good" },
+        ],
+      },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000004",
+    position: 4,
+    activity: "sentence",
+    kind: "new",
+    state: "locked",
+    unit_label: "UNIT 2 · GREETINGS",
+    pack: GREETINGS_PACK,
+    content: {
+      sentence: { hanzi: "你好", pinyin: "nǐ hǎo", translation: "Hello" },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000005",
+    position: 5,
+    activity: "match",
+    kind: "new",
+    state: "locked",
+    unit_label: null,
+    pack: GREETINGS_PACK,
+    content: {
+      match: {
+        pairs: [
+          { hanzi: "你", pinyin: "nǐ", meaning: "you" },
+          { hanzi: "好", pinyin: "hǎo", meaning: "good" },
+          { hanzi: "我", pinyin: "wǒ", meaning: "I, me" },
+        ],
+      },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000006",
+    position: 6,
+    activity: "trace",
+    kind: "review",
+    state: "locked",
+    unit_label: null,
+    pack: NUMBERS_PACK,
+    content: {
+      trace: {
+        chars: [
+          { hanzi: "四", pinyin: "sì", meaning: "four" },
+          { hanzi: "五", pinyin: "wǔ", meaning: "five" },
+        ],
+      },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000007",
+    position: 7,
+    activity: "sentence",
+    kind: "new",
+    state: "locked",
+    unit_label: null,
+    pack: NUMBERS_PACK,
+    content: {
+      sentence: { hanzi: "一二三", pinyin: "yī èr sān", translation: "One two three" },
+    },
+  },
+  {
+    id: "aaaaaaaa-0000-4000-8000-000000000008",
+    position: 8,
+    activity: "match",
+    kind: "new",
+    state: "locked",
+    unit_label: null,
+    pack: GREETINGS_PACK,
+    content: {
+      match: {
+        pairs: [
+          { hanzi: "他", pinyin: "tā", meaning: "he, him" },
+          { hanzi: "谢", pinyin: "xiè", meaning: "thanks" },
+          { hanzi: "我", pinyin: "wǒ", meaning: "I, me" },
+        ],
+      },
+    },
+  },
+];
+
+const pathDaily = { completed: 2, target: 3 };
+const completedPathItemIds = new Set<string>();
+
+function pathPage(cursor: number, limit: number): PathResponse {
+  const start = Number.isFinite(cursor) ? cursor : 0;
+  const slice = pathItems.slice(start, start + limit);
+  const nextIndex = start + slice.length;
+  const next_cursor = nextIndex < pathItems.length ? nextIndex : null;
+  return {
+    items: slice,
+    next_cursor,
+    daily: { ...pathDaily },
+    streak: 12,
+    due: { new: 1, review: 2 },
   };
 }
 
@@ -174,6 +347,47 @@ export const handlers = [
     }
     const response: CompletionResponse = { ...completion, progress };
     return HttpResponse.json<CompletionResponse>(response);
+  }),
+  http.get(`${API_V1}/path`, ({ request }) => {
+    const url = new URL(request.url);
+    const cursor = Number(url.searchParams.get("cursor") ?? "0");
+    const rawLimit = Number(url.searchParams.get("limit") ?? "50");
+    const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 50);
+    return HttpResponse.json<PathResponse>(pathPage(cursor, limit));
+  }),
+  http.post(`${API_V1}/path/items/:itemId/complete`, ({ params }) => {
+    const itemId = String(params.itemId);
+    const item = pathItems.find((entry) => entry.id === itemId);
+    if (!item) {
+      return HttpResponse.json(
+        {
+          error: { code: "not_found", message: "path item not found", request_id: "mock-request" },
+        },
+        { status: 404 },
+      );
+    }
+    if (completedPathItemIds.has(itemId)) {
+      return HttpResponse.json(
+        {
+          error: {
+            code: "already_completed",
+            message: "path item already completed",
+            request_id: "mock-request",
+          },
+        },
+        { status: 409 },
+      );
+    }
+    completedPathItemIds.add(itemId);
+    pathDaily.completed = Math.min(pathDaily.completed + 1, pathDaily.target);
+    const next = pathItems.find((entry) => entry.position === item.position + 1);
+    const response: CompletePathItemResponse = {
+      daily: { ...pathDaily },
+      streak: 12,
+      item_id: itemId,
+      next_item_id: next?.id ?? null,
+    };
+    return HttpResponse.json<CompletePathItemResponse>(response, { status: 201 });
   }),
   http.delete(`${API_V1}/progress/packs/:slug`, ({ params }) => {
     const slug = String(params.slug);

@@ -17,9 +17,11 @@ from habagou.events import emit_workflow_event
 from habagou.models import (
     ActivityCompletion,
     Character,
+    CompletionSource,
     Pack,
     PackCharacter,
     PackStatus,
+    PathItem,
     User,
 )
 
@@ -64,6 +66,21 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                     select(ActivityCompletion.id, ActivityCompletion.pack_id)
                     .outerjoin(Pack, ActivityCompletion.pack_id == Pack.id)
                     .where(Pack.id.is_(None))
+                )
+            ).all()
+            path_completions_missing_item = (
+                await session.execute(
+                    select(ActivityCompletion.id).where(
+                        ActivityCompletion.source == CompletionSource.PATH,
+                        ActivityCompletion.path_item_id.is_(None),
+                    )
+                )
+            ).all()
+            path_items_unpublished_pack = (
+                await session.execute(
+                    select(PathItem.id, PathItem.pack_id)
+                    .outerjoin(Pack, PathItem.pack_id == Pack.id)
+                    .where((Pack.id.is_(None)) | (Pack.status != PackStatus.PUBLISHED))
                 )
             ).all()
     finally:
@@ -128,6 +145,28 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                 message=(
                     "activity completion references missing pack: "
                     f"completion_id={completion_id} pack_id={pack_id}"
+                ),
+            )
+        )
+
+    for (completion_id,) in path_completions_missing_item:
+        violations.append(
+            InvariantViolation(
+                code="path_completion_missing_item",
+                message=(
+                    "path-source activity completion missing path_item_id: "
+                    f"completion_id={completion_id}"
+                ),
+            )
+        )
+
+    for item_id, pack_id in path_items_unpublished_pack:
+        violations.append(
+            InvariantViolation(
+                code="path_item_unpublished_pack",
+                message=(
+                    "path item references a non-published pack: "
+                    f"path_item_id={item_id} pack_id={pack_id}"
                 ),
             )
         )

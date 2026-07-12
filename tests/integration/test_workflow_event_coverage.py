@@ -1,19 +1,27 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import update
 
+from habagou import db
 from habagou.app import create_app
 from habagou.auth import AuthIdentity
 from habagou.config import settings
+from habagou.models import ReviewState
+from habagou.repositories import UserRepository
 from scripts.seed import SeedResult, emit_bootstrap_completed
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+_WORKFLOW_ISSUER = "https://issuer.example.test"
+_WORKFLOW_SUBJECT = "workflow-subject"
 
 
 EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
@@ -32,6 +40,21 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-09": ({"admin_action"}, {"action", "pack_slug", "authorized"}, "ok"),
     "WF-10": ({"deploy_ready"}, {"database"}, "ok"),
     "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}, "ok"),
+    "WF-12": (
+        {"path_viewed"},
+        {"user_id", "item_count", "due_new", "due_review"},
+        "ok",
+    ),
+    "WF-13": (
+        {"path_item_completed"},
+        {"activity", "pack_slug", "kind", "user_id"},
+        "ok",
+    ),
+    "WF-14": (
+        {"path_item_completed"},
+        {"activity", "pack_slug", "kind", "user_id"},
+        "ok",
+    ),
     "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-SIGN-OUT": ({"auth_signed_out"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-GATE": ({"auth_gate_rejected"}, {"path"}, "error"),
@@ -92,6 +115,36 @@ async def test_all_workflows_emit_verification_events(
     await _ok(await client.get("/api/v1/characters/你/strokes"))
     await _ok(await client.get("/api/v1/progress/packs/greetings"))
     await _ok(await client.get("/api/v1/progress/summary"))
+    # WF-12: view the path (also materializes the queue).
+    path_body = await _json(await client.get("/api/v1/path"))
+    new_item = next(
+        item
+        for item in path_body["items"]
+        if item["kind"] == "new" and item["state"] != "done"
+    )
+    # WF-13: complete a new path item.
+    await _ok(
+        await client.post(
+            f"/api/v1/path/items/{new_item['id']}/complete",
+            json={"duration_ms": 900},
+        ),
+        status_code=201,
+    )
+    # WF-14: backdate the completed unit and complete the resurfaced review item.
+    await _backdate_path_reviews()
+    review_body = await _json(await client.get("/api/v1/path?limit=50"))
+    review_item = next(
+        item
+        for item in review_body["items"]
+        if item["kind"] == "review" and item["state"] != "done"
+    )
+    await _ok(
+        await client.post(
+            f"/api/v1/path/items/{review_item['id']}/complete",
+            json={"duration_ms": 900},
+        ),
+        status_code=201,
+    )
     await _ok(await client.delete("/api/v1/progress/packs/greetings"))
     await _ok(
         await client.patch(
@@ -124,6 +177,29 @@ async def test_all_workflows_emit_verification_events(
 
 async def _ok(response, *, status_code: int = 200) -> None:
     assert response.status_code == status_code, response.text
+
+
+async def _json(response, *, status_code: int = 200) -> dict[str, Any]:
+    assert response.status_code == status_code, response.text
+    return response.json()
+
+
+async def _backdate_path_reviews() -> None:
+    """Force the workflow user's practised review states past due."""
+    async with db.async_session() as session:
+        user = await UserRepository(session).get_by_identity(
+            _WORKFLOW_ISSUER, _WORKFLOW_SUBJECT
+        )
+        assert user is not None
+        await session.execute(
+            update(ReviewState)
+            .where(
+                ReviewState.user_id == user.id,
+                ReviewState.due_at.is_not(None),
+            )
+            .values(due_at=datetime.now(UTC) - timedelta(days=2))
+        )
+        await session.commit()
 
 
 def _workflow_ids_from_catalog() -> set[str]:

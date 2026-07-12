@@ -4,7 +4,7 @@ export async function signIn(page: Page) {
   await page.goto("/");
   if (
     await page
-      .getByRole("heading", { name: "Choose a pack" })
+      .getByTestId("path-shell")
       .isVisible()
       .catch(() => false)
   ) {
@@ -16,5 +16,5 @@ export async function signIn(page: Page) {
   await page.getByLabel(/username/i).fill("dev");
   await page.locator("#password").fill("dev");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
+  await expect(page.getByTestId("path-shell")).toBeVisible();
 }

@@ -421,6 +421,311 @@
         "title": "PackSummaryDTO",
         "type": "object"
       },
+      "PathCharDTO": {
+        "properties": {
+          "hanzi": {
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "meaning"
+        ],
+        "title": "PathCharDTO",
+        "type": "object"
+      },
+      "PathContentDTO": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "PathDailyDTO": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "target"
+        ],
+        "title": "PathDailyDTO",
+        "type": "object"
+      },
+      "PathDueDTO": {
+        "properties": {
+          "new": {
+            "title": "New",
+            "type": "integer"
+          },
+          "review": {
+            "title": "Review",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "new",
+          "review"
+        ],
+        "title": "PathDueDTO",
+        "type": "object"
+      },
+      "PathItemCompleteDTO": {
+        "properties": {
+          "duration_ms": {
+            "minimum": 0.0,
+            "title": "Duration Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "duration_ms"
+        ],
+        "title": "PathItemCompleteDTO",
+        "type": "object"
+      },
+      "PathItemCompleteResponseDTO": {
+        "properties": {
+          "daily": {
+            "$ref": "#/components/schemas/PathDailyDTO"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "next_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Item Id"
+          },
+          "streak": {
+            "title": "Streak",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "daily",
+          "streak",
+          "item_id",
+          "next_item_id"
+        ],
+        "title": "PathItemCompleteResponseDTO",
+        "type": "object"
+      },
+      "PathItemDTO": {
+        "properties": {
+          "activity": {
+            "enum": [
+              "trace",
+              "match",
+              "sentence"
+            ],
+            "title": "Activity",
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/PathContentDTO"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "new",
+              "review"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "pack": {
+            "$ref": "#/components/schemas/PathPackDTO"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "done",
+              "current",
+              "locked"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "activity",
+          "kind",
+          "state",
+          "unit_label",
+          "pack",
+          "content"
+        ],
+        "title": "PathItemDTO",
+        "type": "object"
+      },
+      "PathMatchContentDTO": {
+        "properties": {
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/PathCharDTO"
+            },
+            "title": "Pairs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pairs"
+        ],
+        "title": "PathMatchContentDTO",
+        "type": "object"
+      },
+      "PathPackDTO": {
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "glyph": {
+            "title": "Glyph",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "glyph",
+          "color"
+        ],
+        "title": "PathPackDTO",
+        "type": "object"
+      },
+      "PathResponseDTO": {
+        "properties": {
+          "daily": {
+            "$ref": "#/components/schemas/PathDailyDTO"
+          },
+          "due": {
+            "$ref": "#/components/schemas/PathDueDTO"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PathItemDTO"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "streak": {
+            "title": "Streak",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "daily",
+          "streak",
+          "due"
+        ],
+        "title": "PathResponseDTO",
+        "type": "object"
+      },
+      "PathSentenceContentDTO": {
+        "properties": {
+          "hanzi": {
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "translation": {
+            "title": "Translation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "translation"
+        ],
+        "title": "PathSentenceContentDTO",
+        "type": "object"
+      },
+      "PathTraceContentDTO": {
+        "properties": {
+          "chars": {
+            "items": {
+              "$ref": "#/components/schemas/PathCharDTO"
+            },
+            "title": "Chars",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chars"
+        ],
+        "title": "PathTraceContentDTO",
+        "type": "object"
+      },
       "ProgressResetDTO": {
         "properties": {
           "deleted_count": {
@@ -456,6 +761,10 @@
             "title": "Best Streak",
             "type": "integer"
           },
+          "characters_traced": {
+            "title": "Characters Traced",
+            "type": "integer"
+          },
           "current_streak": {
             "title": "Current Streak",
             "type": "integer"
@@ -465,6 +774,14 @@
           },
           "next_milestone": {
             "$ref": "#/components/schemas/NextMilestoneDTO"
+          },
+          "packs_completed": {
+            "title": "Packs Completed",
+            "type": "integer"
+          },
+          "packs_total": {
+            "title": "Packs Total",
+            "type": "integer"
           }
         },
         "required": [
@@ -472,7 +789,10 @@
           "best_streak",
           "daily_goal",
           "activity",
-          "next_milestone"
+          "next_milestone",
+          "characters_traced",
+          "packs_completed",
+          "packs_total"
         ],
         "title": "ProgressSummaryDTO",
         "type": "object"
@@ -928,6 +1248,127 @@
         "summary": "Get Pack",
         "tags": [
           "packs"
+        ]
+      }
+    },
+    "/api/v1/path": {
+      "get": {
+        "operationId": "get_path_api_v1_path_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Path",
+        "tags": [
+          "path"
+        ]
+      }
+    },
+    "/api/v1/path/items/{item_id}/complete": {
+      "post": {
+        "operationId": "complete_path_item_api_v1_path_items__item_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PathItemCompleteDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathItemCompleteResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Path item not found"
+          },
+          "409": {
+            "description": "Path item already completed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Complete Path Item",
+        "tags": [
+          "path"
         ]
       }
     },

@@ -198,6 +198,9 @@ async def test_progress_summary_returns_zero_state_for_fresh_user(
     }
     assert len(body["activity"]) == 45
     assert all(day["count"] == 0 and day["level"] == 0 for day in body["activity"])
+    assert body["characters_traced"] == 0
+    assert body["packs_completed"] == 0
+    assert body["packs_total"] == await _published_pack_count()
 
 
 @pytest.mark.workflow("WF-11")
@@ -327,6 +330,126 @@ async def test_progress_requires_authentication() -> None:
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "unauthenticated"
+
+
+@pytest.mark.workflow("WF-11")
+@pytest.mark.anyio
+async def test_characters_traced_unions_path_and_whole_pack_trace(
+    current_user: User,
+    client: AsyncClient,
+) -> None:
+    await _clear_user_progress(current_user.id)
+
+    path_body = await _get_path(client)
+    trace_item = next(
+        item for item in path_body["items"] if item["activity"] == "trace"
+    )
+    path_traced_hanzi = {
+        char["hanzi"] for char in trace_item["content"]["trace"]["chars"]
+    }
+    pack_slug = trace_item["pack"]["slug"]
+
+    complete_response = await _complete_path_item(client, trace_item["id"])
+    assert complete_response.status_code == 201
+
+    partial = await client.get("/api/v1/progress/summary")
+    assert partial.status_code == 200
+    assert partial.json()["characters_traced"] == len(path_traced_hanzi)
+
+    pack_hanzi = await _pack_hanzi(pack_slug)
+    assert path_traced_hanzi <= pack_hanzi
+
+    # Completing the whole-pack Trace activity brings in every pack character,
+    # unioned with (never summed against) the chars already traced via the
+    # path — otherwise this would overcount past len(pack_hanzi).
+    whole_pack_response = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_slug": pack_slug, "activity": "trace", "duration_ms": 900},
+    )
+    assert whole_pack_response.status_code == 201
+
+    summary = await client.get("/api/v1/progress/summary")
+    assert summary.status_code == 200
+    assert summary.json()["characters_traced"] == len(pack_hanzi)
+
+
+@pytest.mark.workflow("WF-11")
+@pytest.mark.anyio
+async def test_packs_completed_flips_only_when_all_three_activities_done(
+    current_user: User,
+    client: AsyncClient,
+) -> None:
+    await _clear_user_progress(current_user.id)
+
+    for activity in ("trace", "match"):
+        response = await client.post(
+            "/api/v1/progress/completions",
+            json={
+                "pack_slug": "greetings",
+                "activity": activity,
+                "duration_ms": 500,
+            },
+        )
+        assert response.status_code == 201
+
+    partial = await client.get("/api/v1/progress/summary")
+    assert partial.status_code == 200
+    assert partial.json()["packs_completed"] == 0
+
+    sentence_response = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_slug": "greetings", "activity": "sentence", "duration_ms": 500},
+    )
+    assert sentence_response.status_code == 201
+
+    complete = await client.get("/api/v1/progress/summary")
+    assert complete.status_code == 200
+    assert complete.json()["packs_completed"] == 1
+
+
+@pytest.mark.workflow("WF-11")
+@pytest.mark.anyio
+async def test_path_completions_alone_leave_packs_completed_at_zero(
+    current_user: User,
+    client: AsyncClient,
+) -> None:
+    await _clear_user_progress(current_user.id)
+
+    path_body = await _get_path(client, limit=50)
+    for item in path_body["items"][:5]:
+        response = await _complete_path_item(client, item["id"])
+        assert response.status_code == 201
+
+    summary = await client.get("/api/v1/progress/summary")
+    assert summary.status_code == 200
+    assert summary.json()["packs_completed"] == 0
+
+
+async def _get_path(client: AsyncClient, *, limit: int = 20):
+    response = await client.get("/api/v1/path", params={"limit": limit})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def _complete_path_item(
+    client: AsyncClient, item_id: str, *, duration_ms: int = 4200
+):
+    return await client.post(
+        f"/api/v1/path/items/{item_id}/complete",
+        json={"duration_ms": duration_ms},
+    )
+
+
+async def _pack_hanzi(slug: str) -> set[str]:
+    async with db.async_session() as session:
+        pack = await PackRepository(session).get_by_slug(slug)
+        assert pack is not None
+        return {link.character.hanzi for link in pack.characters}
+
+
+async def _published_pack_count() -> int:
+    async with db.async_session() as session:
+        return len(await PackRepository(session).list_published())
 
 
 async def _record_other_user_completion(

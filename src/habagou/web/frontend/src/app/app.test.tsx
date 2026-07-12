@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import type { ProgressReset } from "../lib/api";
@@ -8,6 +8,8 @@ import { App } from "./app";
 
 describe("App", () => {
   it("[WF-02] renders pack cards with progress badges", async () => {
+    window.history.pushState({}, "", "/packs");
+
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Habagou" })).toBeTruthy();
@@ -19,6 +21,29 @@ describe("App", () => {
       }),
     ).toBeTruthy();
     expect(screen.getByText("✓ trace")).toBeTruthy();
+  });
+
+  it("[WF-02] renders the Path shell with the bottom tab bar as the default route", async () => {
+    window.history.pushState({}, "", "/");
+
+    render(<App />);
+
+    expect(await screen.findByTestId("path-shell")).toBeTruthy();
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(nav).toBeTruthy();
+    const pathTab = within(nav).getByRole("link", { name: "Path" });
+    expect(pathTab.getAttribute("aria-current")).toBe("page");
+    expect(within(nav).getByRole("link", { name: "Packs" })).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Progress" })).toBeTruthy();
+  });
+
+  it("[WF-02] hides the tab bar on whole-pack activity routes", async () => {
+    window.history.pushState({}, "", "/packs/numbers/trace");
+
+    render(<App />);
+
+    expect(await screen.findByTestId("trace-canvas")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Primary" })).toBeNull();
   });
 
   it("[WF-AUTH-SIGN-IN] redirects unauthenticated visitors to login", async () => {
@@ -48,7 +73,9 @@ describe("App", () => {
     expect(await screen.findByRole("link", { name: "Continue with Auth0" })).toBeTruthy();
   });
 
-  it("[WF-11] shows a compact progress link on the home page", async () => {
+  it("[WF-11] shows a compact progress link on the pack library", async () => {
+    window.history.pushState({}, "", "/packs");
+
     render(<App />);
 
     const progressLink = await screen.findByRole("link", {
@@ -60,7 +87,9 @@ describe("App", () => {
     expect(screen.getByText("2/3 goal")).toBeTruthy();
   });
 
-  it("[WF-02] navigates from home to a pack screen", async () => {
+  it("[WF-02] navigates from the pack library to a pack screen", async () => {
+    window.history.pushState({}, "", "/packs");
+
     render(<App />);
 
     fireEvent.click(
@@ -204,6 +233,18 @@ describe("App", () => {
     expect(screen.getByText((_, element) => element?.textContent === "2/3")).toBeTruthy();
     expect(screen.getByText("14-day streak")).toBeTruthy();
     expect(screen.getByText(/2 days away/)).toBeTruthy();
+  });
+
+  it("[WF-11] shows the characters and packs stats row from the summary API", async () => {
+    window.history.pushState({}, "", "/progress");
+
+    render(<App />);
+
+    const statsRow = await screen.findByTestId("progress-stats-row");
+    expect(within(statsRow).getByText("Characters")).toBeTruthy();
+    expect(within(statsRow).getByText("7")).toBeTruthy();
+    expect(within(statsRow).getByText("Packs")).toBeTruthy();
+    expect(within(statsRow).getByText("1/4")).toBeTruthy();
   });
 
   it("[WF-11] expands and collapses the activity heatmap", async () => {

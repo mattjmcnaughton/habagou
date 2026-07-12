@@ -38,9 +38,10 @@ src/habagou/
   auth.py              # authlib provider registration and identity extraction
   events.py            # workflow event logging
   streaks.py           # pure daily-goal streak and milestone calculations
+  path_scheduling.py   # pure Leitner-ladder scheduler (queue generation, ladder update)
   routers/
     health.py          # healthz/readyz
-    v1/                # packs, characters, progress, admin
+    v1/                # packs, characters, progress, path, admin
   services/            # business logic
   repositories.py      # SQLAlchemy data access
   models.py            # SQLAlchemy models
@@ -52,6 +53,15 @@ Routers translate HTTP into DTOs and service calls. Services own application
 rules. Repositories isolate SQLAlchemy query details. DTOs are separate from ORM
 models.
 
+The Learning Path follows the same layering: `routers/v1/path.py` ->
+`services/path.py` -> `repositories.py` (`PathRepository`,
+`ReviewStateRepository`), with request/response shapes in `dtos/path.py`.
+Queue generation and the Leitner-ladder update themselves are pure logic in
+`path_scheduling.py` (mirroring `streaks.py`) — no I/O, so the scheduling
+algorithm can be swapped (e.g. for SM-2/FSRS) without touching the service,
+router, or API contract. See [docs/api.md](api.md) for the endpoint contract
+and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.
+
 ## Data Model
 
 - `characters`: pinned Hanzi Writer stroke JSON imported into Postgres.
@@ -60,6 +70,23 @@ models.
 - `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
 - `users`: authenticated learner accounts keyed by provider issuer + subject.
 - `activity_completions`: append-only progress events aggregated at read time.
+  Carries a `source` discriminator (`'pack'` | `'path'`) and a nullable
+  `path_item_id` FK; whole-pack badge aggregation (`per_pack_aggregate`)
+  filters to `source='pack'`, while daily-goal/streak counting uses both.
+- `path_items`: the materialized, append-only Path queue — one row per
+  generated lesson (activity, kind, owning pack, position, pinned `content`
+  JSON snapshot). Rows are never mutated or deleted after generation; a
+  path item's `done`/`current`/`locked` display state is derived at read time
+  from whether a completion event exists for it.
+- `review_states`: a **rebuildable projection**, not a source of truth — one
+  row per `(user, pack, unit_type, unit_ref, activity)` reviewable unit,
+  holding `reps`, `last_seen_at`, `due_at`. It is updated transactionally
+  alongside each path-item completion event and can be fully rebuilt by
+  replaying `activity_completions`. This is the documented exception to
+  ADR-0005 (append-only, aggregate-at-read-time): see
+  `docs/adrs/0008-review-state-as-rebuildable-projection.md` for why a
+  materialized projection is warranted here despite that default. A unit
+  test asserts `replay(events) == table contents`.
 
 The corpus import and seed pipeline validates that every curated pack and
 sentence character exists in `characters`. `scripts/check_invariants.py` repeats
