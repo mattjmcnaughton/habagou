@@ -187,7 +187,7 @@ dev:
     just dev-fe &
     wait
 
-# Start the Compose-managed database for native app development (optional escape hatch)
+# Start Compose Postgres for native app development (preferred when Docker exists and Nix does not)
 compose-db-up:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -196,7 +196,7 @@ compose-db-up:
         sleep 1
     done
 
-# Start the production-image Compose smoke stack (not day-to-day / default e2e)
+# Start the production-image Compose smoke stack (not the everyday native app loop)
 compose-up:
     {{_python}} scripts/dev_env.py render-keycloak-realm
     docker compose up --build

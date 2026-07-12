@@ -19,7 +19,10 @@ devenv inside the container.
 
 ## Consequences
 
-- Humans get a Docker-free primary workflow after installing Nix/devenv.
-- Agents can use Docker without installing Nix on the host.
+- **Do not install Nix on the host solely for Habagou.** Prefer already-installed
+  `uv` / `pnpm` / `just` plus Compose or other existing Postgres/Keycloak.
+- devenv remains available for hermetic, multi-worktree local clusters when
+  Nix/devenv is already present (including cloud-agent / `Dockerfile.dev`
+  environments that ship it).
 - The app only depends on environment variables such as `DATABASE_URL`, so the
   same commands work against devenv, Compose, CI, staging, or production.
