@@ -9,17 +9,32 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "dev_env.py"
 
 
+# Every variable derive() reads from the environment. Cleared before each run so
+# the test is hermetic even inside an active devenv shell (which exports many of
+# these), and only the explicit overrides passed to _run_json take effect.
+_DERIVED_ENV_KEYS = (
+    "HABAGOU_ROOT",
+    "HABAGOU_INSTANCE",
+    "HABAGOU_PORT",
+    "VITE_PORT",
+    "HABAGOU_KEYCLOAK_PORT",
+    "DEVENV_STATE",
+    "PGHOST",
+    "DATABASE_URL",
+    "SESSION_SECRET_KEY",
+    "OIDC_PROVIDER",
+    "OIDC_SCOPES",
+    "OIDC_ISSUER",
+    "OIDC_CLIENT_ID",
+    "OIDC_CLIENT_SECRET",
+    "KEYCLOAK_REALM_FILE",
+    "VITE_API_PROXY_TARGET",
+)
+
+
 def _run_json(**env: str) -> dict[str, str]:
     subprocess_env = os.environ.copy()
-    for key in (
-        "OIDC_PROVIDER",
-        "OIDC_SCOPES",
-        "HABAGOU_KEYCLOAK_PORT",
-        "OIDC_CLIENT_ID",
-        "OIDC_CLIENT_SECRET",
-        "OIDC_ISSUER",
-        "SESSION_SECRET_KEY",
-    ):
+    for key in _DERIVED_ENV_KEYS:
         subprocess_env.pop(key, None)
     subprocess_env.update(env)
     result = subprocess.run(

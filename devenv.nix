@@ -23,6 +23,12 @@
         user = "habagou";
       }
     ];
+    # The integration and e2e suites provision throwaway template and per-test
+    # databases, so the app role needs CREATEDB (the Docker Postgres used in CI
+    # grants this implicitly by making the bootstrap user a superuser).
+    initialScript = ''
+      ALTER ROLE habagou CREATEDB;
+    '';
   };
 
   services.keycloak = {

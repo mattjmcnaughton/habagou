@@ -1,0 +1,46 @@
+targets:
+  - ~/.cursor/skills
+
+skills:
+  - repo: github.com/anthropics/skills
+    ref: main
+    path: skills
+    include:
+      - frontend-design
+  - repo: github.com/mattjmcnaughton/skills
+    ref: main
+    path: skills
+  - repo: github.com/mattpocock/skills
+    ref: main
+    path: skills/productivity
+    include:
+      - handoff
+      - grill-me
+  - repo: github.com/mattpocock/skills
+    ref: main
+    path: skills/engineering
+    include:
+      - grill-with-docs
+      - tdd
+      - to-prd
+      - to-issues
+      - improve-codebase-architecture
+      - zoom-out
+  - repo: github.com/vercel-labs/agent-browser
+    ref: main
+    path: skills
+    include:
+      - agent-browser
+  - repo: github.com/cursor/plugins
+    ref: main
+    path: cursor-team-kit/skills
+    include:
+      - thermo-nuclear-code-quality-review
+  - repo: github.com/DietrichGebert/ponytail
+    ref: main
+    path: skills
+    include:
+      - ponytail
+      - ponytail-review
+      - ponytail-audit
+      - ponytail-debt
