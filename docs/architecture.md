@@ -77,26 +77,36 @@ The React app lives in `src/habagou/web/frontend`.
 
 ## Development And Deployment
 
-The primary human loop is devenv:
+**Do not install Nix just to work on Habagou.** Prefer host tools already on
+the machine (`uv`, `just`, Node/pnpm) and Compose (or other existing Postgres /
+Keycloak) for backing services. Use devenv only when Nix/devenv is already
+present (including cloud-agent / `Dockerfile.dev` environments).
 
-1. `devenv up -d` for the per-checkout Postgres service
+Typical no-Nix loop:
+
+1. `just compose-db-up` (and Compose Keycloak when auth is needed)
+2. Set `DATABASE_URL` / OIDC env
+3. `just bootstrap`
+4. `just dev`
+
+When devenv is already available:
+
+1. `devenv up -d` for the per-checkout Postgres + Keycloak services
 2. `devenv shell`
 3. Inside that shell, `just bootstrap`
 4. Inside that shell, `just dev`
 
 The justfile is the stable interface for native, Compose, CI, staging, and
-production validation commands. Agents use `Dockerfile.dev` for a Docker-hosted
-devenv shell so Nix is not installed on the host without explicit approval.
+production validation commands.
 
 Deployment uses Fly.io in production: one production image for the app, Postgres
 on Neon (project **`habagou`**, external, SSL). Migrations, corpus import, and seeding run once per
 deploy on the Fly release machine (`release_command`); app machines skip
 bootstrap. See [docs/deploy.md](deploy.md).
 
-Docker Compose remains available only as the local **production-image smoke**
-stack (`just compose-up` / `just compose-smoke`): the app container bootstraps
-on start alongside Compose Postgres and Keycloak. It is not the day-to-day or
-default local e2e path — that stays on devenv.
+Docker Compose also runs the local **production-image smoke** stack
+(`just compose-up` / `just compose-smoke`): the app container bootstraps on
+start alongside Compose Postgres and Keycloak.
 
 ## Verification
 

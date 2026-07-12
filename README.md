@@ -49,7 +49,38 @@ docs/
 
 ## Getting started
 
-The primary human dev environment is [devenv](https://devenv.sh/) — it pins the entire toolchain (Python, uv, Node, pnpm, just, Postgres) and gives every checkout its own isolated Postgres over a Unix socket, so you can run any number of independent instances (e.g. one per git worktree) with no port coordination. Install Nix/devenv before this step; agents use the checked-in `Dockerfile.dev`, which installs Nix and devenv inside the image rather than on the host. See [docs/devex.md](docs/devex.md).
+**Do not install Nix just to work on Habagou.** Prefer tools and services you
+already have. The justfile is the common interface in every mode — see
+[docs/devex.md](docs/devex.md) and [docs/development.md](docs/development.md).
+
+### Host tools + Compose services (no Nix)
+
+If you already have `uv`, `just`, Node 22, and `pnpm` (and Docker for
+Postgres/Keycloak):
+
+```sh
+uv sync
+cd src/habagou/web/frontend && pnpm install --frozen-lockfile && cd -
+uv run python scripts/dev_env.py render-keycloak-realm
+just compose-db-up
+docker compose up -d keycloak
+export DATABASE_URL=postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
+export OIDC_PROVIDER=keycloak
+export OIDC_ISSUER=http://127.0.0.1:18080/realms/habagou
+export OIDC_CLIENT_ID=habagou
+export OIDC_CLIENT_SECRET=habagou-dev-secret
+export SESSION_SECRET_KEY=habagou-dev-session-secret
+just bootstrap
+just info
+just dev
+```
+
+### devenv (only if already installed)
+
+[devenv](https://devenv.sh/) pins the toolchain and gives every checkout its
+own isolated Postgres over a Unix socket. Use this path only when Nix/devenv is
+already present — including cloud-agent / `Dockerfile.dev` environments. Do not
+install Nix on the host solely for this repo.
 
 ```sh
 devenv up -d
@@ -67,22 +98,13 @@ just dev
 
 Open the frontend URL printed by `just info`. Ports are derived from the checkout name, so they are not always `8000` and `5173`.
 
-Agent/container path:
+Agent environments that already ship Nix use:
 
 ```sh
 just dev-shell-docker   # builds Dockerfile.dev, then enters devenv shell
 ```
 
-Prefer Docker for the database instead of devenv? Optional escape hatch (not
-the default; day-to-day and local e2e stay on devenv):
-
-```sh
-just compose-db-up
-export DATABASE_URL=postgresql+asyncpg://habagou:habagou@localhost:5432/habagou
-just bootstrap && just dev
-```
-
-### Manual setup (no devenv, no Docker)
+### Manual setup (own Postgres, no Compose)
 
 Prerequisites: [uv](https://docs.astral.sh/uv/), [just](https://just.systems/), Node 22 + pnpm, a Postgres 16 you provide.
 
@@ -92,7 +114,7 @@ uv sync
 cd src/habagou/web/frontend && pnpm install && cd -
 
 # 2. Configure environment
-cp .env.example .env       # set DATABASE_URL
+cp .env.example .env       # set DATABASE_URL (and OIDC if using Keycloak/Auth0)
 
 # 3. Point DATABASE_URL at your Postgres
 
@@ -113,9 +135,9 @@ By default, backend runs at `http://localhost:8000`, frontend dev server at `htt
 | ------- | ------- |
 | `just bootstrap` | Migrate, import corpus data, and seed |
 | `just dev` | Backend + frontend dev servers |
-| `just dev-shell-docker` | Docker-based devenv shell for agents |
-| `just compose-db-up` | Optional Docker Postgres (escape hatch; not default) |
-| `just compose-up` | Prod-image smoke stack (not day-to-day / default e2e) |
+| `just dev-shell-docker` | Docker-based devenv shell when the image already includes Nix |
+| `just compose-db-up` | Compose Postgres for native app development (no Nix) |
+| `just compose-up` | Prod-image smoke stack |
 | `just compose-smoke` | CI-style Compose health/SPA/auth smoke |
 | `just gate` | Fast pre-push check (fmt + lint + typecheck + unit tests) |
 | `just gate-expensive` | gate + integration + e2e tests |
@@ -131,8 +153,9 @@ Production runs on [Fly.io](https://fly.io/) with Postgres on [Neon](https://neo
 Successful CI on `main` runs semantic-release; when a release is published, GitHub Actions pushes `ghcr.io/mattjmcnaughton/habagou` (for artifact retention) and runs `flyctl deploy --remote-only` so Fly builds from the release tag. See [docs/deploy.md](docs/deploy.md) for one-time cutover (Neon, `fly secrets`, custom domain + DNS) and ongoing CD.
 
 Locally, `just compose-up` / `just compose-smoke` build the same production
-image alongside Postgres and Keycloak for **prod-image smoke** without Fly —
-not for ordinary development or default local e2e (those use devenv).
+image alongside Postgres and Keycloak for **prod-image smoke** without Fly.
+Day-to-day development should use host tools (and Compose only for backing
+services if needed) — do not install Nix solely for Habagou.
 
 ## Documentation
 

@@ -51,20 +51,27 @@ tests/
   e2e/                      # End-to-end tests
 ```
 
-## Local Development: devenv vs Docker Compose
+## Local Development: prefer what is already installed
 
-- **Default = devenv.** Day-to-day work, bootstrap, `just dev`, and local e2e
-  (`just test-e2e` / `just e2e` without `BASE_URL`) use devenv for Postgres +
-  Keycloak. Typical loop: `devenv up -d` → `devenv shell` → `just bootstrap` →
-  `just dev`. See `docs/devex.md` and `docs/development.md`.
-- **Docker Compose is not the daily loop.** Use it only for production-image
-  smoke: `just compose-up` / `just compose-smoke` (and the CI `compose-smoke`
-  job). That path builds the real app image with Compose Postgres + Keycloak.
-- Do **not** start Compose for ordinary development or default local e2e.
-  Optional escape hatches (`just compose-db-up`, pointing `just e2e BASE_URL=…`
-  at a Compose stack) exist, but devenv is the supported default.
-- Agents without host Nix: `just dev-shell-docker` (still devenv inside
-  `Dockerfile.dev`), not Compose.
+**Do not install Nix just to work on Habagou.** Prefer the toolchain and
+services already available on the machine (or in the agent environment).
+
+Pick the first path that fits:
+
+1. **Host tools you already have** (`uv`, `just`, Node 22, `pnpm`) plus
+   Postgres/Keycloak you already run, **or** Docker Compose for those
+   services (`just compose-db-up`, and Compose Keycloak when you need auth).
+   Then `just bootstrap` → `just dev`. See `docs/development.md`.
+2. **devenv** — only if Nix/devenv is *already* present (including cloud-agent
+   / `Dockerfile.dev` environments that ship it). Never add a host Nix install
+   solely for this repo. Loop: `devenv up -d` → `devenv shell` →
+   `just bootstrap` → `just dev`.
+3. **Full Compose** (`just compose-up` / `just compose-smoke`) — production-image
+   smoke only (and the CI `compose-smoke` job), not the default day-to-day app
+   loop.
+
+Same justfile targets work in every mode; the app only reads env such as
+`DATABASE_URL`. Details: `docs/devex.md`, `docs/development.md`.
 
 ## Key Conventions
 
@@ -81,5 +88,5 @@ tests/
 
 - `docs/architecture.md` — read before adding new modules or changing project structure
 - `docs/development.md` — read for environment setup, debugging, or common tasks
-- `docs/devex.md` — devenv primary loop vs Compose smoke role
+- `docs/devex.md` — local modes (host tools, Compose services, optional devenv)
 - `docs/api.md` — API endpoint reference
