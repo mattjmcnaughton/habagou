@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -8,13 +8,18 @@ from habagou import db
 from habagou.models import (
     ActivityCompletion,
     ActivityType,
+    CompletionSource,
     Pack,
     PackStatus,
+    PathItemKind,
+    ReviewUnitType,
 )
 from habagou.repositories import (
     CharacterRepository,
     PackRepository,
+    PathRepository,
     ProgressRepository,
+    ReviewStateRepository,
     UserRepository,
 )
 from tests.integration.conftest import create_user
@@ -208,6 +213,163 @@ async def test_user_repository_round_trips_identity() -> None:
 
     assert found is created
     assert username_exists is True
+
+
+@pytest.mark.anyio
+async def test_path_repository_appends_pages_and_counts_pending() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        pack = await PackRepository(session).get_by_slug("greetings")
+        assert pack is not None
+
+        repository = PathRepository(session)
+        assert await repository.max_position(user_id=user.id) is None
+
+        first = await repository.append(
+            user_id=user.id,
+            position=1,
+            activity=ActivityType.TRACE,
+            kind=PathItemKind.NEW,
+            pack_id=pack.id,
+            content={"trace": {"chars": [{"hanzi": "你"}]}},
+        )
+        await repository.append(
+            user_id=user.id,
+            position=2,
+            activity=ActivityType.MATCH,
+            kind=PathItemKind.REVIEW,
+            pack_id=pack.id,
+            content={"match": {"pairs": []}},
+        )
+
+        assert await repository.max_position(user_id=user.id) == 2
+        assert await repository.count_pending(user_id=user.id) == 2
+
+        # Completing the first item removes it from the pending count.
+        await ProgressRepository(session).record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.TRACE,
+            duration_ms=100,
+            source=CompletionSource.PATH,
+            path_item_id=first.id,
+        )
+        assert await repository.count_pending(user_id=user.id) == 1
+
+        fetched = await repository.get_by_id(first.id)
+        assert fetched is not None
+        assert fetched.content == {"trace": {"chars": [{"hanzi": "你"}]}}
+
+        after = await repository.list_for_user(user_id=user.id, after_position=1)
+        assert [item.position for item in after] == [2]
+        limited = await repository.list_for_user(user_id=user.id, limit=1)
+        assert [item.position for item in limited] == [1]
+
+
+@pytest.mark.anyio
+async def test_review_state_repository_upserts_and_lists() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        pack = await PackRepository(session).get_by_slug("greetings")
+        assert pack is not None
+
+        repository = ReviewStateRepository(session)
+        base = datetime(2026, 7, 10, tzinfo=UTC)
+        created = await repository.upsert(
+            user_id=user.id,
+            pack_id=pack.id,
+            unit_type=ReviewUnitType.CHARACTER,
+            unit_ref="你",
+            activity=ActivityType.TRACE,
+            reps=1,
+            last_seen_at=base,
+            due_at=base + timedelta(days=1),
+        )
+        assert created.reps == 1
+
+        # Upsert on the same identity mutates the existing row rather than
+        # inserting a duplicate.
+        updated = await repository.upsert(
+            user_id=user.id,
+            pack_id=pack.id,
+            unit_type=ReviewUnitType.CHARACTER,
+            unit_ref="你",
+            activity=ActivityType.TRACE,
+            reps=2,
+            last_seen_at=base + timedelta(days=1),
+            due_at=base + timedelta(days=4),
+        )
+        assert updated.reps == 2
+
+        # A different activity for the same character is a distinct unit.
+        await repository.upsert(
+            user_id=user.id,
+            pack_id=pack.id,
+            unit_type=ReviewUnitType.CHARACTER,
+            unit_ref="你",
+            activity=ActivityType.MATCH,
+            reps=1,
+            last_seen_at=base,
+            due_at=base + timedelta(days=1),
+        )
+
+        fetched = await repository.get(
+            user_id=user.id,
+            pack_id=pack.id,
+            unit_type=ReviewUnitType.CHARACTER,
+            unit_ref="你",
+            activity=ActivityType.TRACE,
+        )
+        assert fetched is not None
+        assert fetched.reps == 2
+
+        listed = await repository.list_for_user(user_id=user.id)
+        assert len(listed) == 2
+
+
+@pytest.mark.anyio
+async def test_per_pack_aggregate_excludes_path_completions() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        pack = await PackRepository(session).get_by_slug("greetings")
+        assert pack is not None
+
+        progress = ProgressRepository(session)
+        await progress.delete_by_user_pack(user_id=user.id, pack_id=pack.id)
+
+        item = await PathRepository(session).append(
+            user_id=user.id,
+            position=1,
+            activity=ActivityType.TRACE,
+            kind=PathItemKind.NEW,
+            pack_id=pack.id,
+            content={"trace": {"chars": []}},
+        )
+        # A path completion must not count toward whole-pack badges.
+        await progress.record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.TRACE,
+            duration_ms=100,
+            source=CompletionSource.PATH,
+            path_item_id=item.id,
+        )
+
+        path_only = await progress.per_pack_aggregate(user_id=user.id, pack_id=pack.id)
+        assert path_only[ActivityType.TRACE].completed is False
+        assert path_only[ActivityType.TRACE].completion_count == 0
+
+        # A whole-pack completion does count.
+        await progress.record(
+            user_id=user.id,
+            pack_id=pack.id,
+            activity=ActivityType.TRACE,
+            duration_ms=200,
+        )
+        with_pack = await progress.per_pack_aggregate(user_id=user.id, pack_id=pack.id)
+        assert with_pack[ActivityType.TRACE].completed is True
+        assert with_pack[ActivityType.TRACE].completion_count == 1
+        assert with_pack[ActivityType.TRACE].best_duration_ms == 200
 
 
 def _seed_slugs() -> set[str]:

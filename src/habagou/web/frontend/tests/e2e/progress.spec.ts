@@ -59,6 +59,9 @@ test("[WF-11] heatmap expands to the month grid", async ({ page }) => {
 async function completeTraceCharacter(page: Page, hanzi: string) {
   const canvas = page.getByTestId("trace-canvas");
   await expect(canvas).toHaveAttribute("data-hanzi", hanzi);
+  // The scripted-stroke listener is attached in the same effect that renders the
+  // HanziWriter <svg>; wait for it so a freshly-mounted canvas doesn't drop the event.
+  await expect(canvas.locator("svg")).toBeAttached();
   await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
   await expect(page.getByText(`Nice. That is ${hanzi}.`)).toBeVisible();
 }

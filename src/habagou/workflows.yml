@@ -21,6 +21,12 @@ workflows:
     title: Deploy and serve
   - id: WF-11
     title: Review dashboard
+  - id: WF-12
+    title: View path
+  - id: WF-13
+    title: Complete path item
+  - id: WF-14
+    title: Review resurfacing
   - id: WF-AUTH-SIGN-IN
     title: Sign in
   - id: WF-AUTH-SIGN-OUT

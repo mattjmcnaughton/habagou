@@ -53,3 +53,6 @@ class ProgressSummaryDTO(BaseModel):
     daily_goal: DailyGoalDTO
     activity: list[DailyActivityDTO]
     next_milestone: NextMilestoneDTO
+    characters_traced: int
+    packs_completed: int
+    packs_total: int

@@ -84,6 +84,101 @@ Edge cases:
   grouping.
 - A sub-target day contributes to heatmap intensity but not to streak length.
 
+### WF-12 — View path
+
+Steps:
+
+1. Learner opens the app (or scrolls the Path stream) and the frontend
+   requests `GET /api/v1/path` with an optional `cursor`.
+2. If fewer than the pending window (default 10) of not-yet-done items exist
+   for the current user, the API generates more items at the tail of the
+   queue using current review state before responding.
+3. The API returns the queue page (`items`, `next_cursor`, `daily`, `streak`,
+   `due`), scoped by `get_current_user`.
+4. The Path screen renders done/current/locked nodes, the goal-ring hero,
+   streak, and due counts, and offers the current item as the next lesson.
+
+Invariants:
+
+- The Path never returns an empty queue — if nothing is due and nothing new
+  remains, generation falls back to early review of the soonest-due/weakest
+  units (see `docs/product/prd-path.md` FR-20).
+- `items` ordering is: today's done items, then current, then pending, by
+  `position`.
+- All reads are scoped by `get_current_user`; other users' items and review
+  state never affect the queue.
+
+Edge cases:
+
+- A brand-new learner with no review state yet receives an all-`new`-kind
+  queue in curriculum order.
+- Paging past `next_cursor` extends the queue rather than returning an empty
+  page.
+
+### WF-13 — Complete path item
+
+Steps:
+
+1. Learner finishes the current path item's activity in the item-scoped
+   lesson runner (`/lesson/$itemId`).
+2. The frontend posts `POST /api/v1/path/items/{item_id}/complete` with
+   `duration_ms`.
+3. The API appends a `source='path'` row to `activity_completions` (with
+   `path_item_id` set) and applies the Leitner-ladder update to every
+   reviewable unit in the item, updating `review_states` transactionally in
+   the same operation.
+4. The API recomputes daily goal/streak (now including this completion) and
+   returns `{ daily, streak, item_id, next_item_id }`.
+5. The frontend returns to the Path, marks the node done, advances the
+   current node, and updates the goal ring.
+
+Invariants:
+
+- A `source='path'` completion row always has `path_item_id` set (see
+  `docs/adrs/0008-review-state-as-rebuildable-projection.md`).
+- Completing a path item never writes to or changes whole-pack activity
+  completion state; `per_pack_aggregate` (filtered to `source='pack'`) is
+  unaffected.
+- Every reviewable unit in the completed item gets `reps += 1` and a new
+  `due_at` per the ladder (`LADDER = (1, 3, 7, 14, 30)` days).
+
+Edge cases:
+
+- Completing an already-completed item returns 409 and does not double-apply
+  the ladder update.
+- Completing an unknown `item_id` (wrong user or nonexistent) returns 404.
+- A completion that pushes the learner past the daily goal still reports the
+  true `daily.completed` count (uncapped), matching `daily.target`.
+
+### WF-14 — Review resurfacing
+
+Steps:
+
+1. A reviewable unit's `due_at` (set by a prior WF-13 completion) elapses.
+2. On a subsequent `GET /api/v1/path` (WF-12), queue generation selects that
+   unit's due reviewable unit ahead of new material (oldest `due_at` first,
+   per the generation batch rule) and materializes a `kind='review'` path
+   item covering it.
+3. The learner sees the review item in the stream like any other path item
+   and completes it via WF-13, which re-advances the unit on the ladder.
+
+Invariants:
+
+- A reviewable unit only resurfaces as a review item once its `due_at` has
+  passed relative to generation time.
+- Review generation strictly precedes new-material generation within a batch
+  (due reviews first).
+- `review_states` used for resurfacing decisions is always derivable by
+  replaying `activity_completions` (the rebuild-from-events property from
+  ADR-0008).
+
+Edge cases:
+
+- A unit backdated far past due still resurfaces exactly once per due cycle,
+  not repeatedly, until it is completed again.
+- A unit that has never been completed (no `review_states` row) is never
+  treated as due — it can only appear as `kind='new'`.
+
 ## 5. Production instrumentation
 
 Same vocabulary, three signal types. All flow through one tiny helper (`src/habagou/events.py`) so field names cannot drift.
@@ -104,12 +199,14 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `admin_action` | WF-09 | `action`, `pack_slug`, `authorized` |
 | `deploy_ready` | WF-10 | `database` |
 | `progress_summary_viewed` | WF-11 | `user_id`, `current_streak` |
+| `path_viewed` | WF-12 | `user_id`, `item_count`, `due_new`, `due_review` |
+| `path_item_completed` | WF-13/14 | `activity`, `pack_slug`, `kind`, `user_id`, `duration_ms` (client-reported) |
 | `auth_signed_in` | WF-AUTH-SIGN-IN | `user_id`, `provider` |
 | `auth_signed_out` | WF-AUTH-SIGN-OUT | `user_id`, `provider` |
 | `auth_gate_rejected` | WF-AUTH-GATE | `path` |
 | `invariant_check` | — | `check`, `outcome`, `violations` |
 
-Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable.
+Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable. Likewise, `path_item_completed` is derived from the same write that appends the `source='path'` completion row and updates `review_states`; WF-14 (review resurfacing) has no dedicated event of its own — it is proven by a later `path_viewed`/`path_item_completed` pair on a `kind='review'` item, the same way WF-03/04/05 share `activity_completed`.
 
 ### 5.2 Traces (OpenTelemetry — scaffolded in, exports when configured)
 

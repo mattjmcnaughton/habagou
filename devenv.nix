@@ -1,6 +1,8 @@
 { pkgs, ... }:
 
 {
+  env.LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib";
+
   packages = with pkgs; [
     bashInteractive
     curl
@@ -10,6 +12,7 @@
     pnpm
     postgresql_16
     python312
+    stdenv.cc.cc.lib
     uv
   ];
 
@@ -35,7 +38,7 @@
     enable = true;
     initialAdminPassword = "admin";
     settings = {
-      http-host = "127.0.0.1";
+      http-host = "0.0.0.0";
       http-port = 12345;
       hostname = "127.0.0.1";
       hostname-strict = false;

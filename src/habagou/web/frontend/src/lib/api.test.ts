@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type ApiError,
   apiFetch,
+  completePathItem,
   createCompletion,
+  getPath,
   getProgressSummary,
   listPacks,
   logout,
@@ -119,6 +121,51 @@ describe("apiFetch", () => {
         activity: "trace",
         duration_ms: 100,
       }),
+    });
+  });
+
+  it("requests a path page with cursor and limit query params", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ items: [], next_cursor: null }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await getPath({ cursor: 12, limit: 20 });
+
+    expect(fetch).toHaveBeenCalledWith("/api/v1/path?cursor=12&limit=20", undefined);
+  });
+
+  it("requests the path with no query params when none are given", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ items: [], next_cursor: null }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await getPath();
+
+    expect(fetch).toHaveBeenCalledWith("/api/v1/path", undefined);
+  });
+
+  it("posts a path item completion as JSON", async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        daily: { completed: 3, target: 3 },
+        streak: 12,
+        item_id: "item-1",
+        next_item_id: "item-2",
+      }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await completePathItem("item-1", { duration_ms: 41200 });
+
+    expect(fetch).toHaveBeenCalledWith("/api/v1/path/items/item-1/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duration_ms: 41200 }),
     });
   });
 

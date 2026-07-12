@@ -15,8 +15,8 @@ from habagou.dtos.progress import (
     ProgressResetDTO,
     ProgressSummaryDTO,
 )
-from habagou.models import Pack, PackStatus, User
-from habagou.repositories import PackRepository, ProgressRepository
+from habagou.models import ActivityType, Pack, PackStatus, User
+from habagou.repositories import PackRepository, PathRepository, ProgressRepository
 from habagou.services.packs import pack_progress_dto
 from habagou.streaks import (
     DAILY_GOAL_TARGET,
@@ -36,6 +36,7 @@ class ProgressService:
         self.session = session
         self.pack_repository = PackRepository(session)
         self.progress_repository = ProgressRepository(session)
+        self.path_repository = PathRepository(session)
 
     async def record_completion(
         self,
@@ -120,6 +121,10 @@ class ProgressService:
             for day in (today - timedelta(days=offset) for offset in range(44, -1, -1))
         ]
 
+        characters_traced, packs_completed, packs_total = await self._path_stats(
+            user=user
+        )
+
         return ProgressSummaryDTO(
             current_streak=streaks.current,
             best_streak=streaks.best,
@@ -133,7 +138,44 @@ class ProgressService:
                 days_remaining=milestone.days_remaining,
                 progress_pct=milestone.progress_pct,
             ),
+            characters_traced=characters_traced,
+            packs_completed=packs_completed,
+            packs_total=packs_total,
         )
+
+    async def _path_stats(self, *, user: User) -> tuple[int, int, int]:
+        """Return ``(characters_traced, packs_completed, packs_total)``.
+
+        ``characters_traced`` unions two sources of traced hanzi: characters
+        drawn in completed path-item Trace lessons (from the pinned
+        ``content`` snapshot), and every character of packs whose whole-pack
+        Trace activity is complete. ``packs_completed`` reuses the same
+        per-pack aggregate (``source='pack'``) that drives the pack progress
+        badges: all three activities must be complete.
+        """
+        packs = await self.pack_repository.list_published_with_content()
+        traced_hanzi: set[str] = set()
+        packs_completed = 0
+        for pack in packs:
+            aggregate = await self.progress_repository.per_pack_aggregate(
+                user_id=user.id,
+                pack_id=pack.id,
+            )
+            if aggregate[ActivityType.TRACE].completed:
+                traced_hanzi.update(link.character.hanzi for link in pack.characters)
+            if all(aggregate[activity].completed for activity in ActivityType):
+                packs_completed += 1
+
+        trace_items = await self.path_repository.completed_trace_items(user_id=user.id)
+        for item in trace_items:
+            chars = item.content.get("activity_content", {}).get("chars", [])
+            traced_hanzi.update(
+                char["hanzi"]
+                for char in chars
+                if isinstance(char, dict) and "hanzi" in char
+            )
+
+        return len(traced_hanzi), packs_completed, len(packs)
 
     async def _published_pack(self, slug: str) -> Pack | None:
         pack = await self.pack_repository.get_by_slug(slug)

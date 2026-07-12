@@ -8,7 +8,7 @@ export type MonthCell = {
   level: number;
 };
 
-const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+const DEFAULT_RING_RADIUS = 52;
 
 export function last14(activity: DailyActivity[]): DailyActivity[] {
   return activity.slice(-14);
@@ -41,16 +41,21 @@ export function currentMonth(activity: DailyActivity[], today = new Date()) {
   };
 }
 
-export function ringDashOffset(completed: number, target: number): number {
-  if (target <= 0) {
-    return RING_CIRCUMFERENCE;
-  }
-  const progress = Math.max(0, Math.min(1, completed / target));
-  return RING_CIRCUMFERENCE * (1 - progress);
+export function ringCircumference(radius = DEFAULT_RING_RADIUS): number {
+  return 2 * Math.PI * radius;
 }
 
-export function ringCircumference(): number {
-  return RING_CIRCUMFERENCE;
+export function ringDashOffset(
+  completed: number,
+  target: number,
+  radius = DEFAULT_RING_RADIUS,
+): number {
+  const circumference = ringCircumference(radius);
+  if (target <= 0) {
+    return circumference;
+  }
+  const progress = Math.max(0, Math.min(1, completed / target));
+  return circumference * (1 - progress);
 }
 
 export function packPct(progress: PackSummary["progress"]): number {

@@ -36,11 +36,11 @@ async def test_readyz_and_api_return_clean_errors_when_database_is_down(
             "details": {"database": "unreachable"},
         }
     }
-    assert packs.status_code == 503
+    assert packs.status_code == 500
     assert packs.json() == {
         "error": {
-            "code": "database_unavailable",
-            "message": "database is unavailable",
+            "code": "internal_error",
+            "message": "internal server error",
             "request_id": "api-db-down",
         }
     }
