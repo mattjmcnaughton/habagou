@@ -158,6 +158,26 @@ jobs:
       - name: Install just
         run: sudo apt-get update && sudo apt-get install -y just
 
+      - name: Start Keycloak
+        run: |
+          python scripts/dev_env.py render-keycloak-realm
+          docker run --detach --name habagou-keycloak --publish 12345:8080 \
+            --env KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            --env KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+            --env KC_HTTP_ENABLED=true \
+            --env KC_HOSTNAME_STRICT=false \
+            --env KC_HOSTNAME_STRICT_HTTPS=false \
+            --volume "$PWD/.devenv/state/keycloak/habagou-realm.json:/opt/keycloak/data/import/habagou-realm.json:ro" \
+            quay.io/keycloak/keycloak:26.0 start-dev --import-realm
+          for _ in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:12345/realms/habagou/.well-known/openid-configuration >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs habagou-keycloak
+          exit 1
+
       - name: Run e2e suite
         env:
           PYTEST_ADDOPTS: --junitxml=.artifacts/test-results/e2e.xml

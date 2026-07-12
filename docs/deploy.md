@@ -26,6 +26,10 @@ to Fly cutover.
   Final form: `postgresql+asyncpg://USER:PASSWORD@HOST/DB?ssl=require`
   (`DATABASE_URL` may already be set as a Fly secret before first deploy.)
 - GitHub repo access to add the `FLY_API_TOKEN` Actions secret.
+- An Auth0 tenant and a **Regular Web Application** for the production login
+  flow. Register `https://<custom-domain>/auth/callback` as an **Allowed
+  Callback URL**. Auth0 is the production OIDC provider; Keycloak remains the
+  local and CI provider (see [auth.md](auth.md)).
 - A custom domain you control. For Habagou this is typically
   `habagou.mattjmcnaughton.com`; DNS is managed in
   [mattjmcnaughton/nuage](https://github.com/mattjmcnaughton/nuage)
@@ -63,6 +67,16 @@ Confirm `app = 'habagou'` in `fly.toml` matches.
 #   4. Drop channel_binding=…            (asyncpg rejects channel_binding=)
 flyctl secrets set DATABASE_URL='postgresql+asyncpg://neondb_owner:…@….neon.tech/neondb?ssl=require'
 
+# Required — OIDC client credentials and session signing key.
+# OIDC_PROVIDER=auth0 and SESSION_COOKIE_SECURE=true are committed non-secret
+# Fly configuration. Replace the tenant and client values below.
+python -c 'import secrets; print(secrets.token_urlsafe(32))'
+flyctl secrets set \
+  SESSION_SECRET_KEY='<random value above>' \
+  OIDC_ISSUER='https://<tenant>.auth0.com/' \
+  OIDC_CLIENT_ID='<Auth0 Regular Web Application client ID>' \
+  OIDC_CLIENT_SECRET='<Auth0 Regular Web Application client secret>'
+
 # Optional — enables /api/v1 admin pack endpoints (Bearer via ADMIN_TOKEN header).
 # Leave unset to keep admin disabled (endpoints return 503).
 python -c 'import secrets; print(secrets.token_hex(32))'
@@ -78,7 +92,28 @@ load, but set the secret correctly so other tools see the same URL.
 
 `fly secrets` replaces the old AWS Secrets Manager + External Secrets Operator
 path. Non-secret config lives in `fly.toml` `[env]` (including
-`HABAGOU_RUN_BOOTSTRAP=0` so app machines skip bootstrap).
+`HABAGOU_RUN_BOOTSTRAP=0` so app machines skip bootstrap, plus
+`OIDC_PROVIDER=auth0` and `SESSION_COOKIE_SECURE=true`).
+
+### Auth0 configuration
+
+Create an Auth0 **Regular Web Application**. Its callback URL must be the
+public, HTTPS application URL followed by `/auth/callback`:
+
+```text
+https://<custom-domain>/auth/callback
+```
+
+Set the tenant's issuer, client ID, and client secret as Fly secrets in the
+previous step. The app uses discovery at
+`$OIDC_ISSUER/.well-known/openid-configuration`; do not set
+`OIDC_METADATA_URL` for a standard Auth0 tenant. The default requested scopes
+are `openid profile email`.
+
+The current `POST /auth/logout` clears only Habagou's local session. It does
+not redirect to Auth0's logout endpoint, so an Auth0 Allowed Logout URL is not
+required yet. Add `https://<custom-domain>/` before enabling provider logout in
+the future.
 
 On a brand-new app, secrets are often **Staged** until Machines exist
 (`fly secrets list` will say so). `fly secrets deploy` cannot run yet

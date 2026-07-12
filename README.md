@@ -136,6 +136,7 @@ Locally, `docker compose up` still builds the same image alongside Postgres and 
 - [Technical Design (TDD)](docs/technical/tdd.md)
 - [Ticket breakdown](docs/tickets.md)
 - [Deploy runbook](docs/deploy.md) — Fly.io cutover, secrets, DNS/certs, CD
+- [Authentication](docs/auth.md) — OIDC providers, local sessions, and Auth0 configuration
 - [Developer experience](docs/devex.md) — running N local instances, devenv
 - [Verification & validation](docs/verification.md) — workflow catalog, testing strategy, prod instrumentation
 
