@@ -12,7 +12,9 @@ from habagou.config import settings
 from habagou.db import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Escape '%' so ConfigParser does not treat percent-encoded values (e.g. a
+# socket host like host=%2Ftmp%2F... in a Unix-socket DSN) as interpolation.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
