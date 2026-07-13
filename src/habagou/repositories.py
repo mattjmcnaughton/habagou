@@ -17,7 +17,6 @@ from habagou.models import (
     Pack,
     PackCharacter,
     PackSentence,
-    PackStatus,
     PathItem,
     PathItemKind,
     ReviewState,
@@ -239,14 +238,6 @@ class PackRepository:
             )
             for index, sentence in enumerate(sentences, start=1)
         )
-        await self.session.flush()
-        return pack
-
-    async def set_status(self, slug: str, status: PackStatus) -> Pack | None:
-        pack = await self.get_by_slug(slug)
-        if pack is None:
-            return None
-        pack.status = status
         await self.session.flush()
         return pack
 

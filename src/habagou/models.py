@@ -29,14 +29,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from habagou.db import Base
 
 
-class PackStatus(StrEnum):
-    """Lifecycle status for a pack."""
-
-    DRAFT = "draft"
-    PUBLISHED = "published"
-    RETIRED = "retired"
-
-
 class ActivityType(StrEnum):
     """Activity variants that can create completion events."""
 
@@ -146,15 +138,6 @@ class Pack(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     glyph: Mapped[str] = mapped_column(String, nullable=False)
     color: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[PackStatus] = mapped_column(
-        Enum(
-            PackStatus,
-            name="pack_status",
-            values_callable=lambda enum: [e.value for e in enum],
-        ),
-        nullable=False,
-        default=PackStatus.DRAFT,
-    )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -411,7 +394,6 @@ __all__ = [
     "Pack",
     "PackCharacter",
     "PackSentence",
-    "PackStatus",
     "PathItem",
     "PathItemKind",
     "ReviewState",

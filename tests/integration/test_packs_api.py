@@ -11,7 +11,6 @@ from habagou.models import (
     ActivityCompletion,
     ActivityType,
     Pack,
-    PackStatus,
     User,
 )
 from habagou.repositories import PackRepository
@@ -234,7 +233,6 @@ async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
                 title="Owned",
                 glyph="私",
                 color="#000000",
-                status=PackStatus.PUBLISHED,
                 sort_order=99,
                 owner_id=owner_id,
             )

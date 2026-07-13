@@ -391,8 +391,8 @@ class PathService:
         else:
             state = "locked"
 
-        # Every path item references a published pack (enforced by the
-        # path_item_unpublished_pack invariant), so missing here is a bug.
+        # Every path item references a global pack (enforced by the
+        # path_item_owned_pack invariant), so missing here is a bug.
         pack = packs_by_id[item.pack_id]
         pack_dto = PathPackDTO(
             slug=pack.slug,
