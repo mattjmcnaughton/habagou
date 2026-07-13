@@ -4,7 +4,7 @@
 
 Conventions: every ticket must pass `just gate` before merge. Tests added by feature tickets carry workflow tags per VERIFICATION §4. Tickets marked **[FE]**/**[BE]** touch only one side.
 
-Scope note: **no AI/generation work in v1** (v2 roadmap). Forward-compat obligations: stroke corpus in Postgres, `packs.status`.
+Scope note: **no AI/generation work in v1** (v2 roadmap). Forward-compat obligations: stroke corpus in Postgres, `packs.status`. The `packs.status` obligation is superseded by [ADR 0009](adrs/0009-pack-ownership.md): pack ownership (`Pack.owner_id`), not status, is the forward-compat mechanism Epic 6 built for agent-created (Epic 7) packs.
 
 ---
 
