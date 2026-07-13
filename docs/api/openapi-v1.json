@@ -51,14 +51,14 @@
             "title": "Duration Ms",
             "type": "integer"
           },
-          "pack_slug": {
-            "minLength": 1,
-            "title": "Pack Slug",
+          "pack_id": {
+            "format": "uuid",
+            "title": "Pack Id",
             "type": "string"
           }
         },
         "required": [
-          "pack_slug",
+          "pack_id",
           "activity",
           "duration_ms"
         ],
@@ -938,16 +938,17 @@
         ]
       }
     },
-    "/api/v1/packs/{slug}": {
+    "/api/v1/packs/{pack_id}": {
       "get": {
-        "operationId": "get_pack_api_v1_packs__slug__get",
+        "operationId": "get_pack_api_v1_packs__pack_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "slug",
+            "name": "pack_id",
             "required": true,
             "schema": {
-              "title": "Slug",
+              "format": "uuid",
+              "title": "Pack Id",
               "type": "string"
             }
           }
@@ -1148,16 +1149,17 @@
         ]
       }
     },
-    "/api/v1/progress/packs/{slug}": {
+    "/api/v1/progress/packs/{pack_id}": {
       "delete": {
-        "operationId": "reset_pack_progress_api_v1_progress_packs__slug__delete",
+        "operationId": "reset_pack_progress_api_v1_progress_packs__pack_id__delete",
         "parameters": [
           {
             "in": "path",
-            "name": "slug",
+            "name": "pack_id",
             "required": true,
             "schema": {
-              "title": "Slug",
+              "format": "uuid",
+              "title": "Pack Id",
               "type": "string"
             }
           }
@@ -1193,14 +1195,15 @@
         ]
       },
       "get": {
-        "operationId": "get_pack_progress_api_v1_progress_packs__slug__get",
+        "operationId": "get_pack_progress_api_v1_progress_packs__pack_id__get",
         "parameters": [
           {
             "in": "path",
-            "name": "slug",
+            "name": "pack_id",
             "required": true,
             "schema": {
-              "title": "Slug",
+              "format": "uuid",
+              "title": "Pack Id",
               "type": "string"
             }
           }

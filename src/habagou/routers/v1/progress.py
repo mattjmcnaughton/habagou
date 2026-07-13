@@ -1,5 +1,6 @@
 """Progress API routes."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -59,7 +60,7 @@ async def create_completion(
         "activity_completed",
         workflow=_workflow_for_activity(completion.activity),
         activity=completion.activity.value,
-        pack_slug=completion.pack_slug,
+        pack_id=str(completion.pack_id),
         user_id=str(current_user.id),
     ) as event:
         result = await ProgressService(session).record_completion(
@@ -71,71 +72,71 @@ async def create_completion(
         if result is None:
             event.outcome = "error"
             event.fields["reason"] = "pack_not_found"
-            raise _pack_not_found(completion.pack_slug)
+            raise _pack_not_found(completion.pack_id)
 
         return result
 
 
 @router.get(
-    "/packs/{slug}",
+    "/packs/{pack_id}",
     response_model=PackProgressResponseDTO,
     responses={404: {"description": "Pack not found"}},
 )
 async def get_pack_progress(
-    slug: str,
+    pack_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PackProgressResponseDTO:
     async with workflow_event(
         "progress_viewed",
         workflow="WF-07",
-        pack_slug=slug,
+        pack_id=str(pack_id),
         user_id=str(current_user.id),
     ) as event:
         result = await ProgressService(session).get_pack_progress(
             user=current_user,
-            pack_slug=slug,
+            pack_id=pack_id,
         )
         if result is None:
             event.outcome = "error"
             event.fields["reason"] = "pack_not_found"
-            raise _pack_not_found(slug)
+            raise _pack_not_found(pack_id)
         return result
 
 
 @router.delete(
-    "/packs/{slug}",
+    "/packs/{pack_id}",
     response_model=ProgressResetDTO,
     responses={404: {"description": "Pack not found"}},
 )
 async def reset_pack_progress(
-    slug: str,
+    pack_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProgressResetDTO:
     async with workflow_event(
         "progress_reset",
         workflow="WF-08",
-        pack_slug=slug,
+        pack_id=str(pack_id),
         user_id=str(current_user.id),
     ) as event:
         result = await ProgressService(session).reset_pack_progress(
             user=current_user,
-            pack_slug=slug,
+            pack_id=pack_id,
         )
         if result is None:
             event.outcome = "error"
             event.fields.update(deleted_count=0, reason="pack_not_found")
-            raise _pack_not_found(slug)
+            raise _pack_not_found(pack_id)
 
         event.fields["deleted_count"] = result.deleted_count
         return result
 
 
-def _pack_not_found(slug: str) -> HTTPException:
+def _pack_not_found(pack_id: uuid.UUID) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"pack not found: {slug}",
+        detail=f"pack not found: {pack_id}",
     )
 
 

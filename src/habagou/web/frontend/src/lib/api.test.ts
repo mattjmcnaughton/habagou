@@ -108,7 +108,7 @@ describe("apiFetch", () => {
     vi.stubGlobal("fetch", fetch);
 
     await createCompletion({
-      pack_slug: "greetings",
+      pack_id: "11111111-1111-4111-8111-111111111111",
       activity: "trace",
       duration_ms: 100,
     });
@@ -117,7 +117,7 @@ describe("apiFetch", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        pack_slug: "greetings",
+        pack_id: "11111111-1111-4111-8111-111111111111",
         activity: "trace",
         duration_ms: 100,
       }),

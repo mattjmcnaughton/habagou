@@ -23,7 +23,7 @@ function SentenceActivity() {
       createCompletion({
         activity: "sentence",
         duration_ms: Date.now() - startedAt.current,
-        pack_slug: slug,
+        pack_id: pack.data?.id ?? "",
       }),
     onSuccess: (result) => {
       queryClient.setQueryData<PackDetail>(["pack", slug], (current) =>

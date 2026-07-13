@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime  # noqa: TC003 - Pydantic resolves schema annotations.
+import uuid  # noqa: TC003 - Pydantic resolves UUID annotations at runtime.
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +12,7 @@ from habagou.models import ActivityType  # noqa: TC001 - Pydantic validation.
 
 
 class CompletionCreateDTO(BaseModel):
-    pack_slug: str = Field(min_length=1)
+    pack_id: uuid.UUID
     activity: ActivityType
     duration_ms: int = Field(ge=0)
 

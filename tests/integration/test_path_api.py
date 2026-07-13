@@ -21,7 +21,7 @@ from habagou.repositories import (
     UserRepository,
 )
 from habagou.services.path import PENDING_WINDOW, PathService
-from tests.integration.conftest import auth_cookies, create_user
+from tests.integration.conftest import auth_cookies, create_user, pack_by_slug
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -411,7 +411,7 @@ async def test_path_completion_does_not_affect_pack_badges(
     pack_slug = first["pack"]["slug"]
 
     async with db.async_session() as session:
-        pack = await PackRepository(session).get_by_slug(pack_slug)
+        pack = await pack_by_slug(session, pack_slug)
         assert pack is not None
         pack_id = pack.id
         before = await ProgressRepository(session).per_pack_aggregate(

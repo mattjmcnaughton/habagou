@@ -1,5 +1,6 @@
 """Pack API routes."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,22 +30,22 @@ async def list_packs(
 
 
 @router.get(
-    "/{slug}",
+    "/{pack_id}",
     response_model=PackDetailDTO,
     responses={404: {"description": "Pack not found"}},
 )
 async def get_pack(
-    slug: str,
+    pack_id: uuid.UUID,
     session: Annotated[AsyncSession, Depends(get_session)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PackDetailDTO:
     async with workflow_event(
         "pack_served",
         workflow="WF-02",
-        pack_slug=slug,
+        pack_id=str(pack_id),
         user_id=str(current_user.id),
     ) as event:
-        pack = await PackService(session).get_visible_by_slug(slug, current_user)
+        pack = await PackService(session).get_visible(pack_id, current_user)
         if pack is None:
             event.outcome = "error"
             raise HTTPException(

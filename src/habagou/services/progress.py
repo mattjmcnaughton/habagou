@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid  # noqa: TC003 - used in runtime method signatures.
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -44,7 +45,7 @@ class ProgressService:
         user: User,
         completion: CompletionCreateDTO,
     ) -> CompletionResponseDTO | None:
-        pack = await self._visible_pack(completion.pack_slug, user)
+        pack = await self._visible_pack(completion.pack_id, user)
         if pack is None:
             return None
 
@@ -67,9 +68,9 @@ class ProgressService:
         self,
         *,
         user: User,
-        pack_slug: str,
+        pack_id: uuid.UUID,
     ) -> PackProgressResponseDTO | None:
-        pack = await self._visible_pack(pack_slug, user)
+        pack = await self._visible_pack(pack_id, user)
         if pack is None:
             return None
 
@@ -82,9 +83,9 @@ class ProgressService:
         self,
         *,
         user: User,
-        pack_slug: str,
+        pack_id: uuid.UUID,
     ) -> ProgressResetDTO | None:
-        pack = await self._visible_pack(pack_slug, user)
+        pack = await self._visible_pack(pack_id, user)
         if pack is None:
             return None
 
@@ -177,12 +178,9 @@ class ProgressService:
 
         return len(traced_hanzi), packs_completed, len(packs)
 
-    async def _visible_pack(self, slug: str, user: User) -> Pack | None:
-        pack = await self.pack_repository.get_by_slug(slug)
-        # Visible iff global (owner_id IS NULL) or owned by the caller.
-        if pack is None or (pack.owner_id is not None and pack.owner_id != user.id):
-            return None
-        return pack
+    async def _visible_pack(self, pack_id: uuid.UUID, user: User) -> Pack | None:
+        # Visibility (global or owned) is enforced in the repository query.
+        return await self.pack_repository.get_visible(pack_id, user.id)
 
     async def _progress(self, *, user: User, pack: Pack) -> PackProgressDTO:
         progress = await self.progress_repository.per_pack_aggregate(

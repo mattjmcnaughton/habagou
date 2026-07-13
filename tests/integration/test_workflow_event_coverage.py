@@ -15,6 +15,7 @@ from habagou.auth import AuthIdentity
 from habagou.models import ReviewState
 from habagou.repositories import UserRepository
 from scripts.seed import SeedResult, emit_bootstrap_completed
+from tests.integration.conftest import pack_id_by_slug
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -30,12 +31,12 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
         "ok",
     ),
     "WF-02": ({"pack_list_served", "pack_served"}, {"pack_count"}, "ok"),
-    "WF-03": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
-    "WF-04": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
-    "WF-05": ({"activity_completed"}, {"activity", "pack_slug", "user_id"}, "ok"),
+    "WF-03": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
+    "WF-04": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
+    "WF-05": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
     "WF-06": ({"strokes_served", "strokes_missing"}, {"hanzi", "found"}, "ok"),
-    "WF-07": ({"progress_viewed"}, {"pack_slug", "user_id"}, "ok"),
-    "WF-08": ({"progress_reset"}, {"pack_slug", "deleted_count", "user_id"}, "ok"),
+    "WF-07": ({"progress_viewed"}, {"pack_id", "user_id"}, "ok"),
+    "WF-08": ({"progress_reset"}, {"pack_id", "deleted_count", "user_id"}, "ok"),
     "WF-10": ({"deploy_ready"}, {"database"}, "ok"),
     "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}, "ok"),
     "WF-12": (
@@ -97,12 +98,13 @@ async def test_all_workflows_emit_verification_events(
     emit_bootstrap_completed(SeedResult(chars=20, packs=4))
     await _ok(await client.get("/auth/callback"), status_code=303)
     await _ok(await client.get("/api/v1/packs"))
+    greetings_id = await pack_id_by_slug("greetings")
     for activity in ("trace", "match", "sentence"):
         await _ok(
             await client.post(
                 "/api/v1/progress/completions",
                 json={
-                    "pack_slug": "greetings",
+                    "pack_id": str(greetings_id),
                     "activity": activity,
                     "duration_ms": 1000,
                 },
@@ -110,7 +112,7 @@ async def test_all_workflows_emit_verification_events(
             status_code=201,
         )
     await _ok(await client.get("/api/v1/characters/你/strokes"))
-    await _ok(await client.get("/api/v1/progress/packs/greetings"))
+    await _ok(await client.get(f"/api/v1/progress/packs/{greetings_id}"))
     await _ok(await client.get("/api/v1/progress/summary"))
     # WF-12: view the path (also materializes the queue).
     path_body = await _json(await client.get("/api/v1/path"))
@@ -142,7 +144,7 @@ async def test_all_workflows_emit_verification_events(
         ),
         status_code=201,
     )
-    await _ok(await client.delete("/api/v1/progress/packs/greetings"))
+    await _ok(await client.delete(f"/api/v1/progress/packs/{greetings_id}"))
     await _ok(await client.get("/readyz"))
     await _ok(await client.post("/auth/logout"), status_code=204)
     await _ok(await client.get("/api/v1/packs"), status_code=401)

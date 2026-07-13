@@ -13,9 +13,8 @@ from habagou.models import (
     PathItem,
     PathItemKind,
 )
-from habagou.repositories import PackRepository
 from scripts import check_invariants
-from tests.integration.conftest import create_user
+from tests.integration.conftest import create_user, pack_by_slug
 
 
 @pytest.mark.anyio
@@ -86,7 +85,7 @@ async def test_path_source_completion_missing_item_is_detected(
     )
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
         # The DB-level check constraint normally forbids this row; drop it so
         # the test can exercise the invariant script's own detection.

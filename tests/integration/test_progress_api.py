@@ -12,7 +12,12 @@ from habagou import db
 from habagou.app import create_app
 from habagou.models import ActivityCompletion, ActivityType, Pack, User
 from habagou.repositories import PackRepository
-from tests.integration.conftest import auth_cookies, create_user
+from tests.integration.conftest import (
+    auth_cookies,
+    create_user,
+    pack_by_slug,
+    pack_id_by_slug,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -42,6 +47,7 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await _record_other_user_completion("greetings", ActivityType.MATCH, 400)
+    greetings_id = await pack_id_by_slug("greetings")
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
@@ -51,7 +57,7 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
     create_response = await client.post(
         "/api/v1/progress/completions",
         json={
-            "pack_slug": "greetings",
+            "pack_id": str(greetings_id),
             "activity": "match",
             "duration_ms": 1200,
         },
@@ -68,7 +74,7 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
     assert events[0][1]["activity"] == "match"
     assert events[0][1]["duration_ms"] == 1200
 
-    progress_response = await client.get("/api/v1/progress/packs/greetings")
+    progress_response = await client.get(f"/api/v1/progress/packs/{greetings_id}")
 
     assert progress_response.status_code == 200
     assert progress_response.json() == {
@@ -93,9 +99,9 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
     }
     assert events[1][0] == "progress_viewed"
     assert events[1][1]["workflow"] == "WF-07"
-    assert events[1][1]["pack_slug"] == "greetings"
+    assert events[1][1]["pack_id"] == str(greetings_id)
 
-    reset_response = await client.delete("/api/v1/progress/packs/greetings")
+    reset_response = await client.delete(f"/api/v1/progress/packs/{greetings_id}")
 
     assert reset_response.status_code == 200
     assert reset_response.json() == {
@@ -128,10 +134,11 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
 @pytest.mark.workflow("WF-07")
 @pytest.mark.anyio
 async def test_completion_rejects_invalid_activity(client: AsyncClient) -> None:
+    greetings_id = await pack_id_by_slug("greetings")
     response = await client.post(
         "/api/v1/progress/completions",
         json={
-            "pack_slug": "greetings",
+            "pack_id": str(greetings_id),
             "activity": "quiz",
             "duration_ms": 1200,
         },
@@ -155,6 +162,7 @@ async def test_completion_emits_activity_workflow_events(
     activity: str,
     workflow: str,
 ) -> None:
+    greetings_id = await pack_id_by_slug("greetings")
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
@@ -164,7 +172,7 @@ async def test_completion_emits_activity_workflow_events(
     response = await client.post(
         "/api/v1/progress/completions",
         json={
-            "pack_slug": "greetings",
+            "pack_id": str(greetings_id),
             "activity": activity,
             "duration_ms": 1000,
         },
@@ -332,18 +340,18 @@ async def test_progress_rejects_foreign_owned_pack(client: AsyncClient) -> None:
         other = await create_user(session, username="other-owner", email=None)
         await session.commit()
         other_id = other.id
-    await _create_owned_pack("foreign-progress", owner_id=other_id)
+    foreign_id = await _create_owned_pack("foreign-progress", owner_id=other_id)
 
     create = await client.post(
         "/api/v1/progress/completions",
-        json={"pack_slug": "foreign-progress", "activity": "trace", "duration_ms": 100},
+        json={"pack_id": str(foreign_id), "activity": "trace", "duration_ms": 100},
     )
     assert create.status_code == 404
 
-    view = await client.get("/api/v1/progress/packs/foreign-progress")
+    view = await client.get(f"/api/v1/progress/packs/{foreign_id}")
     assert view.status_code == 404
 
-    reset = await client.delete("/api/v1/progress/packs/foreign-progress")
+    reset = await client.delete(f"/api/v1/progress/packs/{foreign_id}")
     assert reset.status_code == 404
 
 
@@ -354,16 +362,16 @@ async def test_progress_records_on_own_owned_pack(
     client: AsyncClient,
     current_user: User,
 ) -> None:
-    await _create_owned_pack("own-progress", owner_id=current_user.id)
+    own_id = await _create_owned_pack("own-progress", owner_id=current_user.id)
 
     create = await client.post(
         "/api/v1/progress/completions",
-        json={"pack_slug": "own-progress", "activity": "trace", "duration_ms": 100},
+        json={"pack_id": str(own_id), "activity": "trace", "duration_ms": 100},
     )
     assert create.status_code == 201
     assert create.json()["progress"]["trace"]["completed"] is True
 
-    reset = await client.delete("/api/v1/progress/packs/own-progress")
+    reset = await client.delete(f"/api/v1/progress/packs/{own_id}")
     assert reset.status_code == 200
     assert reset.json()["deleted_count"] == 1
 
@@ -433,7 +441,11 @@ async def test_characters_traced_unions_path_and_whole_pack_trace(
     # path — otherwise this would overcount past len(pack_hanzi).
     whole_pack_response = await client.post(
         "/api/v1/progress/completions",
-        json={"pack_slug": pack_slug, "activity": "trace", "duration_ms": 900},
+        json={
+            "pack_id": str(await pack_id_by_slug(pack_slug)),
+            "activity": "trace",
+            "duration_ms": 900,
+        },
     )
     assert whole_pack_response.status_code == 201
 
@@ -449,12 +461,13 @@ async def test_packs_completed_flips_only_when_all_three_activities_done(
     client: AsyncClient,
 ) -> None:
     await _clear_user_progress(current_user.id)
+    greetings_id = await pack_id_by_slug("greetings")
 
     for activity in ("trace", "match"):
         response = await client.post(
             "/api/v1/progress/completions",
             json={
-                "pack_slug": "greetings",
+                "pack_id": str(greetings_id),
                 "activity": activity,
                 "duration_ms": 500,
             },
@@ -467,7 +480,7 @@ async def test_packs_completed_flips_only_when_all_three_activities_done(
 
     sentence_response = await client.post(
         "/api/v1/progress/completions",
-        json={"pack_slug": "greetings", "activity": "sentence", "duration_ms": 500},
+        json={"pack_id": str(greetings_id), "activity": "sentence", "duration_ms": 500},
     )
     assert sentence_response.status_code == 201
 
@@ -511,7 +524,7 @@ async def _complete_path_item(
 
 async def _pack_hanzi(slug: str) -> set[str]:
     async with db.async_session() as session:
-        pack = await PackRepository(session).get_by_slug(slug)
+        pack = await pack_by_slug(session, slug)
         assert pack is not None
         return {link.character.hanzi for link in pack.characters}
 
@@ -521,26 +534,26 @@ async def _global_pack_count() -> int:
         return len(await PackRepository(session).list_global_with_content())
 
 
-async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
+async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> uuid.UUID:
     async with db.async_session() as session:
-        session.add(
-            Pack(
-                slug=slug,
-                title="Owned",
-                glyph="私",
-                color="#000000",
-                sort_order=99,
-                owner_id=owner_id,
-            )
+        pack = Pack(
+            slug=slug,
+            title="Owned",
+            glyph="私",
+            color="#000000",
+            sort_order=99,
+            owner_id=owner_id,
         )
+        session.add(pack)
         await session.commit()
+        return pack.id
 
 
 async def _record_other_user_completion(
     slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
     async with db.async_session() as session:
-        pack = await PackRepository(session).get_by_slug(slug)
+        pack = await pack_by_slug(session, slug)
         assert pack is not None
         user = User(
             id=uuid.UUID("22222222-2222-4222-8222-222222222222"),
@@ -564,7 +577,7 @@ async def _record_user_completions(
     user_id: uuid.UUID, completed_at_values: list[datetime]
 ) -> None:
     async with db.async_session() as session:
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
         session.add_all(
             [
@@ -584,7 +597,7 @@ async def _record_user_completions(
 async def _clear_user_progress(user_id: uuid.UUID) -> None:
     async with db.async_session() as session:
         for slug in ("greetings", "numbers", "family", "food-drink"):
-            pack = await PackRepository(session).get_by_slug(slug)
+            pack = await pack_by_slug(session, slug)
             assert pack is not None
             result = await session.execute(
                 delete(ActivityCompletion).where(
