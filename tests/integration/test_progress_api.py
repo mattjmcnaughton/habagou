@@ -10,7 +10,7 @@ from sqlalchemy import delete, func, select
 
 from habagou import db
 from habagou.app import create_app
-from habagou.models import ActivityCompletion, ActivityType, User
+from habagou.models import ActivityCompletion, ActivityType, Pack, PackStatus, User
 from habagou.repositories import PackRepository
 from tests.integration.conftest import auth_cookies, create_user
 
@@ -322,6 +322,52 @@ async def test_progress_summary_emits_workflow_event(
     assert "current_streak" in events[0][1]
 
 
+@pytest.mark.workflow("WF-07")
+@pytest.mark.workflow("WF-08")
+@pytest.mark.anyio
+async def test_progress_rejects_foreign_owned_pack(client: AsyncClient) -> None:
+    # Recording or resetting progress on another user's private pack must 404:
+    # the pack is invisible to the current user.
+    async with db.async_session() as session:
+        other = await create_user(session, username="other-owner", email=None)
+        await session.commit()
+        other_id = other.id
+    await _create_owned_pack("foreign-progress", owner_id=other_id)
+
+    create = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_slug": "foreign-progress", "activity": "trace", "duration_ms": 100},
+    )
+    assert create.status_code == 404
+
+    view = await client.get("/api/v1/progress/packs/foreign-progress")
+    assert view.status_code == 404
+
+    reset = await client.delete("/api/v1/progress/packs/foreign-progress")
+    assert reset.status_code == 404
+
+
+@pytest.mark.workflow("WF-07")
+@pytest.mark.workflow("WF-08")
+@pytest.mark.anyio
+async def test_progress_records_on_own_owned_pack(
+    client: AsyncClient,
+    current_user: User,
+) -> None:
+    await _create_owned_pack("own-progress", owner_id=current_user.id)
+
+    create = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_slug": "own-progress", "activity": "trace", "duration_ms": 100},
+    )
+    assert create.status_code == 201
+    assert create.json()["progress"]["trace"]["completed"] is True
+
+    reset = await client.delete("/api/v1/progress/packs/own-progress")
+    assert reset.status_code == 200
+    assert reset.json()["deleted_count"] == 1
+
+
 @pytest.mark.anyio
 async def test_progress_requires_authentication() -> None:
     transport = ASGITransport(app=create_app())
@@ -450,6 +496,22 @@ async def _pack_hanzi(slug: str) -> set[str]:
 async def _published_pack_count() -> int:
     async with db.async_session() as session:
         return len(await PackRepository(session).list_published())
+
+
+async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
+    async with db.async_session() as session:
+        session.add(
+            Pack(
+                slug=slug,
+                title="Owned",
+                glyph="私",
+                color="#000000",
+                status=PackStatus.PUBLISHED,
+                sort_order=99,
+                owner_id=owner_id,
+            )
+        )
+        await session.commit()
 
 
 async def _record_other_user_completion(

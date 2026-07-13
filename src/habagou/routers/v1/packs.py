@@ -44,7 +44,7 @@ async def get_pack(
         pack_slug=slug,
         user_id=str(current_user.id),
     ) as event:
-        pack = await PackService(session).get_published_by_slug(slug, current_user)
+        pack = await PackService(session).get_visible_by_slug(slug, current_user)
         if pack is None:
             event.outcome = "error"
             raise HTTPException(
