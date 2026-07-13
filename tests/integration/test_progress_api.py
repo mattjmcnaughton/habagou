@@ -358,6 +358,46 @@ async def test_progress_rejects_foreign_owned_pack(client: AsyncClient) -> None:
 @pytest.mark.workflow("WF-07")
 @pytest.mark.workflow("WF-08")
 @pytest.mark.anyio
+async def test_progress_404s_on_unknown_pack(client: AsyncClient) -> None:
+    # A valid-but-unknown pack id 404s identically to a foreign-owned one on
+    # every pack-progress endpoint (record, view, reset): no existence leak.
+    unknown_id = uuid.uuid4()
+
+    create = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_id": str(unknown_id), "activity": "trace", "duration_ms": 100},
+    )
+    assert create.status_code == 404
+
+    view = await client.get(f"/api/v1/progress/packs/{unknown_id}")
+    assert view.status_code == 404
+
+    reset = await client.delete(f"/api/v1/progress/packs/{unknown_id}")
+    assert reset.status_code == 404
+
+
+@pytest.mark.workflow("WF-07")
+@pytest.mark.workflow("WF-08")
+@pytest.mark.anyio
+async def test_progress_422s_on_malformed_id(client: AsyncClient) -> None:
+    # A non-UUID pack id is rejected by validation (path param or request body)
+    # before any visibility check runs.
+    create = await client.post(
+        "/api/v1/progress/completions",
+        json={"pack_id": "not-a-uuid", "activity": "trace", "duration_ms": 100},
+    )
+    assert create.status_code == 422
+
+    view = await client.get("/api/v1/progress/packs/not-a-uuid")
+    assert view.status_code == 422
+
+    reset = await client.delete("/api/v1/progress/packs/not-a-uuid")
+    assert reset.status_code == 422
+
+
+@pytest.mark.workflow("WF-07")
+@pytest.mark.workflow("WF-08")
+@pytest.mark.anyio
 async def test_progress_records_on_own_owned_pack(
     client: AsyncClient,
     current_user: User,
