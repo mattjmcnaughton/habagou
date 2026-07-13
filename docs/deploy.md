@@ -76,11 +76,6 @@ flyctl secrets set \
   OIDC_ISSUER='https://<tenant>.auth0.com/' \
   OIDC_CLIENT_ID='<Auth0 Regular Web Application client ID>' \
   OIDC_CLIENT_SECRET='<Auth0 Regular Web Application client secret>'
-
-# Optional — enables /api/v1 admin pack endpoints (Bearer via ADMIN_TOKEN header).
-# Leave unset to keep admin disabled (endpoints return 503).
-python -c 'import secrets; print(secrets.token_hex(32))'
-flyctl secrets set ADMIN_TOKEN='<paste token>'
 ```
 
 A plain `postgresql://…` secret makes Alembic/SQLAlchemy load **psycopg2**,
@@ -290,7 +285,6 @@ flyctl logs -a habagou
 | `fly secrets deploy`: no machines available | Expected before the first successful Machine-creating deploy. Use `--skip-release-command` first, then `fly secrets deploy` if needed, then a full deploy. |
 | App serves but empty data | Release machine may have failed bootstrap; check `flyctl releases` and logs. App machines intentionally skip bootstrap. |
 | Cert stuck / invalid | `fly certs check <domain>`; DNS A/AAAA/CNAME match `fly certs setup`; no proxy misconfig; ownership TXT if using Cloudflare. |
-| Admin 503 | `ADMIN_TOKEN` unset — expected. Set via `fly secrets` if you want admin. |
 | Scale-to-zero cold start | First request after idle wakes a machine; acceptable for this app. |
 
 ## Local Compose vs Fly
