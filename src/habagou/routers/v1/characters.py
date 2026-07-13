@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 from habagou.db import get_session
 from habagou.dependencies import get_current_user
 from habagou.events import workflow_event
-from habagou.repositories import CharacterRepository
+from habagou.services.characters import CharacterService
 
 router = APIRouter(
     prefix="/api/v1/characters",
@@ -41,7 +41,7 @@ async def get_character_strokes(
                 detail="hanzi must be exactly one grapheme",
             )
 
-        stroke_data = await CharacterRepository(session).strokes_by_hanzi(hanzi)
+        stroke_data = await CharacterService(session).get_strokes(hanzi)
         if stroke_data is None:
             event.event = "strokes_missing"
             event.outcome = "error"
