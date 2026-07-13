@@ -2,7 +2,7 @@
 
 Owns the materialized, append-only path queue and the transactional projection
 of ``review_states`` over the append-only completion log. The scheduling maths
-lives entirely in the pure :mod:`habagou.path_scheduling` module; this service
+lives entirely in the pure :mod:`habagou.domains.scheduling` module; this service
 maps ORM rows onto its plain dataclasses and back.
 
 See ``docs/adrs/0008-review-state-as-rebuildable-projection.md``: every write to
@@ -16,7 +16,8 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
-from habagou import path_scheduling as sched
+from habagou.domains import scheduling as sched
+from habagou.domains.streaks import DAILY_GOAL_TARGET, compute_streaks
 from habagou.dtos.path import (
     PathContentDTO,
     PathDailyDTO,
@@ -41,7 +42,6 @@ from habagou.repositories import (
     ReviewStateRepository,
     UserRepository,
 )
-from habagou.streaks import DAILY_GOAL_TARGET, compute_streaks
 
 if TYPE_CHECKING:
     import uuid
@@ -192,7 +192,7 @@ class PathService:
         Uses only the persisted generation log (``path_items`` and the units
         they introduced, at ``reps=0``) and the ``source='path'`` completions in
         ``completed_at`` order, driven purely by
-        :func:`habagou.path_scheduling.apply_completion`. The result should equal
+        :func:`habagou.domains.scheduling.apply_completion`. The result should equal
         the live ``review_states`` table field-by-field (ADR-0008).
         """
         items = await self.path_repository.list_for_user(user_id=user_id)

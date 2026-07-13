@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from habagou.path_scheduling import (
+from habagou.domains.scheduling import (
     LADDER,
     UNIT_PHRASES,
     UNIT_STRIDE,
