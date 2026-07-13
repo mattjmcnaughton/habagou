@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
 
 from habagou import db
 from habagou.app import create_app
@@ -19,6 +18,7 @@ from habagou.repositories import PackRepository
 from tests.integration.conftest import auth_cookies, create_user
 
 if TYPE_CHECKING:
+    import uuid
     from collections.abc import AsyncGenerator
 
 
@@ -140,11 +140,17 @@ async def test_get_pack_returns_detail_with_progress(
 
 @pytest.mark.workflow("WF-02")
 @pytest.mark.anyio
-async def test_get_pack_404s_for_unknown_or_unpublished(
+async def test_get_pack_404s_for_unknown_or_foreign_owned(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    await _retire_pack("greetings")
+    # A foreign user's private pack is invisible even though it is published:
+    # visibility is gated by ownership, not status.
+    async with db.async_session() as session:
+        other = await create_user(session, username="other-owner", email=None)
+        await session.commit()
+        other_id = other.id
+    await _create_owned_pack("foreign-pack", owner_id=other_id)
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
@@ -152,9 +158,23 @@ async def test_get_pack_404s_for_unknown_or_unpublished(
     )
 
     assert (await client.get("/api/v1/packs/nope")).status_code == 404
-    assert (await client.get("/api/v1/packs/greetings")).status_code == 404
+    assert (await client.get("/api/v1/packs/foreign-pack")).status_code == 404
     assert [event for event, _fields in events] == ["pack_served", "pack_served"]
     assert [fields["outcome"] for _event, fields in events] == ["error", "error"]
+
+
+@pytest.mark.workflow("WF-02")
+@pytest.mark.anyio
+async def test_get_pack_returns_own_owned_pack(
+    client: AsyncClient,
+    current_user: User,
+) -> None:
+    await _create_owned_pack("my-pack", owner_id=current_user.id)
+
+    response = await client.get("/api/v1/packs/my-pack")
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == "my-pack"
 
 
 @pytest.mark.anyio
@@ -184,9 +204,17 @@ async def _record_completion(
         await session.commit()
 
 
-async def _retire_pack(slug: str) -> None:
+async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
     async with db.async_session() as session:
-        pack = await session.scalar(select(Pack).where(Pack.slug == slug))
-        assert pack is not None
-        pack.status = PackStatus.RETIRED
+        session.add(
+            Pack(
+                slug=slug,
+                title="Owned",
+                glyph="私",
+                color="#000000",
+                status=PackStatus.PUBLISHED,
+                sort_order=99,
+                owner_id=owner_id,
+            )
+        )
         await session.commit()

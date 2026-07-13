@@ -12,7 +12,7 @@ from habagou.dtos.packs import (
     PackSentenceDTO,
     PackSummaryDTO,
 )
-from habagou.models import ActivityType, PackStatus, User
+from habagou.models import ActivityType, User
 from habagou.repositories import (
     ActivityProgress,
     PackRepository,
@@ -33,11 +33,10 @@ class PackService:
         packs = await self.pack_repository.list_published()
         return [await self._summary(item, user) for item in packs]
 
-    async def get_published_by_slug(
-        self, slug: str, user: User
-    ) -> PackDetailDTO | None:
+    async def get_visible_by_slug(self, slug: str, user: User) -> PackDetailDTO | None:
         pack = await self.pack_repository.get_by_slug(slug)
-        if pack is None or pack.status is not PackStatus.PUBLISHED:
+        # Visible iff global (owner_id IS NULL) or owned by the caller.
+        if pack is None or (pack.owner_id is not None and pack.owner_id != user.id):
             return None
 
         counts = PackWithCounts(

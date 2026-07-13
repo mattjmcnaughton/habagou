@@ -15,7 +15,7 @@ from habagou.dtos.progress import (
     ProgressResetDTO,
     ProgressSummaryDTO,
 )
-from habagou.models import ActivityType, Pack, PackStatus, User
+from habagou.models import ActivityType, Pack, User
 from habagou.repositories import PackRepository, PathRepository, ProgressRepository
 from habagou.services.packs import pack_progress_dto
 from habagou.streaks import (
@@ -44,7 +44,7 @@ class ProgressService:
         user: User,
         completion: CompletionCreateDTO,
     ) -> CompletionResponseDTO | None:
-        pack = await self._published_pack(completion.pack_slug)
+        pack = await self._visible_pack(completion.pack_slug, user)
         if pack is None:
             return None
 
@@ -69,7 +69,7 @@ class ProgressService:
         user: User,
         pack_slug: str,
     ) -> PackProgressResponseDTO | None:
-        pack = await self._published_pack(pack_slug)
+        pack = await self._visible_pack(pack_slug, user)
         if pack is None:
             return None
 
@@ -84,7 +84,7 @@ class ProgressService:
         user: User,
         pack_slug: str,
     ) -> ProgressResetDTO | None:
-        pack = await self._published_pack(pack_slug)
+        pack = await self._visible_pack(pack_slug, user)
         if pack is None:
             return None
 
@@ -177,9 +177,10 @@ class ProgressService:
 
         return len(traced_hanzi), packs_completed, len(packs)
 
-    async def _published_pack(self, slug: str) -> Pack | None:
+    async def _visible_pack(self, slug: str, user: User) -> Pack | None:
         pack = await self.pack_repository.get_by_slug(slug)
-        if pack is None or pack.status is not PackStatus.PUBLISHED:
+        # Visible iff global (owner_id IS NULL) or owned by the caller.
+        if pack is None or (pack.owner_id is not None and pack.owner_id != user.id):
             return None
         return pack
 
