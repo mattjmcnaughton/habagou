@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    admin_token: str = ""
     otel_exporter_otlp_endpoint: str = ""
     require_frontend: bool = False
 
