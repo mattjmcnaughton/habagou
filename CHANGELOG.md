@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/mattjmcnaughton/habagou/compare/v1.2.0...v1.3.0) (2026-07-13)
+
+
+### Features
+
+* **path:** add the Learning Path — spaced-repetition three-tab app ([7c3d64c](https://github.com/mattjmcnaughton/habagou/commit/7c3d64c61af7165e8e0d54f673d903e2d78d88e2))
+
 # [1.2.0](https://github.com/mattjmcnaughton/habagou/compare/v1.1.2...v1.2.0) (2026-07-12)
 
 
