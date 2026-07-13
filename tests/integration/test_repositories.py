@@ -562,5 +562,30 @@ async def test_pack_repository_create_persists_owned_pack() -> None:
     ]
 
 
+@pytest.mark.anyio
+async def test_pack_repository_create_without_slug_persists_null() -> None:
+    # User packs carry no slug: it is a nullable seed key (HAB-070). Omitting it
+    # must persist NULL rather than a generated placeholder.
+    async with db.async_session() as session:
+        user = await create_user(session)
+        repository = PackRepository(session)
+
+        created = await repository.create(
+            owner_id=user.id,
+            title="No Slug",
+            glyph="无",
+            color="#0f0f0f",
+            sort_order=8,
+            characters=[PackCharacterInput(hanzi="你", pinyin="nǐ", meaning="you")],
+            sentences=[],
+        )
+        await session.flush()
+        reloaded = await session.get(Pack, created.id)
+
+    assert created.slug is None
+    assert reloaded is not None
+    assert reloaded.slug is None
+
+
 def _seed_slugs() -> set[str]:
     return {"greetings", "numbers", "family", "food-drink"}

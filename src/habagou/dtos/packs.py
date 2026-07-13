@@ -21,7 +21,6 @@ class PackProgressDTO(BaseModel):
 
 class PackSummaryDTO(BaseModel):
     id: uuid.UUID
-    slug: str
     title: str
     glyph: str
     color: str

@@ -50,7 +50,6 @@ class PathContentDTO(BaseModel):
 
 
 class PathPackDTO(BaseModel):
-    slug: str
     title: str
     glyph: str
     color: str

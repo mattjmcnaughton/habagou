@@ -46,12 +46,12 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     ),
     "WF-13": (
         {"path_item_completed"},
-        {"activity", "pack_slug", "kind", "user_id"},
+        {"activity", "pack_id", "kind", "user_id"},
         "ok",
     ),
     "WF-14": (
         {"path_item_completed"},
-        {"activity", "pack_slug", "kind", "user_id"},
+        {"activity", "pack_id", "kind", "user_id"},
         "ok",
     ),
     "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),

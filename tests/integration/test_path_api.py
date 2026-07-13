@@ -21,7 +21,7 @@ from habagou.repositories import (
     UserRepository,
 )
 from habagou.services.path import PENDING_WINDOW, PathService
-from tests.integration.conftest import auth_cookies, create_user, pack_by_slug
+from tests.integration.conftest import auth_cookies, create_user, pack_by_title
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -107,8 +107,8 @@ async def test_path_excludes_owned_packs(
 
     body = await _get_path(client, limit=50)
 
-    slugs = {item["pack"]["slug"] for item in body["items"]}
-    assert "owned-path" not in slugs
+    titles = {item["pack"]["title"] for item in body["items"]}
+    assert "Owned Path" not in titles
 
 
 # --------------------------------------------------------------------------- #
@@ -143,7 +143,7 @@ async def test_first_get_materializes_queue_with_contract_shape(
     # content carries exactly one key matching the activity; pack badge present.
     for item in items:
         assert list(item["content"].keys()) == [item["activity"]]
-        assert set(item["pack"]) == {"slug", "title", "glyph", "color"}
+        assert set(item["pack"]) == {"title", "glyph", "color"}
         payload = item["content"][item["activity"]]
         if item["activity"] == "trace":
             assert payload["chars"] and "hanzi" in payload["chars"][0]
@@ -408,10 +408,10 @@ async def test_path_completion_does_not_affect_pack_badges(
 ) -> None:
     body = await _get_path(client)
     first = body["items"][0]
-    pack_slug = first["pack"]["slug"]
+    pack_title = first["pack"]["title"]
 
     async with db.async_session() as session:
-        pack = await pack_by_slug(session, pack_slug)
+        pack = await pack_by_title(session, pack_title)
         assert pack is not None
         pack_id = pack.id
         before = await ProgressRepository(session).per_pack_aggregate(

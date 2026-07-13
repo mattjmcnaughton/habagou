@@ -124,7 +124,18 @@ class Pack(Base):
     """
 
     __tablename__ = "packs"
-    __table_args__ = (Index("ix_packs_owner", "owner_id"),)
+    __table_args__ = (
+        Index("ix_packs_owner", "owner_id"),
+        # Slug is a nullable seed key: curated packs carry a stable, unique
+        # non-null slug; user packs persist NULL. A partial unique index keeps
+        # seed slugs unique while allowing many NULLs (see migration 0006).
+        Index(
+            "ix_packs_slug",
+            "slug",
+            unique=True,
+            postgresql_where=text("slug IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -134,7 +145,7 @@ class Pack(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
     )
-    slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    slug: Mapped[str | None] = mapped_column(String, nullable=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     glyph: Mapped[str] = mapped_column(String, nullable=False)
     color: Mapped[str] = mapped_column(String, nullable=False)

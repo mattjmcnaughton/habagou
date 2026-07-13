@@ -99,7 +99,6 @@ describe("apiFetch", () => {
     const fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
-        pack_slug: "greetings",
         activity: "trace",
         duration_ms: 100,
         progress: {},

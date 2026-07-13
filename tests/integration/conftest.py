@@ -221,10 +221,40 @@ async def pack_by_slug(session: AsyncSession, slug: str) -> Pack | None:
     return result.scalar_one_or_none()
 
 
+async def pack_by_title(session: AsyncSession, title: str) -> Pack | None:
+    """Fetch a seeded pack by its display title (test setup only).
+
+    Companion to :func:`pack_by_slug` for callers that only have the title from
+    a response DTO, which no longer carries slug.
+    """
+    result = await session.execute(
+        select(Pack)
+        .where(Pack.title == title)
+        .options(
+            selectinload(Pack.characters).selectinload(PackCharacter.character),
+            selectinload(Pack.sentences),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def pack_id_by_slug(slug: str) -> uuid.UUID:
     """Resolve a seeded pack's id from its known slug (test setup only)."""
     async with db.async_session() as session:
         pack = await pack_by_slug(session, slug)
+        assert pack is not None
+        return pack.id
+
+
+async def pack_id_by_title(title: str) -> uuid.UUID:
+    """Resolve a seeded pack's id from its display title (test setup only).
+
+    Slug is no longer on the API surface, so tests that only know a pack from a
+    response DTO (which carries ``title`` but not ``slug``) translate the title
+    back to a row id here.
+    """
+    async with db.async_session() as session:
+        pack = await pack_by_title(session, title)
         assert pack is not None
         return pack.id
 

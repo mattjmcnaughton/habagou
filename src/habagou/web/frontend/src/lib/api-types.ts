@@ -284,8 +284,6 @@ export interface components {
             activity: components["schemas"]["ActivityType"];
             /** Duration Ms */
             duration_ms: number;
-            /** Pack Slug */
-            pack_slug: string;
             progress: components["schemas"]["PackProgressDTO"];
         };
         /** DailyActivityDTO */
@@ -350,8 +348,6 @@ export interface components {
             sentence_count: number;
             /** Sentences */
             sentences: components["schemas"]["PackSentenceDTO"][];
-            /** Slug */
-            slug: string;
             /** Title */
             title: string;
         };
@@ -363,8 +359,6 @@ export interface components {
         };
         /** PackProgressResponseDTO */
         PackProgressResponseDTO: {
-            /** Pack Slug */
-            pack_slug: string;
             progress: components["schemas"]["PackProgressDTO"];
         };
         /** PackSentenceDTO */
@@ -392,8 +386,6 @@ export interface components {
             progress: components["schemas"]["PackProgressDTO"];
             /** Sentence Count */
             sentence_count: number;
-            /** Slug */
-            slug: string;
             /** Title */
             title: string;
         };
@@ -481,8 +473,6 @@ export interface components {
             color: string;
             /** Glyph */
             glyph: string;
-            /** Slug */
-            slug: string;
             /** Title */
             title: string;
         };
@@ -515,8 +505,6 @@ export interface components {
         ProgressResetDTO: {
             /** Deleted Count */
             deleted_count: number;
-            /** Pack Slug */
-            pack_slug: string;
             progress: components["schemas"]["PackProgressDTO"];
         };
         /** ProgressSummaryDTO */

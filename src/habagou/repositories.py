@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +25,7 @@ from habagou.models import (
 
 if TYPE_CHECKING:
     import datetime
+    import uuid
     from collections.abc import Iterable, Sequence
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -133,7 +133,7 @@ class PackRepository:
         result = await self.session.execute(
             select(Pack, character_count, sentence_count)
             .where((Pack.owner_id.is_(None)) | (Pack.owner_id == user_id))
-            .order_by(Pack.sort_order, Pack.slug)
+            .order_by(Pack.sort_order, Pack.id)
         )
         return [
             PackWithCounts(
@@ -154,7 +154,7 @@ class PackRepository:
         result = await self.session.execute(
             select(Pack)
             .where(Pack.owner_id.is_(None))
-            .order_by(Pack.sort_order, Pack.slug)
+            .order_by(Pack.sort_order, Pack.id)
             .options(
                 selectinload(Pack.characters).selectinload(PackCharacter.character),
                 selectinload(Pack.sentences),
@@ -212,9 +212,10 @@ class PackRepository:
         non-null ``owner_id`` a private one. Character members are referenced by
         ``hanzi`` against the existing corpus (a ``ValueError`` is raised for any
         hanzi missing from it); ``position`` is assigned from list order
-        (1-based), matching the seed convention. ``slug`` is generated when
-        omitted -- user packs have no slug, but the column stays NOT NULL until
-        HAB-070. Epic 7 wires the pack-Save endpoint to this method.
+        (1-based), matching the seed convention. ``slug`` is a nullable seed key:
+        it persists as NULL when omitted (user packs have no slug), while the
+        seed upsert supplies stable non-null slugs. Epic 7 wires the pack-Save
+        endpoint to this method.
         """
         wanted_hanzi = [character.hanzi for character in characters]
         result = await self.session.execute(
@@ -229,7 +230,7 @@ class PackRepository:
 
         pack = Pack(
             owner_id=owner_id,
-            slug=slug if slug is not None else f"pack-{uuid.uuid4().hex}",
+            slug=slug,
             title=title,
             glyph=glyph,
             color=color,
