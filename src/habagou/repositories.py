@@ -162,14 +162,6 @@ class PackRepository:
         await self.session.flush()
         return pack
 
-    async def set_sort_order(self, slug: str, sort_order: int) -> Pack | None:
-        pack = await self.get_by_slug(slug)
-        if pack is None:
-            return None
-        pack.sort_order = sort_order
-        await self.session.flush()
-        return pack
-
 
 class CharacterRepository:
     def __init__(self, session: AsyncSession) -> None:
