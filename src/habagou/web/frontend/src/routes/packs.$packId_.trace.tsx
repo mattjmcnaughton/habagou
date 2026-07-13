@@ -1,36 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
 import { CompletionStatus } from "../components/completion-status";
-import { SentenceRunner } from "../components/sentence-runner";
+import { TraceRunner } from "../components/trace-runner";
 import type { PackDetail } from "../lib/api";
 import { createCompletion, getPack } from "../lib/api";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
-export const Route = createFileRoute("/packs/$slug_/sentence")({
-  component: SentenceActivity,
+export const Route = createFileRoute("/packs/$packId_/trace")({
+  component: TraceActivity,
 });
 
-function SentenceActivity() {
-  const { slug } = Route.useParams();
+function TraceActivity() {
+  const { packId } = Route.useParams();
   const queryClient = useQueryClient();
   const startedAt = useRef(Date.now());
   const [finished, setFinished] = useState(false);
-  const pack = useQuery({ queryKey: ["pack", slug], queryFn: () => getPack(slug) });
+  const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
   const completion = useMutation({
     mutationFn: () =>
       createCompletion({
-        activity: "sentence",
+        activity: "trace",
         duration_ms: Date.now() - startedAt.current,
         pack_id: pack.data?.id ?? "",
       }),
     onSuccess: (result) => {
-      queryClient.setQueryData<PackDetail>(["pack", slug], (current) =>
+      queryClient.setQueryData<PackDetail>(["pack", packId], (current) =>
         current ? { ...current, progress: result.progress } : current,
       );
       queryClient.invalidateQueries({ queryKey: ["packs"] });
-      queryClient.invalidateQueries({ queryKey: ["pack", slug] });
+      queryClient.invalidateQueries({ queryKey: ["pack", packId] });
     },
   });
 
@@ -51,11 +50,11 @@ function SentenceActivity() {
   }, [completion, finished]);
 
   if (pack.isPending) {
-    return <SentenceShell slug={slug}>Loading sentences...</SentenceShell>;
+    return <TraceShell packId={packId}>Loading trace...</TraceShell>;
   }
 
   if (pack.isError || !pack.data) {
-    return <SentenceShell slug={slug}>Sentence activity could not be loaded.</SentenceShell>;
+    return <TraceShell packId={packId}>Trace activity could not be loaded.</TraceShell>;
   }
 
   if (finished) {
@@ -66,15 +65,15 @@ function SentenceActivity() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md bg-jade/10 font-hanzi text-4xl text-jade">
               ✓
             </div>
-            <h1 className="mt-5 text-2xl font-bold">Sentences complete!</h1>
+            <h1 className="mt-5 text-2xl font-bold">Pack traced!</h1>
             <p className="mt-2 text-sm leading-6 text-mist">
-              You wrote every sentence in {pack.data.title}.
+              You wrote every character in {pack.data.title}.
             </p>
             <CompletionStatus completion={completion} />
             <Link
               className="mt-6 inline-flex w-full justify-center rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
-              params={{ slug }}
-              to="/packs/$slug"
+              params={{ packId }}
+              to="/packs/$packId"
             >
               Back to {pack.data.title}
             </Link>
@@ -85,30 +84,30 @@ function SentenceActivity() {
   }
 
   return (
-    <SentenceRunner
+    <TraceRunner
       backLink={
         <Link
           className="inline-flex py-2 text-sm font-semibold text-mist hover:text-porcelain"
-          params={{ slug }}
-          to="/packs/$slug"
+          params={{ packId }}
+          to="/packs/$packId"
         >
           ‹ {pack.data.title}
         </Link>
       }
+      chars={pack.data.characters}
       onFinish={() => setFinished(true)}
-      sentences={pack.data.sentences}
     />
   );
 }
 
-function SentenceShell({ children, slug }: { children: ReactNode; slug: string }) {
+function TraceShell({ children, packId }: { children: React.ReactNode; packId: string }) {
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
       <div className="mx-auto w-full max-w-[440px]">
         <Link
           className="inline-flex py-2 text-sm font-semibold text-mist"
-          params={{ slug }}
-          to="/packs/$slug"
+          params={{ packId }}
+          to="/packs/$packId"
         >
           ‹ Pack
         </Link>

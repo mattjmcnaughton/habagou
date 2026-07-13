@@ -56,7 +56,7 @@ export const packSummaries: PackSummary[] = [
 ];
 
 const packDetails: Record<string, PackDetail> = {
-  greetings: {
+  [packSummaries[0].id]: {
     ...packSummaries[0],
     characters: [
       { hanzi: "你", pinyin: "nǐ", meaning: "you" },
@@ -71,7 +71,7 @@ const packDetails: Record<string, PackDetail> = {
       { hanzi: "谢谢你", pinyin: "xièxie nǐ", translation: "Thank you" },
     ],
   },
-  numbers: {
+  [packSummaries[1].id]: {
     ...packSummaries[1],
     characters: [
       { hanzi: "一", pinyin: "yī", meaning: "one" },
@@ -297,9 +297,9 @@ export const handlers = [
   http.get(`${API_V1}/progress/summary`, () => {
     return HttpResponse.json<ProgressSummary>(mockProgressSummary());
   }),
-  http.get(`${API_V1}/packs/:slug`, ({ params }) => {
-    const slug = String(params.slug);
-    const pack = packDetails[slug];
+  http.get(`${API_V1}/packs/:packId`, ({ params }) => {
+    const packId = String(params.packId);
+    const pack = packDetails[packId];
     if (!pack) {
       return HttpResponse.json(
         { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
@@ -326,7 +326,7 @@ export const handlers = [
       pack_id: string;
     };
     const summary = packSummaries.find((item) => item.id === completion.pack_id);
-    const pack = summary ? packDetails[summary.slug] : undefined;
+    const pack = summary ? packDetails[summary.id] : undefined;
     if (!summary || !pack) {
       return HttpResponse.json(
         { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
@@ -392,9 +392,9 @@ export const handlers = [
     };
     return HttpResponse.json<CompletePathItemResponse>(response, { status: 201 });
   }),
-  http.delete(`${API_V1}/progress/packs/:slug`, ({ params }) => {
-    const slug = String(params.slug);
-    const pack = packDetails[slug];
+  http.delete(`${API_V1}/progress/packs/:packId`, ({ params }) => {
+    const packId = String(params.packId);
+    const pack = packDetails[packId];
     if (!pack) {
       return HttpResponse.json(
         { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
@@ -402,7 +402,7 @@ export const handlers = [
       );
     }
     const reset: ProgressReset = {
-      pack_slug: slug,
+      pack_slug: pack.slug,
       deleted_count: 1,
       progress: {
         trace: { completed: false, completion_count: 0, best_duration_ms: null },

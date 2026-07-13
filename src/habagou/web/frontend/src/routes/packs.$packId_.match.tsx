@@ -8,23 +8,23 @@ import { formatMatchDuration } from "../components/match-state";
 import type { PackDetail } from "../lib/api";
 import { createCompletion, getPack } from "../lib/api";
 
-export const Route = createFileRoute("/packs/$slug_/match")({
+export const Route = createFileRoute("/packs/$packId_/match")({
   component: MatchActivity,
 });
 
 function MatchActivity() {
-  const { slug } = Route.useParams();
-  const pack = useQuery({ queryKey: ["pack", slug], queryFn: () => getPack(slug) });
+  const { packId } = Route.useParams();
+  const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
 
   if (pack.isPending) {
-    return <MatchShell slug={slug}>Loading match...</MatchShell>;
+    return <MatchShell packId={packId}>Loading match...</MatchShell>;
   }
 
   if (pack.isError || !pack.data) {
-    return <MatchShell slug={slug}>Match activity could not be loaded.</MatchShell>;
+    return <MatchShell packId={packId}>Match activity could not be loaded.</MatchShell>;
   }
 
-  return <MatchGame key={pack.data.slug} pack={pack.data} />;
+  return <MatchGame key={pack.data.id} pack={pack.data} />;
 }
 
 function MatchGame({ pack }: { pack: PackDetail }) {
@@ -42,11 +42,11 @@ function MatchGame({ pack }: { pack: PackDetail }) {
         pack_id: pack.id,
       }),
     onSuccess: (result) => {
-      queryClient.setQueryData<PackDetail>(["pack", pack.slug], (current) =>
+      queryClient.setQueryData<PackDetail>(["pack", pack.id], (current) =>
         current ? { ...current, progress: result.progress } : current,
       );
       queryClient.invalidateQueries({ queryKey: ["packs"] });
-      queryClient.invalidateQueries({ queryKey: ["pack", pack.slug] });
+      queryClient.invalidateQueries({ queryKey: ["pack", pack.id] });
     },
   });
 
@@ -71,8 +71,8 @@ function MatchGame({ pack }: { pack: PackDetail }) {
             <CompletionStatus completion={completion} />
             <Link
               className="mt-6 inline-flex w-full justify-center rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
-              params={{ slug: pack.slug }}
-              to="/packs/$slug"
+              params={{ packId: pack.id }}
+              to="/packs/$packId"
             >
               Back to {pack.title}
             </Link>
@@ -87,8 +87,8 @@ function MatchGame({ pack }: { pack: PackDetail }) {
       backLink={
         <Link
           className="inline-flex py-2 text-sm font-semibold text-mist hover:text-porcelain"
-          params={{ slug: pack.slug }}
-          to="/packs/$slug"
+          params={{ packId: pack.id }}
+          to="/packs/$packId"
         >
           ‹ {pack.title}
         </Link>
@@ -101,14 +101,14 @@ function MatchGame({ pack }: { pack: PackDetail }) {
   );
 }
 
-function MatchShell({ children, slug }: { children: ReactNode; slug: string }) {
+function MatchShell({ children, packId }: { children: ReactNode; packId: string }) {
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
       <div className="mx-auto w-full max-w-[440px]">
         <Link
           className="inline-flex py-2 text-sm font-semibold text-mist"
-          params={{ slug }}
-          to="/packs/$slug"
+          params={{ packId }}
+          to="/packs/$packId"
         >
           ‹ Pack
         </Link>

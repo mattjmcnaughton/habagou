@@ -101,8 +101,8 @@ export async function logout(): Promise<void> {
   await apiFetch<void>("/auth/logout", { method: "POST" });
 }
 
-export function getPack(slug: string): Promise<PackDetail> {
-  return apiFetch<PackDetail>(apiV1Path(`/packs/${encodeURIComponent(slug)}`));
+export function getPack(packId: string): Promise<PackDetail> {
+  return apiFetch<PackDetail>(apiV1Path(`/packs/${encodeURIComponent(packId)}`));
 }
 
 export function getCharacterStrokes(hanzi: string): Promise<StrokeData> {
@@ -117,8 +117,8 @@ export function createCompletion(completion: CompletionCreate): Promise<Completi
   });
 }
 
-export function getPackProgress(slug: string): Promise<PackProgress> {
-  return apiFetch<PackProgress>(apiV1Path(`/progress/packs/${encodeURIComponent(slug)}`));
+export function getPackProgress(packId: string): Promise<PackProgress> {
+  return apiFetch<PackProgress>(apiV1Path(`/progress/packs/${encodeURIComponent(packId)}`));
 }
 
 export function getProgressSummary(): Promise<ProgressSummary> {
@@ -128,8 +128,8 @@ export function getProgressSummary(): Promise<ProgressSummary> {
   );
 }
 
-export function resetPackProgress(slug: string): Promise<ProgressReset> {
-  return apiFetch<ProgressReset>(apiV1Path(`/progress/packs/${encodeURIComponent(slug)}`), {
+export function resetPackProgress(packId: string): Promise<ProgressReset> {
+  return apiFetch<ProgressReset>(apiV1Path(`/progress/packs/${encodeURIComponent(packId)}`), {
     method: "DELETE",
   });
 }

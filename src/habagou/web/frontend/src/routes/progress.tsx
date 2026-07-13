@@ -77,8 +77,8 @@ function ProgressContent({
       {firstIncomplete ? (
         <Link
           className="mt-4 block w-full rounded-md bg-jade px-4 py-3 text-center text-sm font-bold text-ink transition-colors hover:bg-jade-bright"
-          params={{ slug: firstIncomplete.slug }}
-          to="/packs/$slug"
+          params={{ packId: firstIncomplete.id }}
+          to="/packs/$packId"
         >
           Practice now
         </Link>
@@ -267,7 +267,7 @@ function PackProgress({ packs }: { packs: PackSummary[] }) {
         {packs.map((pack) => {
           const percent = packPct(pack.progress);
           return (
-            <div className="grid grid-cols-[38px_1fr] items-center gap-3" key={pack.slug}>
+            <div className="grid grid-cols-[38px_1fr] items-center gap-3" key={pack.id}>
               <span
                 className="flex h-[38px] w-[38px] items-center justify-center rounded-[9px] font-hanzi text-xl"
                 style={{ backgroundColor: `${pack.color}22`, color: pack.color }}

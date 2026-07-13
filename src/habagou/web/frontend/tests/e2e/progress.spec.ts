@@ -1,18 +1,17 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
 import { signIn } from "./auth-helpers";
-
-const packsUnderTest = ["greetings", "numbers", "family", "food-drink"] as const;
+import { packIdByTitle, resetAllPacks } from "./pack-helpers";
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
-  await resetPacks(page.request);
+  await resetAllPacks(page.request);
 });
 
 test.afterEach(async ({ page }) => {
-  await resetPacks(page.request);
+  await resetAllPacks(page.request);
 });
 
 test("[WF-11] progress dashboard reflects a completed activity in goal and heatmap", async ({
@@ -26,7 +25,8 @@ test("[WF-11] progress dashboard reflects a completed activity in goal and heatm
   await expect(page.locator("p").filter({ hasText: "0-day streak" })).toBeVisible();
   await expect(page.getByText("7-day streak")).toBeVisible();
 
-  await page.goto("/packs/numbers/trace");
+  const numbersId = await packIdByTitle(page.request, "Numbers");
+  await page.goto(`/packs/${numbersId}/trace`);
   for (const [index, hanzi] of ["一", "二", "三", "四", "五"].entries()) {
     await completeTraceCharacter(page, hanzi);
     await page.getByRole("button", { name: index === 4 ? "Finish" : "Next character" }).click();
@@ -64,13 +64,6 @@ async function completeTraceCharacter(page: Page, hanzi: string) {
   await expect(canvas.locator("svg")).toBeAttached();
   await canvas.dispatchEvent(SCRIPTED_STROKE_COMPLETE_EVENT);
   await expect(page.getByText(`Nice. That is ${hanzi}.`)).toBeVisible();
-}
-
-async function resetPacks(request: APIRequestContext) {
-  for (const slug of packsUnderTest) {
-    const response = await request.delete(`/api/v1/progress/packs/${slug}`);
-    expect(response.ok()).toBe(true);
-  }
 }
 
 function localDateKey(date: Date): string {

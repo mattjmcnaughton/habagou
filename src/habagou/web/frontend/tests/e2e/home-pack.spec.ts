@@ -1,21 +1,21 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
 import { signIn } from "./auth-helpers";
-
-const packsUnderTest = ["greetings", "numbers"] as const;
+import { packIdByTitle, resetAllPacks } from "./pack-helpers";
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
-  await resetPacks(page.request);
+  await resetAllPacks(page.request);
 });
 
 test.afterEach(async ({ page }) => {
-  await resetPacks(page.request);
+  await resetAllPacks(page.request);
 });
 
 test("[WF-02] navigates from the pack library to pack detail", async ({ page }) => {
+  const greetingsId = await packIdByTitle(page.request, "Greetings");
   await page.goto("/packs");
 
   await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
@@ -24,7 +24,7 @@ test("[WF-02] navigates from the pack library to pack detail", async ({ page }) 
   ).toBeVisible();
   await page.getByRole("link", { name: "Greetings pack, 5 characters, 3 sentences" }).click();
 
-  await expect(page).toHaveURL("/packs/greetings");
+  await expect(page).toHaveURL(`/packs/${greetingsId}`);
   await expect(page.getByRole("heading", { name: "Greetings" })).toBeVisible();
   await expect(page.getByTitle("nǐ · you")).toBeVisible();
   await expect(
@@ -33,10 +33,11 @@ test("[WF-02] navigates from the pack library to pack detail", async ({ page }) 
 });
 
 test("[WF-03] completes a traced pack and records progress", async ({ page }) => {
-  await page.goto("/packs/numbers");
+  const numbersId = await packIdByTitle(page.request, "Numbers");
+  await page.goto(`/packs/${numbersId}`);
 
   await page.getByRole("link", { name: "Trace. Write each character stroke by stroke" }).click();
-  await expect(page).toHaveURL("/packs/numbers/trace");
+  await expect(page).toHaveURL(`/packs/${numbersId}/trace`);
 
   for (const [index, hanzi] of ["一", "二", "三", "四", "五"].entries()) {
     await completeTraceCharacter(page, hanzi);
@@ -53,7 +54,8 @@ test("[WF-03] completes a traced pack and records progress", async ({ page }) =>
 });
 
 test("[WF-04] completes a full match and records progress", async ({ page }) => {
-  await page.goto("/packs/numbers/match?shuffleSeed=e2e");
+  const numbersId = await packIdByTitle(page.request, "Numbers");
+  await page.goto(`/packs/${numbersId}/match?shuffleSeed=e2e`);
 
   await expect(page.getByRole("heading", { name: "Match characters" })).toBeVisible();
   await expect(page.getByText("0 / 5")).toBeVisible();
@@ -89,7 +91,8 @@ test("[WF-05] traces a sentence with a sentence-only character", async ({ page }
     }
   });
 
-  await page.goto("/packs/greetings/sentence");
+  const greetingsId = await packIdByTitle(page.request, "Greetings");
+  await page.goto(`/packs/${greetingsId}/sentence`);
   await expect(page.getByRole("heading", { name: "Hello" })).toBeVisible();
 
   await completeSentenceCharacter(page, "你");
@@ -133,9 +136,10 @@ test("[WF-06] serves stroke data through the running app", async ({ page }) => {
 });
 
 test("[WF-07] shows recorded progress on the pack screen", async ({ page }) => {
-  await recordCompletion(page.request, "numbers", "match");
+  const numbersId = await packIdByTitle(page.request, "Numbers");
+  await recordCompletion(page.request, numbersId, "match");
 
-  await page.goto("/packs/numbers");
+  await page.goto(`/packs/${numbersId}`);
 
   await expect(page.getByRole("heading", { name: "Numbers" })).toBeVisible();
   await expect(
@@ -147,10 +151,11 @@ test("[WF-07] shows recorded progress on the pack screen", async ({ page }) => {
 });
 
 test("[WF-08] resets progress for a pack", async ({ page }) => {
-  await recordCompletion(page.request, "numbers", "trace");
-  await recordCompletion(page.request, "numbers", "match");
+  const numbersId = await packIdByTitle(page.request, "Numbers");
+  await recordCompletion(page.request, numbersId, "trace");
+  await recordCompletion(page.request, numbersId, "match");
 
-  await page.goto("/packs/numbers");
+  await page.goto(`/packs/${numbersId}`);
   await expect(
     page.getByRole("link", { name: "Trace, completed. Write each character stroke by stroke" }),
   ).toBeVisible();
@@ -191,22 +196,15 @@ async function completeSentenceCharacter(page: Page, hanzi: string, doneText?: s
 
 async function recordCompletion(
   request: APIRequestContext,
-  packSlug: string,
+  packId: string,
   activity: "match" | "sentence" | "trace",
 ) {
   const response = await request.post("/api/v1/progress/completions", {
     data: {
       activity,
       duration_ms: 1000,
-      pack_slug: packSlug,
+      pack_id: packId,
     },
   });
   expect(response.status()).toBe(201);
-}
-
-async function resetPacks(request: APIRequestContext) {
-  for (const slug of packsUnderTest) {
-    const response = await request.delete(`/api/v1/progress/packs/${slug}`);
-    expect(response.ok()).toBe(true);
-  }
 }
