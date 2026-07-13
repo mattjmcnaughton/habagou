@@ -5,7 +5,7 @@ import type { PackDetail } from "../lib/api";
 import { getPack, resetPackProgress } from "../lib/api";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
-export const Route = createFileRoute("/packs/$slug")({
+export const Route = createFileRoute("/packs/$packId")({
   component: PackScreen,
 });
 
@@ -15,28 +15,28 @@ const activities = [
     title: "Trace",
     subtitle: "Write each character stroke by stroke",
     icon: "✎",
-    to: "/packs/$slug/trace",
+    to: "/packs/$packId/trace",
   },
   {
     key: "match",
     title: "Match",
     subtitle: "Pair characters with their meanings",
     icon: "⌘",
-    to: "/packs/$slug/match",
+    to: "/packs/$packId/match",
   },
   {
     key: "sentence",
     title: "Sentences",
     subtitle: "Write full sentences from the pack",
     icon: "☰",
-    to: "/packs/$slug/sentence",
+    to: "/packs/$packId/sentence",
   },
 ] as const;
 
 function PackScreen() {
-  const { slug } = Route.useParams();
+  const { packId } = Route.useParams();
   const queryClient = useQueryClient();
-  const pack = useQuery({ queryKey: ["pack", slug], queryFn: () => getPack(slug) });
+  const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
   useEffect(() => {
     if (pack.data) {
       void prefetchPackStrokeData(queryClient, pack.data);
@@ -44,9 +44,9 @@ function PackScreen() {
   }, [pack.data, queryClient]);
 
   const reset = useMutation({
-    mutationFn: () => resetPackProgress(slug),
+    mutationFn: () => resetPackProgress(packId),
     onSuccess: (result) => {
-      queryClient.setQueryData<PackDetail>(["pack", slug], (current) =>
+      queryClient.setQueryData<PackDetail>(["pack", packId], (current) =>
         current ? { ...current, progress: result.progress } : current,
       );
       queryClient.invalidateQueries({ queryKey: ["packs"] });
@@ -141,7 +141,7 @@ function PackScreen() {
                       aria-label={`${activity.title}${progress.completed ? ", completed" : ""}. ${activity.subtitle}`}
                       className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
                       key={activity.key}
-                      params={{ slug }}
+                      params={{ packId }}
                       to={activity.to}
                     >
                       {content}

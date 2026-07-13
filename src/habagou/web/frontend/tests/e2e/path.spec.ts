@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 import { SCRIPTED_STROKE_COMPLETE_EVENT } from "../../src/components/trace-canvas";
 import type { PathItem, PathResponse } from "../../src/lib/api";
 import { signIn } from "./auth-helpers";
+import { fetchPacks, type PackRef } from "./pack-helpers";
 
 // End-to-end coverage for the Learning Path (INT-1 / issue #77). These specs run
 // against the live dev backend and a shared Postgres that accumulates path
@@ -192,17 +193,8 @@ async function fetchPathItemsUntil(
   return seen;
 }
 
-type PackRef = { slug: string; title: string };
-
-async function fetchPacks(request: APIRequestContext): Promise<PackRef[]> {
-  const response = await request.get("/api/v1/packs");
-  expect(response.ok(), await response.text()).toBeTruthy();
-  const packs = (await response.json()) as PackRef[];
-  return packs.map((pack) => ({ slug: pack.slug, title: pack.title }));
-}
-
 // Snapshot each pack's per-activity badge text (e.g. "✓ trace" vs "trace") from
-// the /packs library, keyed by slug, so before/after can be compared exactly.
+// the /packs library, keyed by pack id, so before/after can be compared exactly.
 async function readPackBadges(page: Page, packs: PackRef[]): Promise<Record<string, string>> {
   await page.goto("/packs");
   await expect(page.getByRole("heading", { name: "Choose a pack" })).toBeVisible();
@@ -215,7 +207,7 @@ async function readPackBadges(page: Page, packs: PackRef[]): Promise<Record<stri
       const badge = link.getByText(new RegExp(`(^|\\s)${label}$`)).first();
       badges.push(((await badge.textContent()) ?? "").trim());
     }
-    snapshot[pack.slug] = badges.join("|");
+    snapshot[pack.id] = badges.join("|");
   }
   return snapshot;
 }

@@ -6,6 +6,11 @@ import { API_V1_BASE } from "../lib/api";
 import { server } from "../mocks/server";
 import { App } from "./app";
 
+// Pack ids mirror the MSW fixtures in ../mocks/handlers.ts; packs are addressed
+// by id, so routes and reset requests key on these UUIDs, not slugs.
+const GREETINGS_ID = "11111111-1111-4111-8111-111111111111";
+const NUMBERS_ID = "22222222-2222-4222-8222-222222222222";
+
 describe("App", () => {
   it("[WF-02] renders pack cards with progress badges", async () => {
     window.history.pushState({}, "", "/packs");
@@ -38,7 +43,7 @@ describe("App", () => {
   });
 
   it("[WF-02] hides the tab bar on whole-pack activity routes", async () => {
-    window.history.pushState({}, "", "/packs/numbers/trace");
+    window.history.pushState({}, "", `/packs/${NUMBERS_ID}/trace`);
 
     render(<App />);
 
@@ -107,7 +112,7 @@ describe("App", () => {
   });
 
   it("[WF-06] prefetches pack and sentence-only stroke data", async () => {
-    window.history.pushState({}, "", "/packs/greetings");
+    window.history.pushState({}, "", `/packs/${GREETINGS_ID}`);
     const strokeRequests: string[] = [];
     server.use(
       http.get(`${API_V1_BASE}/characters/:hanzi/strokes`, ({ params }) => {
@@ -134,7 +139,7 @@ describe("App", () => {
   });
 
   it("[WF-07] shows per-activity progress on the pack screen", async () => {
-    window.history.pushState({}, "", "/packs/numbers");
+    window.history.pushState({}, "", `/packs/${NUMBERS_ID}`);
 
     render(<App />);
 
@@ -153,14 +158,14 @@ describe("App", () => {
   });
 
   it("[WF-08] confirms and clears pack progress", async () => {
-    window.history.pushState({}, "", "/packs/numbers");
+    window.history.pushState({}, "", `/packs/${NUMBERS_ID}`);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const resetRequest = vi.fn();
     server.use(
-      http.delete(`${API_V1_BASE}/progress/packs/:slug`, ({ params }) => {
-        resetRequest(params.slug);
+      http.delete(`${API_V1_BASE}/progress/packs/:packId`, ({ params }) => {
+        resetRequest(params.packId);
         const reset: ProgressReset = {
-          pack_slug: String(params.slug),
+          pack_slug: String(params.packId),
           deleted_count: 1,
           progress: {
             trace: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -182,7 +187,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset progress for this pack" }));
 
     expect(await screen.findByText("Progress reset. 1 completion cleared.")).toBeTruthy();
-    expect(resetRequest).toHaveBeenCalledWith("numbers");
+    expect(resetRequest).toHaveBeenCalledWith(NUMBERS_ID);
     await waitFor(() => {
       expect(
         screen.queryByRole("link", {
@@ -193,12 +198,12 @@ describe("App", () => {
   });
 
   it("[WF-08] shows a retry action when progress reset fails", async () => {
-    window.history.pushState({}, "", "/packs/numbers");
+    window.history.pushState({}, "", `/packs/${NUMBERS_ID}`);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const resetRequest = vi.fn();
     server.use(
-      http.delete(`${API_V1_BASE}/progress/packs/:slug`, ({ params }) => {
-        resetRequest(params.slug);
+      http.delete(`${API_V1_BASE}/progress/packs/:packId`, ({ params }) => {
+        resetRequest(params.packId);
         return HttpResponse.json(
           {
             error: {
@@ -274,7 +279,7 @@ describe("App", () => {
     render(<App />);
 
     const practiceNow = await screen.findByRole("link", { name: "Practice now" });
-    expect(practiceNow.getAttribute("href")).toBe("/packs/greetings");
+    expect(practiceNow.getAttribute("href")).toBe(`/packs/${GREETINGS_ID}`);
   });
 
   it("[WF-11] shows the progress error state", async () => {

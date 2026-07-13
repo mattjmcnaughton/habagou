@@ -49,9 +49,9 @@ function PackLibrary() {
               <Link
                 aria-label={`${pack.title} pack, ${pack.char_count} characters, ${pack.sentence_count} sentences`}
                 className="grid w-full grid-cols-[3.5rem_1fr_auto] items-center gap-4 p-4 text-left transition-colors hover:bg-white/[0.035]"
-                key={pack.slug}
-                params={{ slug: pack.slug }}
-                to="/packs/$slug"
+                key={pack.id}
+                params={{ packId: pack.id }}
+                to="/packs/$packId"
               >
                 <span
                   aria-hidden="true"
