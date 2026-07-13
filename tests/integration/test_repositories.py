@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import delete
 
 from habagou import db
 from habagou.models import (
@@ -13,6 +14,7 @@ from habagou.models import (
     PackStatus,
     PathItemKind,
     ReviewUnitType,
+    User,
 )
 from habagou.repositories import (
     CharacterRepository,
@@ -416,6 +418,43 @@ async def test_seeded_packs_have_null_owner_id() -> None:
     seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
     assert len(seeded) == 4
     assert all(item.pack.owner_id is None for item in seeded)
+
+
+@pytest.mark.anyio
+async def test_deleting_user_cascades_owned_packs_but_spares_global() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        owned_pack = Pack(
+            slug="cascade-owned",
+            title="Owned Pack",
+            glyph="私",
+            color="#333333",
+            status=PackStatus.DRAFT,
+            sort_order=0,
+            owner_id=user.id,
+        )
+        global_pack = Pack(
+            slug="cascade-global",
+            title="Global Pack",
+            glyph="全",
+            color="#444444",
+            status=PackStatus.DRAFT,
+            sort_order=0,
+        )
+        session.add_all([owned_pack, global_pack])
+        await session.commit()
+        user_id = user.id
+        owned_id = owned_pack.id
+        global_id = global_pack.id
+
+    async with db.async_session() as session:
+        await session.execute(delete(User).where(User.id == user_id))
+        await session.commit()
+
+    async with db.async_session() as session:
+        # CASCADE removes the owner's private pack; the global pack is untouched.
+        assert await session.get(Pack, owned_id) is None
+        assert await session.get(Pack, global_id) is not None
 
 
 @pytest.mark.anyio
