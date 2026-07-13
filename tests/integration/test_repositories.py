@@ -16,7 +16,9 @@ from habagou.models import (
 )
 from habagou.repositories import (
     CharacterRepository,
+    PackCharacterInput,
     PackRepository,
+    PackSentenceInput,
     PathRepository,
     ProgressRepository,
     ReviewStateRepository,
@@ -414,6 +416,54 @@ async def test_seeded_packs_have_null_owner_id() -> None:
     seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
     assert len(seeded) == 4
     assert all(item.pack.owner_id is None for item in seeded)
+
+
+@pytest.mark.anyio
+async def test_pack_repository_create_persists_owned_pack() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+        repository = PackRepository(session)
+
+        created = await repository.create(
+            owner_id=user.id,
+            slug="owned-create",
+            title="Owned Create",
+            glyph="创",
+            color="#abcdef",
+            sort_order=7,
+            characters=[
+                PackCharacterInput(hanzi="你", pinyin="nǐ", meaning="you"),
+                PackCharacterInput(hanzi="好", pinyin="hǎo", meaning="good"),
+            ],
+            sentences=[
+                PackSentenceInput(hanzi="你好", pinyin="nǐ hǎo", translation="Hello"),
+            ],
+        )
+        await session.flush()
+
+        fetched = await repository.get_by_slug("owned-create")
+
+    assert created.owner_id == user.id
+    assert fetched is not None
+    assert fetched.id == created.id
+    assert fetched.owner_id == user.id
+    assert fetched.title == "Owned Create"
+    assert fetched.glyph == "创"
+    assert fetched.color == "#abcdef"
+    assert fetched.sort_order == 7
+    assert [
+        (link.position, link.character.hanzi, link.pinyin, link.meaning)
+        for link in fetched.characters
+    ] == [
+        (1, "你", "nǐ", "you"),
+        (2, "好", "hǎo", "good"),
+    ]
+    assert [
+        (sentence.position, sentence.hanzi, sentence.pinyin, sentence.translation)
+        for sentence in fetched.sentences
+    ] == [
+        (1, "你好", "nǐ hǎo", "Hello"),
+    ]
 
 
 def _seed_slugs() -> set[str]:
