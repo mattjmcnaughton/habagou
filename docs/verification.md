@@ -196,7 +196,6 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `strokes_missing` | WF-06 | `hanzi` — **leading indicator of corpus/seed drift; alertable at rate > 0** |
 | `progress_viewed` | WF-07 | `pack_slug`, `user_id` |
 | `progress_reset` | WF-08 | `pack_slug`, `deleted_count` |
-| `admin_action` | WF-09 | `action`, `pack_slug`, `authorized` |
 | `deploy_ready` | WF-10 | `database` |
 | `progress_summary_viewed` | WF-11 | `user_id`, `current_streak` |
 | `path_viewed` | WF-12 | `user_id`, `item_count`, `due_new`, `due_review` |
