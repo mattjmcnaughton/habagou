@@ -37,8 +37,9 @@ src/habagou/
   dependencies.py      # current-user resolver
   auth.py              # authlib provider registration and identity extraction
   events.py            # workflow event logging
-  streaks.py           # pure daily-goal streak and milestone calculations
-  path_scheduling.py   # pure Leitner-ladder scheduler (queue generation, ladder update)
+  domains/             # pure, I/O-free domain logic
+    streaks.py         # pure daily-goal streak and milestone calculations
+    scheduling.py      # pure Leitner-ladder scheduler (queue generation, ladder update)
   routers/
     health.py          # healthz/readyz
     v1/                # packs, characters, progress, path
@@ -57,7 +58,7 @@ The Learning Path follows the same layering: `routers/v1/path.py` ->
 `services/path.py` -> `repositories.py` (`PathRepository`,
 `ReviewStateRepository`), with request/response shapes in `dtos/path.py`.
 Queue generation and the Leitner-ladder update themselves are pure logic in
-`path_scheduling.py` (mirroring `streaks.py`) — no I/O, so the scheduling
+`domains/scheduling.py` (mirroring `domains/streaks.py`) — no I/O, so the scheduling
 algorithm can be swapped (e.g. for SM-2/FSRS) without touching the service,
 router, or API contract. See [docs/api.md](api.md) for the endpoint contract
 and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.

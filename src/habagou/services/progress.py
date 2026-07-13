@@ -6,6 +6,12 @@ import uuid  # noqa: TC003 - used in runtime method signatures.
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from habagou.domains.streaks import (
+    DAILY_GOAL_TARGET,
+    bucket_level,
+    compute_streaks,
+    next_milestone,
+)
 from habagou.dtos.progress import (
     CompletionCreateDTO,
     CompletionResponseDTO,
@@ -19,12 +25,6 @@ from habagou.dtos.progress import (
 from habagou.models import ActivityType, Pack, User
 from habagou.repositories import PackRepository, PathRepository, ProgressRepository
 from habagou.services.packs import pack_progress_dto
-from habagou.streaks import (
-    DAILY_GOAL_TARGET,
-    bucket_level,
-    compute_streaks,
-    next_milestone,
-)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from habagou.streaks import bucket_level, compute_streaks, next_milestone
+from habagou.domains.streaks import bucket_level, compute_streaks, next_milestone
 
 
 @pytest.mark.workflow("WF-11")
