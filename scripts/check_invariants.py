@@ -20,7 +20,6 @@ from habagou.models import (
     CompletionSource,
     Pack,
     PackCharacter,
-    PackStatus,
     PathItem,
     User,
 )
@@ -45,7 +44,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
             packs = (
                 await session.scalars(
                     select(Pack)
-                    .where(Pack.status == PackStatus.PUBLISHED)
+                    .where(Pack.owner_id.is_(None))
                     .options(
                         selectinload(Pack.characters).selectinload(
                             PackCharacter.character
@@ -76,11 +75,11 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                     )
                 )
             ).all()
-            path_items_unpublished_pack = (
+            path_items_owned_pack = (
                 await session.execute(
                     select(PathItem.id, PathItem.pack_id)
                     .outerjoin(Pack, PathItem.pack_id == Pack.id)
-                    .where((Pack.id.is_(None)) | (Pack.status != PackStatus.PUBLISHED))
+                    .where((Pack.id.is_(None)) | (Pack.owner_id.is_not(None)))
                 )
             ).all()
     finally:
@@ -94,7 +93,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                     InvariantViolation(
                         code="missing_pack_character",
                         message=(
-                            "published pack references missing corpus character: "
+                            "global pack references missing corpus character: "
                             f"pack={pack.slug} "
                             f"character_id={pack_character.character_id}"
                         ),
@@ -107,7 +106,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                     InvariantViolation(
                         code="missing_pack_character",
                         message=(
-                            "published pack references missing corpus character: "
+                            "global pack references missing corpus character: "
                             f"pack={pack.slug} character={hanzi}"
                         ),
                     )
@@ -120,7 +119,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                         InvariantViolation(
                             code="missing_sentence_character",
                             message=(
-                                "published pack sentence references missing corpus "
+                                "global pack sentence references missing corpus "
                                 f"character: pack={pack.slug} character={hanzi} "
                                 f"sentence={sentence.hanzi}"
                             ),
@@ -160,12 +159,12 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
             )
         )
 
-    for item_id, pack_id in path_items_unpublished_pack:
+    for item_id, pack_id in path_items_owned_pack:
         violations.append(
             InvariantViolation(
-                code="path_item_unpublished_pack",
+                code="path_item_owned_pack",
                 message=(
-                    "path item references a non-published pack: "
+                    "path item references a non-global (owned) pack: "
                     f"path_item_id={item_id} pack_id={pack_id}"
                 ),
             )

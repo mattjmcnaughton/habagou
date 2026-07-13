@@ -15,7 +15,6 @@ from habagou.models import (
     Pack,
     PackCharacter,
     PackSentence,
-    PackStatus,
 )
 
 if TYPE_CHECKING:
@@ -185,7 +184,6 @@ async def upsert_pack(
     pack.title = seed_pack.title
     pack.glyph = seed_pack.glyph
     pack.color = seed_pack.color
-    pack.status = PackStatus.PUBLISHED
     pack.sort_order = seed_pack.sort_order
     await session.flush()
 

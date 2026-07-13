@@ -14,7 +14,6 @@ from habagou.models import (
     Pack,
     PackCharacter,
     PackSentence,
-    PackStatus,
     User,
 )
 from scripts.import_stroke_data import (
@@ -53,7 +52,6 @@ async def test_database_round_trips_pack_and_completion() -> None:
             title="Schema Test",
             glyph="你",
             color="#5fb89a",
-            status=PackStatus.PUBLISHED,
             sort_order=1,
             characters=[
                 PackCharacter(character=ni, position=1, pinyin="nǐ", meaning="you"),
@@ -88,7 +86,6 @@ async def test_database_round_trips_pack_and_completion() -> None:
         )
         saved = result.scalar_one()
 
-    assert saved.status is PackStatus.PUBLISHED
     assert [link.character.hanzi for link in saved.characters] == ["☀", "☁"]
     assert saved.characters[0].pinyin == "nǐ"
     assert saved.sentences[0].hanzi == "你好"
@@ -170,7 +167,7 @@ async def test_seed_database_is_idempotent() -> None:
         "Family",
         "Food & drink",
     ]
-    assert [pack.status for pack in packs] == [PackStatus.PUBLISHED] * 4
+    assert all(pack.owner_id is None for pack in packs)
     assert character_count == sum(len(pack.characters) for pack in SEED_PACKS)
     assert sentence_count == sum(len(pack.sentences) for pack in SEED_PACKS)
 

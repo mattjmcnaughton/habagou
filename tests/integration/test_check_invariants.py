@@ -9,7 +9,7 @@ from habagou.models import (
     ActivityType,
     Character,
     CompletionSource,
-    PackStatus,
+    Pack,
     PathItem,
     PathItemKind,
 )
@@ -120,7 +120,7 @@ async def test_path_source_completion_missing_item_is_detected(
 
 
 @pytest.mark.anyio
-async def test_path_item_referencing_unpublished_pack_is_detected(
+async def test_path_item_referencing_owned_pack_is_detected(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -132,19 +132,28 @@ async def test_path_item_referencing_unpublished_pack_is_detected(
     )
     async with db.async_session() as session:
         user = await create_user(session)
-        pack_repository = PackRepository(session)
-        pack = await pack_repository.get_by_slug("greetings")
-        assert pack is not None
+        # The Path is global-only: a path item must never reference an owned
+        # (private) pack. Materialize that forbidden state directly.
+        owned = Pack(
+            slug="owned-invariant",
+            title="Owned Invariant",
+            glyph="私",
+            color="#000000",
+            sort_order=99,
+            owner_id=user.id,
+        )
+        session.add(owned)
+        await session.flush()
         session.add(
             PathItem(
                 user_id=user.id,
                 position=1,
                 activity=ActivityType.TRACE,
                 kind=PathItemKind.NEW,
-                pack_id=pack.id,
+                pack_id=owned.id,
                 content={
                     "unit_label": None,
-                    "pack_slug": "greetings",
+                    "pack_slug": "owned-invariant",
                     "activity_content": {},
                     "units": [],
                 },
@@ -152,14 +161,11 @@ async def test_path_item_referencing_unpublished_pack_is_detected(
         )
         await session.commit()
 
-        await pack_repository.set_status("greetings", PackStatus.DRAFT)
-        await session.commit()
-
     exit_code = await check_invariants.run(_dsn())
 
     captured = capsys.readouterr()
     assert exit_code == 1
-    assert "path_item_unpublished_pack" in captured.err
+    assert "path_item_owned_pack" in captured.err
     assert events[0][0] == "invariant_check"
     assert events[0][1]["outcome"] == "error"
     assert events[0][1]["issue_count"] == 1

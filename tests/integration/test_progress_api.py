@@ -10,7 +10,7 @@ from sqlalchemy import delete, func, select
 
 from habagou import db
 from habagou.app import create_app
-from habagou.models import ActivityCompletion, ActivityType, Pack, PackStatus, User
+from habagou.models import ActivityCompletion, ActivityType, Pack, User
 from habagou.repositories import PackRepository
 from tests.integration.conftest import auth_cookies, create_user
 
@@ -529,7 +529,6 @@ async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
                 title="Owned",
                 glyph="私",
                 color="#000000",
-                status=PackStatus.PUBLISHED,
                 sort_order=99,
                 owner_id=owner_id,
             )

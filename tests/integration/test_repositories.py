@@ -11,7 +11,6 @@ from habagou.models import (
     ActivityType,
     CompletionSource,
     Pack,
-    PackStatus,
     PathItemKind,
     ReviewUnitType,
     User,
@@ -42,7 +41,6 @@ async def test_pack_repository_lists_visible_packs_with_counts() -> None:
                     title="Own Visible",
                     glyph="私",
                     color="#444444",
-                    status=PackStatus.DRAFT,
                     sort_order=50,
                     owner_id=user.id,
                 ),
@@ -51,7 +49,6 @@ async def test_pack_repository_lists_visible_packs_with_counts() -> None:
                     title="Foreign Visible",
                     glyph="他",
                     color="#555555",
-                    status=PackStatus.PUBLISHED,
                     sort_order=51,
                     owner_id=other.id,
                 ),
@@ -404,7 +401,6 @@ async def test_pack_owner_id_round_trips_global_and_owned() -> None:
             title="Global Pack",
             glyph="全",
             color="#111111",
-            status=PackStatus.DRAFT,
             sort_order=0,
         )
         owned_pack = Pack(
@@ -412,7 +408,6 @@ async def test_pack_owner_id_round_trips_global_and_owned() -> None:
             title="Private Pack",
             glyph="私",
             color="#222222",
-            status=PackStatus.DRAFT,
             sort_order=0,
             owner_id=user.id,
         )
@@ -449,7 +444,6 @@ async def test_deleting_user_cascades_owned_packs_but_spares_global() -> None:
             title="Owned Pack",
             glyph="私",
             color="#333333",
-            status=PackStatus.DRAFT,
             sort_order=0,
             owner_id=user.id,
         )
@@ -458,7 +452,6 @@ async def test_deleting_user_cascades_owned_packs_but_spares_global() -> None:
             title="Global Pack",
             glyph="全",
             color="#444444",
-            status=PackStatus.DRAFT,
             sort_order=0,
         )
         session.add_all([owned_pack, global_pack])
