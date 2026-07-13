@@ -95,7 +95,7 @@ class PathService:
         cursor: int | None = None,
         limit: int = 20,
     ) -> PathResponseDTO:
-        packs = await self._published_packs()
+        packs = await self._global_packs()
         await self._extend_queue(user_id=user.id, packs=packs)
 
         items = await self.path_repository.list_for_user(user_id=user.id)
@@ -350,8 +350,8 @@ class PathService:
     # ------------------------------------------------------------------ #
     # Shared helpers.
     # ------------------------------------------------------------------ #
-    async def _published_packs(self) -> list[Pack]:
-        return await self.pack_repository.list_published_with_content()
+    async def _global_packs(self) -> list[Pack]:
+        return await self.pack_repository.list_global_with_content()
 
     async def _daily_and_streak(
         self, *, user_id: uuid.UUID, today: date

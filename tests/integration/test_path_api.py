@@ -13,6 +13,7 @@ from habagou import db
 from habagou.app import create_app
 from habagou.models import ActivityType, PathItem, ReviewState, User
 from habagou.repositories import (
+    PackCharacterInput,
     PackRepository,
     PathRepository,
     ProgressRepository,
@@ -78,6 +79,36 @@ async def _generate_for_new_user(username: str) -> tuple[uuid.UUID, uuid.UUID]:
         await PathService(session).get_path(user=user)
         items = await PathRepository(session).list_for_user(user_id=user_id)
         return user_id, items[0].id
+
+
+# --------------------------------------------------------------------------- #
+# 0. Path is global-only: owned packs never enter the curriculum.
+# --------------------------------------------------------------------------- #
+@pytest.mark.workflow("WF-12")
+@pytest.mark.anyio
+async def test_path_excludes_owned_packs(
+    client: AsyncClient,
+    current_user: User,
+) -> None:
+    # An owned pack -- even the caller's own, with valid corpus characters --
+    # must never be scheduled: the Path is sourced from global packs only.
+    async with db.async_session() as session:
+        await PackRepository(session).create(
+            owner_id=current_user.id,
+            slug="owned-path",
+            title="Owned Path",
+            glyph="私",
+            color="#000000",
+            sort_order=99,
+            characters=[PackCharacterInput(hanzi="你", pinyin="nǐ", meaning="you")],
+            sentences=[],
+        )
+        await session.commit()
+
+    body = await _get_path(client, limit=50)
+
+    slugs = {item["pack"]["slug"] for item in body["items"]}
+    assert "owned-path" not in slugs
 
 
 # --------------------------------------------------------------------------- #

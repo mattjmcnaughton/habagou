@@ -30,26 +30,44 @@ from tests.integration.conftest import create_user
 
 
 @pytest.mark.anyio
-async def test_pack_repository_lists_published_packs_with_counts() -> None:
+async def test_pack_repository_lists_visible_packs_with_counts() -> None:
     async with db.async_session() as session:
-        session.add(
-            Pack(
-                slug="repository-draft",
-                title="Repository Draft",
-                glyph="草",
-                color="#444444",
-                status=PackStatus.DRAFT,
-                sort_order=0,
-            )
+        user = await create_user(session, username="visible-user")
+        other = await create_user(session, username="visible-other", email=None)
+        await session.flush()
+        session.add_all(
+            [
+                Pack(
+                    slug="own-visible",
+                    title="Own Visible",
+                    glyph="私",
+                    color="#444444",
+                    status=PackStatus.DRAFT,
+                    sort_order=50,
+                    owner_id=user.id,
+                ),
+                Pack(
+                    slug="foreign-visible",
+                    title="Foreign Visible",
+                    glyph="他",
+                    color="#555555",
+                    status=PackStatus.PUBLISHED,
+                    sort_order=51,
+                    owner_id=other.id,
+                ),
+            ]
         )
         await session.flush()
 
         repository = PackRepository(session)
-        packs = await repository.list_published()
+        packs = await repository.list_visible(user_id=user.id)
 
+    slugs = {item.pack.slug for item in packs}
     seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
 
-    assert "repository-draft" not in {item.pack.slug for item in packs}
+    # Own packs are visible (regardless of status); foreign owned packs are not.
+    assert "own-visible" in slugs
+    assert "foreign-visible" not in slugs
     assert [item.pack.slug for item in seeded] == [
         "greetings",
         "numbers",
@@ -413,7 +431,9 @@ async def test_pack_owner_id_round_trips_global_and_owned() -> None:
 @pytest.mark.anyio
 async def test_seeded_packs_have_null_owner_id() -> None:
     async with db.async_session() as session:
-        packs = await PackRepository(session).list_published()
+        user = await create_user(session, username="null-owner-check")
+        await session.flush()
+        packs = await PackRepository(session).list_visible(user_id=user.id)
 
     seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
     assert len(seeded) == 4

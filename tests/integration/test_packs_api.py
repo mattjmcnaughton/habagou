@@ -165,6 +165,28 @@ async def test_get_pack_404s_for_unknown_or_foreign_owned(
 
 @pytest.mark.workflow("WF-02")
 @pytest.mark.anyio
+async def test_list_packs_includes_own_excludes_foreign_owned(
+    client: AsyncClient,
+    current_user: User,
+) -> None:
+    async with db.async_session() as session:
+        other = await create_user(session, username="other-owner", email=None)
+        await session.commit()
+        other_id = other.id
+    await _create_owned_pack("mine-cat", owner_id=current_user.id)
+    await _create_owned_pack("foreign-cat", owner_id=other_id)
+
+    response = await client.get("/api/v1/packs")
+
+    assert response.status_code == 200
+    slugs = {pack["slug"] for pack in response.json()}
+    assert "mine-cat" in slugs
+    assert "foreign-cat" not in slugs
+    assert {"greetings", "numbers", "family", "food-drink"} <= slugs
+
+
+@pytest.mark.workflow("WF-02")
+@pytest.mark.anyio
 async def test_get_pack_returns_own_owned_pack(
     client: AsyncClient,
     current_user: User,
