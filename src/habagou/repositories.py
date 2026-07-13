@@ -173,6 +173,37 @@ class PackRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_id(self, pack_id: uuid.UUID) -> Pack | None:
+        result = await self.session.execute(
+            select(Pack)
+            .where(Pack.id == pack_id)
+            .options(
+                selectinload(Pack.characters).selectinload(PackCharacter.character),
+                selectinload(Pack.sentences),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_visible(self, pack_id: uuid.UUID, user_id: uuid.UUID) -> Pack | None:
+        """Fetch a pack by id iff it is visible to ``user_id``.
+
+        Visible means global (``owner_id IS NULL``) or owned by the caller; the
+        ownership predicate is pushed into SQL (mirroring :meth:`list_visible`)
+        so callers never re-check visibility in Python.
+        """
+        result = await self.session.execute(
+            select(Pack)
+            .where(
+                Pack.id == pack_id,
+                (Pack.owner_id.is_(None)) | (Pack.owner_id == user_id),
+            )
+            .options(
+                selectinload(Pack.characters).selectinload(PackCharacter.character),
+                selectinload(Pack.sentences),
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         *,

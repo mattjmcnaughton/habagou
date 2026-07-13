@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -25,7 +26,7 @@ from habagou.repositories import (
     ReviewStateRepository,
     UserRepository,
 )
-from tests.integration.conftest import create_user
+from tests.integration.conftest import create_user, pack_by_slug
 
 
 @pytest.mark.anyio
@@ -95,6 +96,71 @@ async def test_pack_repository_gets_pack_by_slug_eager_loaded() -> None:
         "我很好",
         "谢谢你",
     ]
+
+
+@pytest.mark.anyio
+async def test_pack_repository_gets_pack_by_id_eager_loaded() -> None:
+    async with db.async_session() as session:
+        repository = PackRepository(session)
+        greetings = await pack_by_slug(session, "greetings")
+        assert greetings is not None
+
+        pack = await repository.get_by_id(greetings.id)
+
+    assert pack is not None
+    assert pack.title == "Greetings"
+    assert [link.character.hanzi for link in pack.characters] == [
+        "你",
+        "好",
+        "我",
+        "他",
+        "谢",
+    ]
+    assert [sentence.hanzi for sentence in pack.sentences] == [
+        "你好",
+        "我很好",
+        "谢谢你",
+    ]
+
+
+@pytest.mark.anyio
+async def test_pack_repository_get_visible_scopes_by_ownership() -> None:
+    async with db.async_session() as session:
+        owner = await create_user(session, username="visible-owner")
+        other = await create_user(session, username="visible-stranger", email=None)
+        await session.flush()
+
+        global_pack = await pack_by_slug(session, "greetings")
+        assert global_pack is not None
+        owned_pack = Pack(
+            slug="owner-scoped",
+            title="Owner Scoped",
+            glyph="私",
+            color="#123456",
+            sort_order=60,
+            owner_id=owner.id,
+        )
+        session.add(owned_pack)
+        await session.flush()
+
+        repository = PackRepository(session)
+
+        # Global packs are visible to anyone.
+        global_for_owner = await repository.get_visible(global_pack.id, owner.id)
+        global_for_other = await repository.get_visible(global_pack.id, other.id)
+        assert global_for_owner is not None
+        assert global_for_owner.id == global_pack.id
+        assert global_for_other is not None
+        assert global_for_other.id == global_pack.id
+
+        # Owned packs are visible only to their owner.
+        owned_for_owner = await repository.get_visible(owned_pack.id, owner.id)
+        assert owned_for_owner is not None
+        assert owned_for_owner.id == owned_pack.id
+        assert await repository.get_visible(owned_pack.id, other.id) is None
+
+        # Unknown ids resolve to nothing.
+        assert await repository.get_visible(uuid.uuid4(), owner.id) is None
 
 
 @pytest.mark.anyio

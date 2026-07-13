@@ -12,12 +12,14 @@ import asyncpg
 import pytest
 from alembic.config import Config
 from itsdangerous import TimestampSigner
+from sqlalchemy import select
 from sqlalchemy.engine import URL, make_url
+from sqlalchemy.orm import selectinload
 
 from alembic import command
 from habagou import db
 from habagou.config import settings
-from habagou.models import User
+from habagou.models import Pack, PackCharacter, User
 from scripts.import_stroke_data import archive_path, import_corpus
 from scripts.seed import seed_database
 
@@ -200,6 +202,23 @@ async def create_user(
     session.add(user)
     await session.flush()
     return user
+
+
+async def pack_by_slug(session: AsyncSession, slug: str) -> Pack | None:
+    """Fetch a seeded pack by its known slug (test setup only).
+
+    Production code addresses packs by id; tests still need to translate the
+    fixed seed slugs into pack rows (and their ids) for arrange/assert steps.
+    """
+    result = await session.execute(
+        select(Pack)
+        .where(Pack.slug == slug)
+        .options(
+            selectinload(Pack.characters).selectinload(PackCharacter.character),
+            selectinload(Pack.sentences),
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 def auth_cookies(user_id: uuid.UUID, secret: str | None = None) -> dict[str, str]:
