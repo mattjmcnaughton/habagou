@@ -372,5 +372,49 @@ async def test_per_pack_aggregate_excludes_path_completions() -> None:
         assert with_pack[ActivityType.TRACE].best_duration_ms == 200
 
 
+@pytest.mark.anyio
+async def test_pack_owner_id_round_trips_global_and_owned() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session)
+
+        global_pack = Pack(
+            slug="owner-global",
+            title="Global Pack",
+            glyph="全",
+            color="#111111",
+            status=PackStatus.DRAFT,
+            sort_order=0,
+        )
+        owned_pack = Pack(
+            slug="owner-private",
+            title="Private Pack",
+            glyph="私",
+            color="#222222",
+            status=PackStatus.DRAFT,
+            sort_order=0,
+            owner_id=user.id,
+        )
+        session.add_all([global_pack, owned_pack])
+        await session.flush()
+
+        global_reloaded = await session.get(Pack, global_pack.id)
+        owned_reloaded = await session.get(Pack, owned_pack.id)
+
+    assert global_reloaded is not None
+    assert global_reloaded.owner_id is None
+    assert owned_reloaded is not None
+    assert owned_reloaded.owner_id == user.id
+
+
+@pytest.mark.anyio
+async def test_seeded_packs_have_null_owner_id() -> None:
+    async with db.async_session() as session:
+        packs = await PackRepository(session).list_published()
+
+    seeded = [item for item in packs if item.pack.slug in _seed_slugs()]
+    assert len(seeded) == 4
+    assert all(item.pack.owner_id is None for item in seeded)
+
+
 def _seed_slugs() -> set[str]:
     return {"greetings", "numbers", "family", "food-drink"}

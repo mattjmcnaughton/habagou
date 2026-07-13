@@ -124,11 +124,24 @@ class Character(Base):
 
 
 class Pack(Base):
-    """Curated character pack."""
+    """Character pack.
+
+    Two-tier ownership: ``owner_id IS NULL`` marks a global, curated pack
+    (seeded and visible to everyone); a non-null ``owner_id`` marks a private
+    pack owned by a single user.
+    """
 
     __tablename__ = "packs"
+    __table_args__ = (Index("ix_packs_owner", "owner_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        # CASCADE: a deleted user's private packs must not linger. SET NULL
+        # would silently promote them to global packs -- a privacy leak.
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     glyph: Mapped[str] = mapped_column(String, nullable=False)
@@ -166,6 +179,7 @@ class Pack(Base):
         order_by="PackSentence.position",
     )
     completions: Mapped[list[ActivityCompletion]] = relationship(back_populates="pack")
+    owner: Mapped[User | None] = relationship()
 
 
 class PackCharacter(Base):
