@@ -4,7 +4,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 
 from habagou import db
 from habagou.app import create_app
@@ -162,10 +162,27 @@ async def test_get_pack_404s_for_unknown_or_foreign_owned(
         lambda event, **fields: events.append((event, fields)),
     )
 
-    assert (await client.get(f"/api/v1/packs/{unknown_id}")).status_code == 404
-    assert (await client.get(f"/api/v1/packs/{foreign_id}")).status_code == 404
+    unknown_response = await client.get(f"/api/v1/packs/{unknown_id}")
+    foreign_response = await client.get(f"/api/v1/packs/{foreign_id}")
+    assert unknown_response.status_code == 404
+    assert foreign_response.status_code == 404
+    # An unknown id and a foreign-owned id are indistinguishable to the caller:
+    # the 404 code and message match (only the per-request request_id differs),
+    # so pack existence never leaks.
+    assert _error_without_request_id(unknown_response) == _error_without_request_id(
+        foreign_response
+    )
     assert [event for event, _fields in events] == ["pack_served", "pack_served"]
     assert [fields["outcome"] for _event, fields in events] == ["error", "error"]
+
+
+@pytest.mark.workflow("WF-02")
+@pytest.mark.anyio
+async def test_get_pack_422s_on_malformed_id(client: AsyncClient) -> None:
+    # A non-UUID path segment is rejected by FastAPI before the route runs.
+    response = await client.get("/api/v1/packs/not-a-uuid")
+
+    assert response.status_code == 422
 
 
 @pytest.mark.workflow("WF-02")
@@ -212,6 +229,12 @@ async def test_packs_require_authentication() -> None:
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "unauthenticated"
+
+
+def _error_without_request_id(response: Response) -> dict[str, object]:
+    error = dict(response.json()["error"])
+    error.pop("request_id", None)
+    return error
 
 
 async def _record_completion(
