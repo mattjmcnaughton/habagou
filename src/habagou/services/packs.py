@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid  # noqa: TC003 - used in runtime method signatures.
 from typing import TYPE_CHECKING
 
 from habagou.dtos.packs import (
@@ -33,10 +34,10 @@ class PackService:
         packs = await self.pack_repository.list_visible(user_id=user.id)
         return [await self._summary(item, user) for item in packs]
 
-    async def get_visible_by_slug(self, slug: str, user: User) -> PackDetailDTO | None:
-        pack = await self.pack_repository.get_by_slug(slug)
-        # Visible iff global (owner_id IS NULL) or owned by the caller.
-        if pack is None or (pack.owner_id is not None and pack.owner_id != user.id):
+    async def get_visible(self, pack_id: uuid.UUID, user: User) -> PackDetailDTO | None:
+        # Visibility (global or owned) is enforced in the repository query.
+        pack = await self.pack_repository.get_visible(pack_id, user.id)
+        if pack is None:
             return None
 
         counts = PackWithCounts(

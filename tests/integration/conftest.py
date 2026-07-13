@@ -221,6 +221,14 @@ async def pack_by_slug(session: AsyncSession, slug: str) -> Pack | None:
     return result.scalar_one_or_none()
 
 
+async def pack_id_by_slug(slug: str) -> uuid.UUID:
+    """Resolve a seeded pack's id from its known slug (test setup only)."""
+    async with db.async_session() as session:
+        pack = await pack_by_slug(session, slug)
+        assert pack is not None
+        return pack.id
+
+
 def auth_cookies(user_id: uuid.UUID, secret: str | None = None) -> dict[str, str]:
     payload = base64.b64encode(json.dumps({"user_id": str(user_id)}).encode("utf-8"))
     signer = TimestampSigner(str(secret or settings.session_secret_key))

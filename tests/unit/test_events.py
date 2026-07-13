@@ -46,7 +46,7 @@ def test_emit_workflow_event_logs(monkeypatch) -> None:
         "pack_served",
         workflow="WF-02",
         duration_ms=12,
-        pack_slug="greetings",
+        pack_id="11111111-1111-4111-8111-111111111111",
     )
 
     assert emitted == {
@@ -54,7 +54,7 @@ def test_emit_workflow_event_logs(monkeypatch) -> None:
         "workflow": "WF-02",
         "outcome": "ok",
         "duration_ms": 12,
-        "pack_slug": "greetings",
+        "pack_id": "11111111-1111-4111-8111-111111111111",
     }
 
 

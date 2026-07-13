@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,11 +14,14 @@ from habagou.models import (
     Pack,
     User,
 )
-from habagou.repositories import PackRepository
-from tests.integration.conftest import auth_cookies, create_user
+from tests.integration.conftest import (
+    auth_cookies,
+    create_user,
+    pack_by_slug,
+    pack_id_by_slug,
+)
 
 if TYPE_CHECKING:
-    import uuid
     from collections.abc import AsyncGenerator
 
 
@@ -107,7 +111,8 @@ async def test_get_pack_returns_detail_with_progress(
         lambda event, **fields: events.append((event, fields)),
     )
 
-    response = await client.get("/api/v1/packs/greetings")
+    greetings_id = await pack_id_by_slug("greetings")
+    response = await client.get(f"/api/v1/packs/{greetings_id}")
 
     assert response.status_code == 200
     body = response.json()
@@ -133,7 +138,7 @@ async def test_get_pack_returns_detail_with_progress(
     }
     assert events[0][0] == "pack_served"
     assert events[0][1]["workflow"] == "WF-02"
-    assert events[0][1]["pack_slug"] == "greetings"
+    assert events[0][1]["pack_id"] == str(greetings_id)
     assert events[0][1]["outcome"] == "ok"
 
 
@@ -149,15 +154,16 @@ async def test_get_pack_404s_for_unknown_or_foreign_owned(
         other = await create_user(session, username="other-owner", email=None)
         await session.commit()
         other_id = other.id
-    await _create_owned_pack("foreign-pack", owner_id=other_id)
+    foreign_id = await _create_owned_pack("foreign-pack", owner_id=other_id)
+    unknown_id = uuid.uuid4()
     events: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(
         "habagou.events.emit_workflow_event",
         lambda event, **fields: events.append((event, fields)),
     )
 
-    assert (await client.get("/api/v1/packs/nope")).status_code == 404
-    assert (await client.get("/api/v1/packs/foreign-pack")).status_code == 404
+    assert (await client.get(f"/api/v1/packs/{unknown_id}")).status_code == 404
+    assert (await client.get(f"/api/v1/packs/{foreign_id}")).status_code == 404
     assert [event for event, _fields in events] == ["pack_served", "pack_served"]
     assert [fields["outcome"] for _event, fields in events] == ["error", "error"]
 
@@ -190,9 +196,9 @@ async def test_get_pack_returns_own_owned_pack(
     client: AsyncClient,
     current_user: User,
 ) -> None:
-    await _create_owned_pack("my-pack", owner_id=current_user.id)
+    my_pack_id = await _create_owned_pack("my-pack", owner_id=current_user.id)
 
-    response = await client.get("/api/v1/packs/my-pack")
+    response = await client.get(f"/api/v1/packs/{my_pack_id}")
 
     assert response.status_code == 200
     assert response.json()["slug"] == "my-pack"
@@ -212,7 +218,7 @@ async def _record_completion(
     user_id: object, slug: str, activity: ActivityType, duration_ms: int
 ) -> None:
     async with db.async_session() as session:
-        pack = await PackRepository(session).get_by_slug(slug)
+        pack = await pack_by_slug(session, slug)
         assert pack is not None
         session.add(
             ActivityCompletion(
@@ -225,16 +231,16 @@ async def _record_completion(
         await session.commit()
 
 
-async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:
+async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> uuid.UUID:
     async with db.async_session() as session:
-        session.add(
-            Pack(
-                slug=slug,
-                title="Owned",
-                glyph="私",
-                color="#000000",
-                sort_order=99,
-                owner_id=owner_id,
-            )
+        pack = Pack(
+            slug=slug,
+            title="Owned",
+            glyph="私",
+            color="#000000",
+            sort_order=99,
+            owner_id=owner_id,
         )
+        session.add(pack)
         await session.commit()
+        return pack.id

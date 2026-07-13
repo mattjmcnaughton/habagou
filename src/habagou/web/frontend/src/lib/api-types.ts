@@ -55,7 +55,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/packs/{slug}": {
+    "/api/v1/packs/{pack_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -63,7 +63,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Pack */
-        get: operations["get_pack_api_v1_packs__slug__get"];
+        get: operations["get_pack_api_v1_packs__pack_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -123,7 +123,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/progress/packs/{slug}": {
+    "/api/v1/progress/packs/{pack_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -131,11 +131,11 @@ export interface paths {
             cookie?: never;
         };
         /** Get Pack Progress */
-        get: operations["get_pack_progress_api_v1_progress_packs__slug__get"];
+        get: operations["get_pack_progress_api_v1_progress_packs__pack_id__get"];
         put?: never;
         post?: never;
         /** Reset Pack Progress */
-        delete: operations["reset_pack_progress_api_v1_progress_packs__slug__delete"];
+        delete: operations["reset_pack_progress_api_v1_progress_packs__pack_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -273,8 +273,11 @@ export interface components {
             activity: components["schemas"]["ActivityType"];
             /** Duration Ms */
             duration_ms: number;
-            /** Pack Slug */
-            pack_slug: string;
+            /**
+             * Pack Id
+             * Format: uuid
+             */
+            pack_id: string;
         };
         /** CompletionResponseDTO */
         CompletionResponseDTO: {
@@ -655,12 +658,12 @@ export interface operations {
             };
         };
     };
-    get_pack_api_v1_packs__slug__get: {
+    get_pack_api_v1_packs__pack_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                slug: string;
+                pack_id: string;
             };
             cookie?: never;
         };
@@ -814,12 +817,12 @@ export interface operations {
             };
         };
     };
-    get_pack_progress_api_v1_progress_packs__slug__get: {
+    get_pack_progress_api_v1_progress_packs__pack_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                slug: string;
+                pack_id: string;
             };
             cookie?: never;
         };
@@ -852,12 +855,12 @@ export interface operations {
             };
         };
     };
-    reset_pack_progress_api_v1_progress_packs__slug__delete: {
+    reset_pack_progress_api_v1_progress_packs__pack_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                slug: string;
+                pack_id: string;
             };
             cookie?: never;
         };

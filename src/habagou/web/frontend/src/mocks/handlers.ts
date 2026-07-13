@@ -323,10 +323,11 @@ export const handlers = [
     const completion = (await request.json()) as {
       activity: "match" | "sentence" | "trace";
       duration_ms: number;
-      pack_slug: string;
+      pack_id: string;
     };
-    const pack = packDetails[completion.pack_slug];
-    if (!pack) {
+    const summary = packSummaries.find((item) => item.id === completion.pack_id);
+    const pack = summary ? packDetails[summary.slug] : undefined;
+    if (!summary || !pack) {
       return HttpResponse.json(
         { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
         { status: 404 },
@@ -341,11 +342,13 @@ export const handlers = [
       },
     };
     pack.progress = progress;
-    const summary = packSummaries.find((item) => item.slug === completion.pack_slug);
-    if (summary) {
-      summary.progress = progress;
-    }
-    const response: CompletionResponse = { ...completion, progress };
+    summary.progress = progress;
+    const response: CompletionResponse = {
+      pack_slug: pack.slug,
+      activity: completion.activity,
+      duration_ms: completion.duration_ms,
+      progress,
+    };
     return HttpResponse.json<CompletionResponse>(response);
   }),
   http.get(`${API_V1}/path`, ({ request }) => {

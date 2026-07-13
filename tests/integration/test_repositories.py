@@ -77,28 +77,6 @@ async def test_pack_repository_lists_visible_packs_with_counts() -> None:
 
 
 @pytest.mark.anyio
-async def test_pack_repository_gets_pack_by_slug_eager_loaded() -> None:
-    async with db.async_session() as session:
-        repository = PackRepository(session)
-        pack = await repository.get_by_slug("greetings")
-
-    assert pack is not None
-    assert pack.title == "Greetings"
-    assert [link.character.hanzi for link in pack.characters] == [
-        "你",
-        "好",
-        "我",
-        "他",
-        "谢",
-    ]
-    assert [sentence.hanzi for sentence in pack.sentences] == [
-        "你好",
-        "我很好",
-        "谢谢你",
-    ]
-
-
-@pytest.mark.anyio
 async def test_pack_repository_gets_pack_by_id_eager_loaded() -> None:
     async with db.async_session() as session:
         repository = PackRepository(session)
@@ -181,7 +159,7 @@ async def test_character_repository_reads_strokes_and_missing_set() -> None:
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
 
         repository = ProgressRepository(session)
@@ -237,7 +215,7 @@ async def test_progress_repository_records_aggregates_and_deletes() -> None:
 async def test_progress_repository_groups_daily_counts_by_timezone_offset() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
 
         repository = ProgressRepository(session)
@@ -304,7 +282,7 @@ async def test_user_repository_round_trips_identity() -> None:
 async def test_path_repository_appends_pages_and_counts_pending() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
 
         repository = PathRepository(session)
@@ -355,7 +333,7 @@ async def test_path_repository_appends_pages_and_counts_pending() -> None:
 async def test_review_state_repository_upserts_and_lists() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
 
         repository = ReviewStateRepository(session)
@@ -416,7 +394,7 @@ async def test_review_state_repository_upserts_and_lists() -> None:
 async def test_per_pack_aggregate_excludes_path_completions() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
-        pack = await PackRepository(session).get_by_slug("greetings")
+        pack = await pack_by_slug(session, "greetings")
         assert pack is not None
 
         progress = ProgressRepository(session)
@@ -559,7 +537,7 @@ async def test_pack_repository_create_persists_owned_pack() -> None:
         )
         await session.flush()
 
-        fetched = await repository.get_by_slug("owned-create")
+        fetched = await pack_by_slug(session, "owned-create")
 
     assert created.owner_id == user.id
     assert fetched is not None

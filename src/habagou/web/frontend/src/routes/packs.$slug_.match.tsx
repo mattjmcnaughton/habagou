@@ -39,7 +39,7 @@ function MatchGame({ pack }: { pack: PackDetail }) {
       createCompletion({
         activity: "match",
         duration_ms: durationMs ?? 0,
-        pack_slug: pack.slug,
+        pack_id: pack.id,
       }),
     onSuccess: (result) => {
       queryClient.setQueryData<PackDetail>(["pack", pack.slug], (current) =>

@@ -162,17 +162,6 @@ class PackRepository:
         )
         return list(result.scalars())
 
-    async def get_by_slug(self, slug: str) -> Pack | None:
-        result = await self.session.execute(
-            select(Pack)
-            .where(Pack.slug == slug)
-            .options(
-                selectinload(Pack.characters).selectinload(PackCharacter.character),
-                selectinload(Pack.sentences),
-            )
-        )
-        return result.scalar_one_or_none()
-
     async def get_by_id(self, pack_id: uuid.UUID) -> Pack | None:
         result = await self.session.execute(
             select(Pack)
