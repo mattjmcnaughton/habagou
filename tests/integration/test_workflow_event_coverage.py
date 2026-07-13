@@ -12,7 +12,6 @@ from sqlalchemy import update
 from habagou import db
 from habagou.app import create_app
 from habagou.auth import AuthIdentity
-from habagou.config import settings
 from habagou.models import ReviewState
 from habagou.repositories import UserRepository
 from scripts.seed import SeedResult, emit_bootstrap_completed
@@ -37,7 +36,6 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-06": ({"strokes_served", "strokes_missing"}, {"hanzi", "found"}, "ok"),
     "WF-07": ({"progress_viewed"}, {"pack_slug", "user_id"}, "ok"),
     "WF-08": ({"progress_reset"}, {"pack_slug", "deleted_count", "user_id"}, "ok"),
-    "WF-09": ({"admin_action"}, {"action", "pack_slug", "authorized"}, "ok"),
     "WF-10": ({"deploy_ready"}, {"database"}, "ok"),
     "WF-11": ({"progress_summary_viewed"}, {"user_id", "current_streak"}, "ok"),
     "WF-12": (
@@ -82,7 +80,6 @@ async def test_all_workflows_emit_verification_events(
     monkeypatch.setattr(
         "habagou.events.structlog.get_logger", lambda _name: StubLogger()
     )
-    monkeypatch.setattr(settings, "admin_token", "secret")
     monkeypatch.setattr(
         "habagou.routers.auth.oauth.create_client",
         lambda _provider: StubOAuthClient(),
@@ -146,13 +143,6 @@ async def test_all_workflows_emit_verification_events(
         status_code=201,
     )
     await _ok(await client.delete("/api/v1/progress/packs/greetings"))
-    await _ok(
-        await client.patch(
-            "/api/v1/admin/packs/greetings",
-            headers={"ADMIN_TOKEN": "secret"},
-            json={"sort_order": 1},
-        )
-    )
     await _ok(await client.get("/readyz"))
     await _ok(await client.post("/auth/logout"), status_code=204)
     await _ok(await client.get("/api/v1/packs"), status_code=401)

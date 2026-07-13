@@ -4,57 +4,6 @@
  */
 
 export interface paths {
-    "/api/v1/admin/packs/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Patch Pack */
-        patch: operations["patch_pack_api_v1_admin_packs__slug__patch"];
-        trace?: never;
-    };
-    "/api/v1/admin/packs/{slug}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Publish Pack */
-        post: operations["publish_pack_api_v1_admin_packs__slug__publish_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/packs/{slug}/retire": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Retire Pack */
-        post: operations["retire_pack_api_v1_admin_packs__slug__retire_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/session": {
         parameters: {
             query?: never;
@@ -369,21 +318,6 @@ export interface components {
             /** Target Days */
             target_days: number;
         };
-        /** PackAdminDTO */
-        PackAdminDTO: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Slug */
-            slug: string;
-            /** Sort Order */
-            sort_order: number;
-            status: components["schemas"]["PackStatus"];
-            /** Title */
-            title: string;
-        };
         /** PackCharacterDTO */
         PackCharacterDTO: {
             /** Hanzi */
@@ -439,17 +373,6 @@ export interface components {
             /** Translation */
             translation: string;
         };
-        /** PackSortOrderPatchDTO */
-        PackSortOrderPatchDTO: {
-            /** Sort Order */
-            sort_order: number;
-        };
-        /**
-         * PackStatus
-         * @description Lifecycle status for a pack.
-         * @enum {string}
-         */
-        PackStatus: "draft" | "published" | "retired";
         /** PackSummaryDTO */
         PackSummaryDTO: {
             /** Char Count */
@@ -654,172 +577,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    patch_pack_api_v1_admin_packs__slug__patch: {
-        parameters: {
-            query?: never;
-            header?: {
-                ADMIN_TOKEN?: string | null;
-            };
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PackSortOrderPatchDTO"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackAdminDTO"];
-                };
-            };
-            /** @description Missing or invalid admin token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pack not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Admin endpoints disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    publish_pack_api_v1_admin_packs__slug__publish_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                ADMIN_TOKEN?: string | null;
-            };
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackAdminDTO"];
-                };
-            };
-            /** @description Missing or invalid admin token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pack not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Admin endpoints disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    retire_pack_api_v1_admin_packs__slug__retire_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                ADMIN_TOKEN?: string | null;
-            };
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackAdminDTO"];
-                };
-            };
-            /** @description Missing or invalid admin token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Pack not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Admin endpoints disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     get_auth_session_api_v1_auth_session_get: {
         parameters: {
             query?: never;

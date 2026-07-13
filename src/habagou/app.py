@@ -16,7 +16,7 @@ from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
-from habagou.routers.v1 import admin, characters, packs, path, progress
+from habagou.routers.v1 import characters, packs, path, progress
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
 
@@ -53,7 +53,6 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
-    app.include_router(admin.router)
     app.include_router(characters.router)
     app.include_router(packs.router)
     app.include_router(path.router)
