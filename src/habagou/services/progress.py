@@ -153,7 +153,7 @@ class ProgressService:
         per-pack aggregate (``source='pack'``) that drives the pack progress
         badges: all three activities must be complete.
         """
-        packs = await self.pack_repository.list_published_with_content()
+        packs = await self.pack_repository.list_global_with_content()
         traced_hanzi: set[str] = set()
         packs_completed = 0
         for pack in packs:

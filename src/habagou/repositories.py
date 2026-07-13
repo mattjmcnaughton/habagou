@@ -117,7 +117,8 @@ class PackRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_published(self) -> list[PackWithCounts]:
+    async def list_visible(self, *, user_id: uuid.UUID) -> list[PackWithCounts]:
+        """Packs visible to a user: global (``owner_id IS NULL``) plus own."""
         character_count = (
             select(func.count(PackCharacter.character_id))
             .where(PackCharacter.pack_id == Pack.id)
@@ -132,7 +133,7 @@ class PackRepository:
         )
         result = await self.session.execute(
             select(Pack, character_count, sentence_count)
-            .where(Pack.status == PackStatus.PUBLISHED)
+            .where((Pack.owner_id.is_(None)) | (Pack.owner_id == user_id))
             .order_by(Pack.sort_order, Pack.slug)
         )
         return [
@@ -144,15 +145,16 @@ class PackRepository:
             for row in result.all()
         ]
 
-    async def list_published_with_content(self) -> list[Pack]:
-        """Published packs in curriculum order, with characters and sentences.
+    async def list_global_with_content(self) -> list[Pack]:
+        """Global packs (``owner_id IS NULL``) in curriculum order, with content.
 
         Used to build the scheduler :class:`Curriculum`; characters carry their
-        pinyin/meaning and are ordered by ``position``.
+        pinyin/meaning and are ordered by ``position``. The Learning Path is
+        global-only this epic, so owned packs are excluded.
         """
         result = await self.session.execute(
             select(Pack)
-            .where(Pack.status == PackStatus.PUBLISHED)
+            .where(Pack.owner_id.is_(None))
             .order_by(Pack.sort_order, Pack.slug)
             .options(
                 selectinload(Pack.characters).selectinload(PackCharacter.character),

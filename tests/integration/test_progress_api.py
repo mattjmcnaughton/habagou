@@ -200,7 +200,7 @@ async def test_progress_summary_returns_zero_state_for_fresh_user(
     assert all(day["count"] == 0 and day["level"] == 0 for day in body["activity"])
     assert body["characters_traced"] == 0
     assert body["packs_completed"] == 0
-    assert body["packs_total"] == await _published_pack_count()
+    assert body["packs_total"] == await _global_pack_count()
 
 
 @pytest.mark.workflow("WF-11")
@@ -368,6 +368,29 @@ async def test_progress_records_on_own_owned_pack(
     assert reset.json()["deleted_count"] == 1
 
 
+@pytest.mark.workflow("WF-11")
+@pytest.mark.anyio
+async def test_progress_stats_ignore_owned_packs(
+    current_user: User,
+    client: AsyncClient,
+) -> None:
+    # packs_total counts only global Path-curriculum packs; neither the caller's
+    # own private packs nor another user's owned packs affect it.
+    await _clear_user_progress(current_user.id)
+    async with db.async_session() as session:
+        other = await create_user(session, username="other-owner", email=None)
+        await session.commit()
+        other_id = other.id
+    global_total = await _global_pack_count()
+    await _create_owned_pack("mine-stats", owner_id=current_user.id)
+    await _create_owned_pack("foreign-stats", owner_id=other_id)
+
+    response = await client.get("/api/v1/progress/summary")
+
+    assert response.status_code == 200
+    assert response.json()["packs_total"] == global_total
+
+
 @pytest.mark.anyio
 async def test_progress_requires_authentication() -> None:
     transport = ASGITransport(app=create_app())
@@ -493,9 +516,9 @@ async def _pack_hanzi(slug: str) -> set[str]:
         return {link.character.hanzi for link in pack.characters}
 
 
-async def _published_pack_count() -> int:
+async def _global_pack_count() -> int:
     async with db.async_session() as session:
-        return len(await PackRepository(session).list_published())
+        return len(await PackRepository(session).list_global_with_content())
 
 
 async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> None:

@@ -23,7 +23,7 @@ async def list_packs(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[PackSummaryDTO]:
     async with workflow_event("pack_list_served", workflow="WF-02") as event:
-        packs = await PackService(session).list_published(current_user)
+        packs = await PackService(session).list_visible(current_user)
         event.fields.update(pack_count=len(packs), user_id=str(current_user.id))
         return packs
 

@@ -29,8 +29,8 @@ class PackService:
         self.pack_repository = PackRepository(session)
         self.progress_repository = ProgressRepository(session)
 
-    async def list_published(self, user: User) -> list[PackSummaryDTO]:
-        packs = await self.pack_repository.list_published()
+    async def list_visible(self, user: User) -> list[PackSummaryDTO]:
+        packs = await self.pack_repository.list_visible(user_id=user.id)
         return [await self._summary(item, user) for item in packs]
 
     async def get_visible_by_slug(self, slug: str, user: User) -> PackDetailDTO | None:
