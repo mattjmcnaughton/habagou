@@ -587,5 +587,44 @@ async def test_pack_repository_create_without_slug_persists_null() -> None:
     assert reloaded.slug is None
 
 
+@pytest.mark.anyio
+async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
+    # Two packs sharing a sort_order must fall back to Pack.id order, in both
+    # the per-user catalog (list_visible) and the global-with-content
+    # curriculum query (list_global_with_content).
+    async with db.async_session() as session:
+        user = await create_user(session, username="tie-break-user")
+        await session.flush()
+
+        shared_sort_order = 900
+        first = Pack(
+            slug="tie-break-a",
+            title="Tie Break A",
+            glyph="甲",
+            color="#aa0000",
+            sort_order=shared_sort_order,
+        )
+        second = Pack(
+            slug="tie-break-b",
+            title="Tie Break B",
+            glyph="乙",
+            color="#00aa00",
+            sort_order=shared_sort_order,
+        )
+        session.add_all([first, second])
+        await session.flush()
+        expected = sorted([first.id, second.id])
+
+        repository = PackRepository(session)
+        visible = await repository.list_visible(user_id=user.id)
+        global_with_content = await repository.list_global_with_content()
+
+    visible_ids = [item.pack.id for item in visible if item.pack.id in expected]
+    global_ids = [pack.id for pack in global_with_content if pack.id in expected]
+
+    assert visible_ids == expected
+    assert global_ids == expected
+
+
 def _seed_slugs() -> set[str]:
     return {"greetings", "numbers", "family", "food-drink"}
