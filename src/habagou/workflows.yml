@@ -15,8 +15,6 @@ workflows:
     title: Review progress
   - id: WF-08
     title: Reset progress
-  - id: WF-09
-    title: Admin curate
   - id: WF-10
     title: Deploy and serve
   - id: WF-11

@@ -41,7 +41,7 @@ src/habagou/
   path_scheduling.py   # pure Leitner-ladder scheduler (queue generation, ladder update)
   routers/
     health.py          # healthz/readyz
-    v1/                # packs, characters, progress, path, admin
+    v1/                # packs, characters, progress, path
   services/            # business logic
   repositories.py      # SQLAlchemy data access
   models.py            # SQLAlchemy models
