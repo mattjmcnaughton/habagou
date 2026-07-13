@@ -1,3 +1,12 @@
+# [1.4.0](https://github.com/mattjmcnaughton/habagou/compare/v1.3.0...v1.4.0) (2026-07-13)
+
+
+### Features
+
+* **packs:** add Pack.owner_id ownership column ([804349d](https://github.com/mattjmcnaughton/habagou/commit/804349d4bd61ea24e1cf8c79e75658794471da56)), closes [#88](https://github.com/mattjmcnaughton/habagou/issues/88)
+* **packs:** add PackRepository.create write path for owned packs ([e44f3c7](https://github.com/mattjmcnaughton/habagou/commit/e44f3c794f946fbd667d772fcab6210d6a25a45f)), closes [#89](https://github.com/mattjmcnaughton/habagou/issues/89)
+* **packs:** address packs by id in the repository ([4e57ce5](https://github.com/mattjmcnaughton/habagou/commit/4e57ce511bada7fa0178cd3748460d7ce22a2e88)), closes [#93](https://github.com/mattjmcnaughton/habagou/issues/93)
+
 # [1.3.0](https://github.com/mattjmcnaughton/habagou/compare/v1.2.0...v1.3.0) (2026-07-13)
 
 
