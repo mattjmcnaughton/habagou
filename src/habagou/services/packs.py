@@ -73,7 +73,6 @@ class PackService:
         )
         return PackSummaryDTO(
             id=item.pack.id,
-            slug=item.pack.slug,
             title=item.pack.title,
             glyph=item.pack.glyph,
             color=item.pack.color,

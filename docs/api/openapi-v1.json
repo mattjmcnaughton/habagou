@@ -74,16 +74,11 @@
             "title": "Duration Ms",
             "type": "integer"
           },
-          "pack_slug": {
-            "title": "Pack Slug",
-            "type": "string"
-          },
           "progress": {
             "$ref": "#/components/schemas/PackProgressDTO"
           }
         },
         "required": [
-          "pack_slug",
           "progress",
           "activity",
           "duration_ms"
@@ -232,10 +227,6 @@
             "title": "Sentences",
             "type": "array"
           },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -243,7 +234,6 @@
         },
         "required": [
           "id",
-          "slug",
           "title",
           "glyph",
           "color",
@@ -278,16 +268,11 @@
       },
       "PackProgressResponseDTO": {
         "properties": {
-          "pack_slug": {
-            "title": "Pack Slug",
-            "type": "string"
-          },
           "progress": {
             "$ref": "#/components/schemas/PackProgressDTO"
           }
         },
         "required": [
-          "pack_slug",
           "progress"
         ],
         "title": "PackProgressResponseDTO",
@@ -342,10 +327,6 @@
             "title": "Sentence Count",
             "type": "integer"
           },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -353,7 +334,6 @@
         },
         "required": [
           "id",
-          "slug",
           "title",
           "glyph",
           "color",
@@ -571,17 +551,12 @@
             "title": "Glyph",
             "type": "string"
           },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          },
           "title": {
             "title": "Title",
             "type": "string"
           }
         },
         "required": [
-          "slug",
           "title",
           "glyph",
           "color"
@@ -675,16 +650,11 @@
             "title": "Deleted Count",
             "type": "integer"
           },
-          "pack_slug": {
-            "title": "Pack Slug",
-            "type": "string"
-          },
           "progress": {
             "$ref": "#/components/schemas/PackProgressDTO"
           }
         },
         "required": [
-          "pack_slug",
           "progress",
           "deleted_count"
         ],

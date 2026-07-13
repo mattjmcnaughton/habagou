@@ -75,7 +75,7 @@ class CompleteResult:
     status: CompleteStatus
     response: PathItemCompleteResponseDTO | None = None
     activity: str | None = None
-    pack_slug: str | None = None
+    pack_id: str | None = None
     kind: str | None = None
 
 
@@ -180,7 +180,7 @@ class PathService:
                 next_item_id=next_item.id if next_item else None,
             ),
             activity=item.activity.value,
-            pack_slug=item.content.get("pack_slug"),
+            pack_id=str(item.pack_id),
             kind=item.kind.value,
         )
 
@@ -243,8 +243,8 @@ class PathService:
             return
         await self.user_repository.lock_by_id(user_id)
         curriculum = _build_curriculum(packs)
-        pack_by_slug = {pack.slug: pack for pack in packs}
-        slug_by_pack_id = {pack.id: pack.slug for pack in packs}
+        pack_by_slug = {_pack_key(pack): pack for pack in packs}
+        slug_by_pack_id = {pack.id: _pack_key(pack) for pack in packs}
 
         pending = await self.path_repository.count_pending(user_id=user_id)
         passes = 0
@@ -395,7 +395,6 @@ class PathService:
         # path_item_owned_pack invariant), so missing here is a bug.
         pack = packs_by_id[item.pack_id]
         pack_dto = PathPackDTO(
-            slug=pack.slug,
             title=pack.title,
             glyph=pack.glyph,
             color=pack.color,
@@ -432,11 +431,22 @@ _UNIT_TYPE_LITERAL: dict[ReviewUnitType, Literal["character", "sentence"]] = {
 }
 
 
+def _pack_key(pack: Pack) -> str:
+    """Stable scheduler identity for a global pack.
+
+    The Learning Path is global-only and global packs always carry a non-null
+    slug (the scheduler keys its review units on it). ``slug`` is now nullable
+    at the type level, so coalesce to the pack id for total type-safety; the
+    fallback never fires for real global packs.
+    """
+    return pack.slug or str(pack.id)
+
+
 def _build_curriculum(packs: list[Pack]) -> sched.Curriculum:
     return sched.Curriculum(
         packs=tuple(
             sched.PackSpec(
-                slug=pack.slug,
+                slug=_pack_key(pack),
                 title=pack.title,
                 glyph=pack.glyph,
                 color=pack.color,

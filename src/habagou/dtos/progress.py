@@ -18,7 +18,6 @@ class CompletionCreateDTO(BaseModel):
 
 
 class PackProgressResponseDTO(BaseModel):
-    pack_slug: str
     progress: PackProgressDTO
 
 

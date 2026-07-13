@@ -165,7 +165,6 @@ describe("App", () => {
       http.delete(`${API_V1_BASE}/progress/packs/:packId`, ({ params }) => {
         resetRequest(params.packId);
         const reset: ProgressReset = {
-          pack_slug: String(params.packId),
           deleted_count: 1,
           progress: {
             trace: { completed: false, completion_count: 0, best_duration_ms: null },

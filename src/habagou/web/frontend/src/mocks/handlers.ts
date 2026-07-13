@@ -27,7 +27,6 @@ export const authenticatedSession: AuthSession = {
 export const packSummaries: PackSummary[] = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    slug: "greetings",
     title: "Greetings",
     glyph: "你",
     color: "#c4633f",
@@ -41,7 +40,6 @@ export const packSummaries: PackSummary[] = [
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    slug: "numbers",
     title: "Numbers",
     glyph: "三",
     color: "#3f8a86",
@@ -118,14 +116,12 @@ function mockProgressSummary(): ProgressSummary {
 }
 
 const GREETINGS_PACK: PathItem["pack"] = {
-  slug: "greetings",
   title: "Greetings",
   glyph: "你",
   color: "#c4633f",
 };
 
 const NUMBERS_PACK: PathItem["pack"] = {
-  slug: "numbers",
   title: "Numbers",
   glyph: "三",
   color: "#3f8a86",
@@ -344,7 +340,6 @@ export const handlers = [
     pack.progress = progress;
     summary.progress = progress;
     const response: CompletionResponse = {
-      pack_slug: pack.slug,
       activity: completion.activity,
       duration_ms: completion.duration_ms,
       progress,
@@ -402,7 +397,6 @@ export const handlers = [
       );
     }
     const reset: ProgressReset = {
-      pack_slug: pack.slug,
       deleted_count: 1,
       progress: {
         trace: { completed: false, completion_count: 0, best_duration_ms: null },

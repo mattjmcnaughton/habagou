@@ -59,15 +59,14 @@ async def test_list_packs_returns_published_sorted_summaries(
 
     assert response.status_code == 200
     body = response.json()
-    assert [pack["slug"] for pack in body] == [
-        "greetings",
-        "numbers",
-        "family",
-        "food-drink",
+    assert [pack["title"] for pack in body] == [
+        "Greetings",
+        "Numbers",
+        "Family",
+        "Food & drink",
     ]
     assert body[0] == {
         "id": body[0]["id"],
-        "slug": "greetings",
         "title": "Greetings",
         "glyph": "你",
         "color": "#c4633f",
@@ -116,7 +115,7 @@ async def test_get_pack_returns_detail_with_progress(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["slug"] == "greetings"
+    assert body["title"] == "Greetings"
     assert body["char_count"] == 5
     assert body["sentence_count"] == 3
     assert [character["hanzi"] for character in body["characters"]] == [
@@ -195,16 +194,18 @@ async def test_list_packs_includes_own_excludes_foreign_owned(
         other = await create_user(session, username="other-owner", email=None)
         await session.commit()
         other_id = other.id
-    await _create_owned_pack("mine-cat", owner_id=current_user.id)
-    await _create_owned_pack("foreign-cat", owner_id=other_id)
+    mine_id = await _create_owned_pack("mine-cat", owner_id=current_user.id)
+    foreign_id = await _create_owned_pack("foreign-cat", owner_id=other_id)
 
     response = await client.get("/api/v1/packs")
 
     assert response.status_code == 200
-    slugs = {pack["slug"] for pack in response.json()}
-    assert "mine-cat" in slugs
-    assert "foreign-cat" not in slugs
-    assert {"greetings", "numbers", "family", "food-drink"} <= slugs
+    body = response.json()
+    ids = {pack["id"] for pack in body}
+    assert str(mine_id) in ids
+    assert str(foreign_id) not in ids
+    titles = {pack["title"] for pack in body}
+    assert {"Greetings", "Numbers", "Family", "Food & drink"} <= titles
 
 
 @pytest.mark.workflow("WF-02")
@@ -218,7 +219,7 @@ async def test_get_pack_returns_own_owned_pack(
     response = await client.get(f"/api/v1/packs/{my_pack_id}")
 
     assert response.status_code == 200
-    assert response.json()["slug"] == "my-pack"
+    assert response.json()["id"] == str(my_pack_id)
 
 
 @pytest.mark.anyio

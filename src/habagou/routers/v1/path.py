@@ -92,7 +92,7 @@ async def complete_path_item(
         event.duration_ms = body.duration_ms
         event.fields.update(
             activity=result.activity,
-            pack_slug=result.pack_slug,
+            pack_id=result.pack_id,
             kind=result.kind,
         )
         assert result.response is not None

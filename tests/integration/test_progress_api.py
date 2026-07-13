@@ -16,7 +16,9 @@ from tests.integration.conftest import (
     auth_cookies,
     create_user,
     pack_by_slug,
+    pack_by_title,
     pack_id_by_slug,
+    pack_id_by_title,
 )
 
 if TYPE_CHECKING:
@@ -78,7 +80,6 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
 
     assert progress_response.status_code == 200
     assert progress_response.json() == {
-        "pack_slug": "greetings",
         "progress": {
             "trace": {
                 "completed": False,
@@ -105,7 +106,6 @@ async def test_completion_reflects_then_reset_clears_current_user_progress(
 
     assert reset_response.status_code == 200
     assert reset_response.json() == {
-        "pack_slug": "greetings",
         "deleted_count": 1,
         "progress": {
             "trace": {
@@ -464,7 +464,7 @@ async def test_characters_traced_unions_path_and_whole_pack_trace(
     path_traced_hanzi = {
         char["hanzi"] for char in trace_item["content"]["trace"]["chars"]
     }
-    pack_slug = trace_item["pack"]["slug"]
+    pack_title = trace_item["pack"]["title"]
 
     complete_response = await _complete_path_item(client, trace_item["id"])
     assert complete_response.status_code == 201
@@ -473,7 +473,7 @@ async def test_characters_traced_unions_path_and_whole_pack_trace(
     assert partial.status_code == 200
     assert partial.json()["characters_traced"] == len(path_traced_hanzi)
 
-    pack_hanzi = await _pack_hanzi(pack_slug)
+    pack_hanzi = await _pack_hanzi(pack_title)
     assert path_traced_hanzi <= pack_hanzi
 
     # Completing the whole-pack Trace activity brings in every pack character,
@@ -482,7 +482,7 @@ async def test_characters_traced_unions_path_and_whole_pack_trace(
     whole_pack_response = await client.post(
         "/api/v1/progress/completions",
         json={
-            "pack_id": str(await pack_id_by_slug(pack_slug)),
+            "pack_id": str(await pack_id_by_title(pack_title)),
             "activity": "trace",
             "duration_ms": 900,
         },
@@ -562,9 +562,9 @@ async def _complete_path_item(
     )
 
 
-async def _pack_hanzi(slug: str) -> set[str]:
+async def _pack_hanzi(title: str) -> set[str]:
     async with db.async_session() as session:
-        pack = await pack_by_slug(session, slug)
+        pack = await pack_by_title(session, title)
         assert pack is not None
         return {link.character.hanzi for link in pack.characters}
 

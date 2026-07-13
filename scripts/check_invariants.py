@@ -94,7 +94,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                         code="missing_pack_character",
                         message=(
                             "global pack references missing corpus character: "
-                            f"pack={pack.slug} "
+                            f"pack={pack.slug or pack.id} "
                             f"character_id={pack_character.character_id}"
                         ),
                     )
@@ -107,7 +107,7 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                         code="missing_pack_character",
                         message=(
                             "global pack references missing corpus character: "
-                            f"pack={pack.slug} character={hanzi}"
+                            f"pack={pack.slug or pack.id} character={hanzi}"
                         ),
                     )
                 )
@@ -120,7 +120,8 @@ async def check_invariants(dsn: str) -> list[InvariantViolation]:
                             code="missing_sentence_character",
                             message=(
                                 "global pack sentence references missing corpus "
-                                f"character: pack={pack.slug} character={hanzi} "
+                                f"character: pack={pack.slug or pack.id} "
+                                f"character={hanzi} "
                                 f"sentence={sentence.hanzi}"
                             ),
                         ),

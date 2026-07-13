@@ -58,7 +58,6 @@ class ProgressService:
         await self.session.commit()
         progress = await self._progress(user=user, pack=pack)
         return CompletionResponseDTO(
-            pack_slug=pack.slug,
             activity=completion.activity,
             duration_ms=completion.duration_ms,
             progress=progress,
@@ -75,7 +74,6 @@ class ProgressService:
             return None
 
         return PackProgressResponseDTO(
-            pack_slug=pack.slug,
             progress=await self._progress(user=user, pack=pack),
         )
 
@@ -95,7 +93,6 @@ class ProgressService:
         )
         await self.session.commit()
         return ProgressResetDTO(
-            pack_slug=pack.slug,
             deleted_count=deleted_count,
             progress=await self._progress(user=user, pack=pack),
         )
