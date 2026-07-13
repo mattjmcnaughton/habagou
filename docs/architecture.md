@@ -44,8 +44,8 @@ src/habagou/
     health.py          # healthz/readyz
     v1/                # packs, characters, progress, path
   services/            # business logic
-  repositories.py      # SQLAlchemy data access
-  models.py            # SQLAlchemy models
+  repositories/        # SQLAlchemy data access (one module per bounded context)
+  models/              # SQLAlchemy models (one module per bounded context)
   dtos/                # Pydantic API DTOs
   web/serve.py         # production static frontend serving
 ```
@@ -55,7 +55,7 @@ rules. Repositories isolate SQLAlchemy query details. DTOs are separate from ORM
 models.
 
 The Learning Path follows the same layering: `routers/v1/path.py` ->
-`services/path.py` -> `repositories.py` (`PathRepository`,
+`services/path.py` -> `repositories/` (`PathRepository`,
 `ReviewStateRepository`), with request/response shapes in `dtos/path.py`.
 Queue generation and the Leitner-ladder update themselves are pure logic in
 `domains/scheduling.py` (mirroring `domains/streaks.py`) — no I/O, so the scheduling
