@@ -43,8 +43,8 @@ src/habagou/
     serve.py                # Static file serving for production
     frontend/               # Frontend application (scaffolded separately)
   db.py                     # Async engine/session setup
-  models.py                 # SQLAlchemy models
-  repositories.py           # Data access layer
+  models/                   # SQLAlchemy models (one module per bounded context)
+  repositories/             # Data access layer (one module per bounded context)
 tests/
   unit/                     # Unit tests
   integration/              # Integration tests
