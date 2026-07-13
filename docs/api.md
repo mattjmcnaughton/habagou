@@ -36,9 +36,9 @@ invalid sessions return the standard error envelope with HTTP 401:
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | GET | `/api/v1/progress/summary` | Current user's daily goal, streaks, 45-day activity heatmap, and next milestone |
-| GET | `/api/v1/progress/packs/{slug}` | Current user's per-activity progress for a pack |
+| GET | `/api/v1/progress/packs/{pack_id}` | Current user's per-activity progress for a pack |
 | POST | `/api/v1/progress/completions` | Record an activity completion for the current user |
-| DELETE | `/api/v1/progress/packs/{slug}` | Reset current user's progress for a pack |
+| DELETE | `/api/v1/progress/packs/{pack_id}` | Reset current user's progress for a pack |
 
 `GET /api/v1/progress/summary` accepts optional
 `tz_offset_minutes` (`-900` to `900`), matching JavaScript
@@ -61,7 +61,9 @@ returns:
   activity.
 - `packs_completed` — packs where all three whole-pack activities are
   complete for the current user.
-- `packs_total` — total published packs.
+- `packs_total` — total global packs. The Learning Path and these stats stay
+  global-only this epic (see
+  [ADR 0009](adrs/0009-pack-ownership.md)); private, owned packs are excluded.
 
 ### Path
 
@@ -109,7 +111,7 @@ using current review state before responding.
   "kind": "new" | "review",
   "state": "done" | "current" | "locked",
   "unit_label": "UNIT 1 · WARMING UP" | null,
-  "pack": { "slug": "numbers", "title": "Numbers", "glyph": "三", "color": "#3f8a86" },
+  "pack": { "title": "Numbers", "glyph": "三", "color": "#3f8a86" },
   "content": {
     "trace":    { "chars": [{ "hanzi": "一", "pinyin": "yī", "meaning": "one" }] },
     "match":    { "pairs": [{ "hanzi": "一", "pinyin": "yī", "meaning": "one" }] },

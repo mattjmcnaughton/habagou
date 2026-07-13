@@ -65,7 +65,13 @@ and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.
 ## Data Model
 
 - `characters`: pinned Hanzi Writer stroke JSON imported into Postgres.
-- `packs`: curated learning packs with lifecycle status and sort order.
+- `packs`: learning packs with nullable `owner_id` and sort order. `owner_id
+  IS NULL` is a global, curated, seed-managed pack visible to everyone;
+  non-null is a private pack visible only to its owner (created via
+  `PackRepository.create(owner_id=...)`, the write path the Epic 7 agent
+  uses). See
+  [ADR 0009](adrs/0009-pack-ownership.md) for why ownership replaced the
+  earlier lifecycle status.
 - `pack_characters`: pack-specific pinyin/meaning metadata.
 - `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
 - `users`: authenticated learner accounts keyed by provider issuer + subject.
