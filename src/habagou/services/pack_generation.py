@@ -166,9 +166,11 @@ async def validate_corpus_membership(
 
 # --- HAB-081: assembled agent, model construction, and service entry point -----
 
-# Bound how many times a ModelRetry (from the tool or the output validator) can
-# bounce a response back to the model before the run fails, so a model that
-# never grounds itself can't loop forever.
+# Retry budget passed to Agent(retries=...). pydantic-ai applies it as two
+# independent caps of this size: one on tool-call retries (find_characters)
+# and one on output-validation retries (validate_corpus_membership's
+# ModelRetry), so a model that never grounds itself still terminates after a
+# bounded number of round trips.
 _GENERATION_RETRIES = 3
 
 SYSTEM_PROMPT = """\
@@ -277,21 +279,35 @@ def get_generation_agent() -> Agent[GenerationDeps, PackDraft]:
     return _generation_agent
 
 
-def _build_model() -> OpenAIChatModel:
-    """Construct the OpenRouter-backed model for a generation run.
+# The provider owns an httpx.AsyncClient, so the built model is cached and
+# reused across runs (mirroring db.py's shared engine) instead of leaking a
+# fresh connection pool per request. Keyed on the settings that shape it so
+# tests that flip configuration get a matching model.
+_model_cache: OpenAIChatModel | None = None
+_model_cache_key: tuple[str, str] | None = None
 
-    Lazy and gated: only built when generation is configured. Constructing the
-    model performs no network I/O; the request happens when the agent runs.
+
+def _build_model() -> OpenAIChatModel:
+    """Return the OpenRouter-backed model for a generation run.
+
+    Lazy and gated: only built when generation is configured, then cached for
+    reuse. Constructing the model performs no network I/O; the request happens
+    when the agent runs.
     """
+    global _model_cache, _model_cache_key
     if not settings.generation_configured:
         raise GenerationNotConfiguredError(
             "Pack generation is not configured: set OPENROUTER_API_KEY (and "
             "GENERATION_MODEL) to enable it."
         )
-    return OpenAIChatModel(
-        settings.generation_model,
-        provider=OpenRouterProvider(api_key=settings.openrouter_api_key),
-    )
+    key = (settings.generation_model, settings.openrouter_api_key)
+    if _model_cache is None or _model_cache_key != key:
+        _model_cache = OpenAIChatModel(
+            settings.generation_model,
+            provider=OpenRouterProvider(api_key=settings.openrouter_api_key),
+        )
+        _model_cache_key = key
+    return _model_cache
 
 
 async def generate_pack_draft(
