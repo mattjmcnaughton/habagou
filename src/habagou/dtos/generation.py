@@ -15,32 +15,39 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
-NonEmptyStr = Annotated[str, Field(min_length=1)]
+# Size bounds keep hand-crafted payloads from amplifying into oversized
+# database writes or oversized (billed) model calls, while staying generous
+# enough that a well-behaved model never trips them into a needless retry.
+GlossStr = Annotated[str, Field(min_length=1, max_length=200)]
+SentenceHanziStr = Annotated[str, Field(min_length=1, max_length=64)]
+SentenceGlossStr = Annotated[str, Field(min_length=1, max_length=512)]
 
 
 class PackDraftCharacter(BaseModel):
     """A single drafted character with its model-generated gloss."""
 
     hanzi: Annotated[str, Field(min_length=1, max_length=1)]
-    pinyin: NonEmptyStr
-    meaning: NonEmptyStr
+    pinyin: GlossStr
+    meaning: GlossStr
 
 
 class PackDraftSentence(BaseModel):
     """A drafted example sentence for the sentence-tracing activity."""
 
-    hanzi: NonEmptyStr
-    pinyin: NonEmptyStr
-    translation: NonEmptyStr
+    hanzi: SentenceHanziStr
+    pinyin: SentenceGlossStr
+    translation: SentenceGlossStr
 
 
 class PackDraft(BaseModel):
     """Structured output the generation agent returns for a practice pack."""
 
-    title: NonEmptyStr
-    characters: Annotated[list[PackDraftCharacter], Field(min_length=1)]
-    sentences: list[PackDraftSentence] = Field(default_factory=list)
-    coverage_note: NonEmptyStr | None = None
+    title: Annotated[str, Field(min_length=1, max_length=120)]
+    characters: Annotated[list[PackDraftCharacter], Field(min_length=1, max_length=30)]
+    sentences: Annotated[list[PackDraftSentence], Field(max_length=12)] = Field(
+        default_factory=list
+    )
+    coverage_note: Annotated[str, Field(min_length=1, max_length=1000)] | None = None
 
 
 class GenerationDraftRequestDTO(BaseModel):
@@ -51,8 +58,8 @@ class GenerationDraftRequestDTO(BaseModel):
     refinement turn keep the model's context. It is ``None`` on the first turn.
     """
 
-    topic: NonEmptyStr
-    history: list[Any] | None = None
+    topic: Annotated[str, Field(min_length=1, max_length=2000)]
+    history: Annotated[list[Any], Field(max_length=200)] | None = None
 
 
 class GenerationDraftResponseDTO(BaseModel):

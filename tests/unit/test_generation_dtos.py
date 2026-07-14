@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from habagou.dtos.generation import (
+    GenerationDraftRequestDTO,
     PackDraft,
     PackDraftCharacter,
     PackDraftSentence,
@@ -78,3 +79,26 @@ def test_sentence_requires_translation_not_meaning() -> None:
     assert "meaning" not in PackDraftSentence.model_fields
     with pytest.raises(ValidationError):
         PackDraftSentence(hanzi="你好", pinyin="nǐ hǎo", translation="")
+
+
+def test_size_bounds_rejected() -> None:
+    # Bounds keep hand-crafted payloads from amplifying into oversized model
+    # calls or database writes (review finding, Epic 7 endpoints batch).
+    kwargs = _valid_draft_kwargs()
+    kwargs["title"] = "x" * 121
+    with pytest.raises(ValidationError):
+        PackDraft.model_validate(kwargs)
+
+    kwargs = _valid_draft_kwargs()
+    kwargs["characters"] = [{"hanzi": "你", "pinyin": "nǐ", "meaning": "you"}] * 31
+    with pytest.raises(ValidationError):
+        PackDraft.model_validate(kwargs)
+
+    with pytest.raises(ValidationError):
+        PackDraftSentence(hanzi="你" * 65, pinyin="x", translation="x")
+
+    with pytest.raises(ValidationError):
+        GenerationDraftRequestDTO(topic="x" * 2001)
+
+    with pytest.raises(ValidationError):
+        GenerationDraftRequestDTO(topic="ok", history=[{}] * 201)
