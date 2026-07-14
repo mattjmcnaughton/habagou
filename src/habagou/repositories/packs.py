@@ -139,20 +139,29 @@ class PackRepository:
 
         Mirrors the seed write path (:func:`scripts.seed.upsert_pack`) but for a
         single pack: ``owner_id=None`` creates a global (curated) pack and a
-        non-null ``owner_id`` a private one. Character members are referenced by
-        ``hanzi`` against the existing corpus (a ``ValueError`` is raised for any
-        hanzi missing from it); ``position`` is assigned from list order
-        (1-based), matching the seed convention. ``slug`` is a nullable seed key:
-        it persists as NULL when omitted (user packs have no slug), while the
-        seed upsert supplies stable non-null slugs. Epic 7 wires the pack-Save
-        endpoint to this method.
+        non-null ``owner_id`` a private one. Every glyph the pack would trace —
+        its character members *and* each glyph within every sentence (sentences
+        are traced glyph by glyph) — is validated against the existing corpus (a
+        ``ValueError`` is raised for any hanzi missing from it), mirroring
+        :func:`scripts.seed.required_hanzi` and the agent output validator so
+        this save path (grounding layer 3) cannot admit non-corpus glyphs.
+        ``position`` is assigned from list order (1-based), matching the seed
+        convention. ``slug`` is a nullable seed key: it persists as NULL when
+        omitted (user packs have no slug), while the seed upsert supplies stable
+        non-null slugs. Epic 7 wires the pack-Save endpoint to this method.
         """
-        wanted_hanzi = [character.hanzi for character in characters]
+        member_hanzi = [character.hanzi for character in characters]
+        sentence_glyphs = [
+            glyph for sentence in sentences for glyph in sentence.hanzi if glyph.strip()
+        ]
+        # Dedup, first-seen order preserved: pack members are looked up for their
+        # character FK; sentence glyphs need corpus membership only.
+        required = list(dict.fromkeys(member_hanzi + sentence_glyphs))
         result = await self.session.execute(
-            select(Character).where(Character.hanzi.in_(wanted_hanzi))
+            select(Character).where(Character.hanzi.in_(required))
         )
         by_hanzi = {character.hanzi: character for character in result.scalars()}
-        missing = [hanzi for hanzi in wanted_hanzi if hanzi not in by_hanzi]
+        missing = [hanzi for hanzi in required if hanzi not in by_hanzi]
         if missing:
             raise ValueError(
                 f"pack references characters missing from corpus: {''.join(missing)}"

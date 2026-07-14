@@ -576,6 +576,37 @@ async def test_pack_repository_create_persists_owned_pack() -> None:
 
 
 @pytest.mark.anyio
+async def test_pack_repository_create_rejects_non_corpus_sentence_glyph() -> None:
+    # Grounding layer 3: every glyph inside a sentence must be in the corpus,
+    # mirroring the seed write path and the agent output validator — even when
+    # all pack characters themselves are valid.
+    async with db.async_session() as session:
+        user = await create_user(session)
+        repository = PackRepository(session)
+
+        with pytest.raises(ValueError, match="龘") as excinfo:
+            await repository.create(
+                owner_id=user.id,
+                title="Bad Sentence",
+                glyph="你",
+                color="#abcdef",
+                sort_order=9,
+                characters=[
+                    PackCharacterInput(hanzi="你", pinyin="nǐ", meaning="you"),
+                    PackCharacterInput(hanzi="好", pinyin="hǎo", meaning="good"),
+                ],
+                sentences=[
+                    PackSentenceInput(
+                        hanzi="你好龘", pinyin="nǐ hǎo x", translation="bad"
+                    ),
+                ],
+            )
+
+    # The valid pack characters are not reported as missing.
+    assert "你" not in str(excinfo.value)
+
+
+@pytest.mark.anyio
 async def test_pack_repository_create_without_slug_persists_null() -> None:
     # User packs carry no slug: it is a nullable seed key (HAB-070). Omitting it
     # must persist NULL rather than a generated placeholder.
