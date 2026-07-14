@@ -58,12 +58,22 @@ class Settings(BaseSettings):
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
 
+    # Agent pack generation (OpenAI models via OpenRouter). Empty key means
+    # generation is not configured; see ``generation_configured``.
+    generation_model: str = "openai/gpt-5-mini"
+    openrouter_api_key: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")
     @classmethod
     def _normalize_database_url(cls, value: str) -> str:
         return normalize_database_url(value)
+
+    @property
+    def generation_configured(self) -> bool:
+        """Whether agent pack generation can run (API key and model set)."""
+        return bool(self.openrouter_api_key) and bool(self.generation_model)
 
 
 settings = Settings()
