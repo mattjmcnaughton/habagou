@@ -106,16 +106,13 @@ async def find_characters(deps: GenerationDeps, candidates: list[str]) -> Corpus
     if not ordered:
         return CorpusCheck(found=[], dropped=[])
 
-    missing = await deps.characters.missing_hanzi(ordered)
-    present = [char for char in ordered if char not in missing]
-    dropped = [char for char in ordered if char in missing]
-
-    counts = await deps.characters.stroke_counts(present)
+    counts = await deps.characters.stroke_counts(ordered)
     found = [
         FoundCharacter(hanzi=char, stroke_count=counts[char])
-        for char in present
+        for char in ordered
         if char in counts
     ]
+    dropped = [char for char in ordered if char not in counts]
     return CorpusCheck(found=found, dropped=dropped)
 
 
@@ -124,20 +121,14 @@ def _draft_hanzi(draft: PackDraft) -> list[str]:
 
     Mirrors :func:`scripts.seed.required_hanzi`: the pack's character members
     plus *each* glyph in every sentence (sentences are traced glyph by glyph, so
-    every one of their characters must exist in the corpus too).
+    every one of their characters must exist in the corpus too). Shares the
+    normalization of :func:`_unique_characters`, so stray whitespace never
+    reaches the corpus check.
     """
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for character in draft.characters:
-        if character.hanzi not in seen:
-            seen.add(character.hanzi)
-            ordered.append(character.hanzi)
-    for sentence in draft.sentences:
-        for char in sentence.hanzi:
-            if char not in seen:
-                seen.add(char)
-                ordered.append(char)
-    return ordered
+    return _unique_characters(
+        [character.hanzi for character in draft.characters]
+        + [sentence.hanzi for sentence in draft.sentences]
+    )
 
 
 async def validate_corpus_membership(
