@@ -7,6 +7,7 @@ membership and stroke-count queries.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -383,3 +384,127 @@ def test_build_model_builds_openrouter_model_when_configured(
     assert model.model_name == "openai/gpt-5-mini"
     assert model.system == "openrouter"
     assert "openrouter" in model.base_url
+
+
+# --- HAB-082: multi-turn message history ---------------------------------------
+
+
+class _CapturingResponder:
+    """Like :class:`Responder`, but records the messages seen on each call.
+
+    Lets a test assert that a refinement turn's model callback actually receives
+    the prior turn's conversation.
+    """
+
+    __name__ = "capturing_responder"
+
+    def __init__(self, drafts: list[dict[str, object]]) -> None:
+        self._drafts = drafts
+        self.call_count = 0
+        self.messages_per_call: list[list[ModelMessage]] = []
+
+    def __call__(
+        self, messages: Sequence[ModelMessage], info: AgentInfo
+    ) -> ModelResponse:
+        self.messages_per_call.append(list(messages))
+        draft = self._drafts[self.call_count]
+        self.call_count += 1
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name=info.output_tools[0].name, args=draft)]
+        )
+
+
+def _user_prompt_texts(messages: Sequence[ModelMessage]) -> list[str]:
+    """Every user-prompt string across a message history (for assertions)."""
+    from pydantic_ai.messages import UserPromptPart
+
+    texts: list[str] = []
+    for message in messages:
+        for part in getattr(message, "parts", []):
+            if isinstance(part, UserPromptPart) and isinstance(part.content, str):
+                texts.append(part.content)
+    return texts
+
+
+def _stub_session() -> AsyncSession:
+    return cast("AsyncSession", object())
+
+
+@pytest.mark.anyio
+async def test_refinement_turn_receives_prior_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = StubCorpus({"你": 7, "好": 6})
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    respond = _CapturingResponder(
+        [
+            {"title": "First", "characters": [_character("你")]},
+            {"title": "Second", "characters": [_character("你"), _character("好")]},
+        ]
+    )
+    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    agent = pack_generation.get_generation_agent()
+
+    first = await pack_generation.generate_pack_draft(
+        agent, session=_stub_session(), topic="greetings for beginners"
+    )
+    second = await pack_generation.generate_pack_draft(
+        agent,
+        session=_stub_session(),
+        topic="make it harder",
+        history=first.messages,
+    )
+
+    assert second.draft.title == "Second"
+    # The refinement turn's model call actually saw the first turn's prompt.
+    second_call_messages = respond.messages_per_call[1]
+    prompts = _user_prompt_texts(second_call_messages)
+    assert any("greetings for beginners" in text for text in prompts)
+    assert any("make it harder" in text for text in prompts)
+
+
+@pytest.mark.anyio
+async def test_first_turn_without_history_works(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = StubCorpus({"你": 7, "好": 6})
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    respond = _CapturingResponder(
+        [{"title": "Solo", "characters": [_character("你"), _character("好")]}]
+    )
+    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+
+    result = await pack_generation.generate_pack_draft(
+        pack_generation.get_generation_agent(),
+        session=_stub_session(),
+        topic="greetings",
+    )
+
+    assert result.draft.title == "Solo"
+    # Only this turn's prompt reached the model — no prior conversation.
+    assert _user_prompt_texts(respond.messages_per_call[0]) == ["greetings"]
+
+
+@pytest.mark.anyio
+async def test_message_history_round_trips_through_helpers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = StubCorpus({"你": 7, "好": 6})
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    respond = Responder(
+        [{"title": "Trip", "characters": [_character("你"), _character("好")]}]
+    )
+    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+
+    result = await pack_generation.generate_pack_draft(
+        pack_generation.get_generation_agent(),
+        session=_stub_session(),
+        topic="greetings",
+    )
+
+    dumped = pack_generation.dump_message_history(result.messages)
+    # The dump is genuinely JSON-able (survives a JSON encode/decode cycle).
+    assert json.loads(json.dumps(dumped)) == dumped
+    # And it reconstructs the exact same messages.
+    loaded = pack_generation.load_message_history(dumped)
+    assert loaded == result.messages
