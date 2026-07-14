@@ -7,17 +7,21 @@ membership and stroke-count queries.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.test import TestModel
 
 from habagou.dtos.generation import PackDraft
+from habagou.services import pack_generation
 from habagou.services.pack_generation import (
     CorpusCheck,
     GenerationDeps,
+    GenerationNotConfiguredError,
     find_characters,
     validate_corpus_membership,
 )
@@ -26,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from pydantic_ai.messages import ModelMessage
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class StubCorpus:
@@ -235,3 +240,146 @@ async def test_agent_accepts_valid_draft_without_retry() -> None:
 
     assert respond.call_count == 1
     assert result.output.title == "OK"
+
+
+# --- HAB-081: assembled agent, model construction, service entry point ---------
+
+
+class _ToolThenOutput:
+    """Callback that calls find_characters, then emits ``output`` as the draft.
+
+    Proves the grounding tool is actually registered on the real agent: on the
+    second turn it records whether a ``find_characters`` tool return reached the
+    model.
+    """
+
+    __name__ = "tool_then_output"
+
+    def __init__(self, output: dict[str, object]) -> None:
+        self._output = output
+        self.call_count = 0
+        self.saw_tool_return = False
+
+    def __call__(
+        self, messages: Sequence[ModelMessage], info: AgentInfo
+    ) -> ModelResponse:
+        self.call_count += 1
+        if self.call_count == 1:
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        tool_name="find_characters",
+                        args={"candidates": ["你", "好", "龘"]},
+                    )
+                ]
+            )
+        for message in messages:
+            for part in getattr(message, "parts", []):
+                if (
+                    isinstance(part, ToolReturnPart)
+                    and part.tool_name == "find_characters"
+                ):
+                    self.saw_tool_return = True
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name=info.output_tools[0].name, args=self._output)]
+        )
+
+
+def test_get_generation_agent_returns_the_module_agent() -> None:
+    # Trivial + argument-free so dependency_overrides can swap it wholesale.
+    assert pack_generation.get_generation_agent() is pack_generation._generation_agent
+
+
+@pytest.mark.anyio
+async def test_real_agent_has_grounding_tool_wired() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    agent = pack_generation.get_generation_agent()
+    respond = _ToolThenOutput(
+        {"title": "Grounded", "characters": [_character("你"), _character("好")]}
+    )
+
+    result = await agent.run("make a pack", deps=deps, model=FunctionModel(respond))
+
+    # The model actually invoked find_characters and got a tool return back,
+    # and the validated draft came through.
+    assert respond.saw_tool_return is True
+    assert result.output.title == "Grounded"
+
+
+@pytest.mark.anyio
+async def test_real_agent_output_validator_forces_retry() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    agent = pack_generation.get_generation_agent()
+    respond = Responder(
+        [
+            {"title": "First", "characters": [_character("你"), _character("龘")]},
+            {"title": "Second", "characters": [_character("你"), _character("好")]},
+        ]
+    )
+
+    result = await agent.run("make a pack", deps=deps, model=FunctionModel(respond))
+
+    # The validator on the REAL assembled agent rejected the bad hanzi and the
+    # model retried into a grounded draft.
+    assert respond.call_count == 2
+    assert result.output.title == "Second"
+
+
+@pytest.mark.anyio
+async def test_generate_pack_draft_returns_valid_draft_under_test_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = StubCorpus({"你": 7, "好": 6})
+    # Inject the corpus (no DB) and a TestModel producing a corpus-valid draft;
+    # TestModel would otherwise synthesize hanzi the validator rejects.
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    draft_args = {
+        "title": "Greetings",
+        "characters": [_character("你"), _character("好")],
+        "sentences": [],
+    }
+    monkeypatch.setattr(
+        pack_generation,
+        "_build_model",
+        lambda: TestModel(custom_output_args=draft_args),
+    )
+
+    result = await pack_generation.generate_pack_draft(
+        pack_generation.get_generation_agent(),
+        # The monkeypatched repository ignores the session entirely.
+        session=cast("AsyncSession", object()),
+        topic="greetings",
+    )
+
+    assert isinstance(result.draft, PackDraft)
+    assert result.draft.title == "Greetings"
+    assert [c.hanzi for c in result.draft.characters] == ["你", "好"]
+    # The full conversation is returned for the caller to persist.
+    assert result.messages
+
+
+def test_build_model_raises_when_unconfigured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pack_generation.settings, "openrouter_api_key", "")
+
+    assert pack_generation.settings.generation_configured is False
+    with pytest.raises(GenerationNotConfiguredError):
+        pack_generation._build_model()
+
+
+def test_build_model_builds_openrouter_model_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pack_generation.settings, "openrouter_api_key", "sk-test")
+    monkeypatch.setattr(
+        pack_generation.settings, "generation_model", "openai/gpt-5-mini"
+    )
+
+    model = pack_generation._build_model()
+
+    # Built against OpenRouter with the configured model; no request is made.
+    assert isinstance(model, OpenAIChatModel)
+    assert model.model_name == "openai/gpt-5-mini"
+    assert model.system == "openrouter"
+    assert "openrouter" in model.base_url
