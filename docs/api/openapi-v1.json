@@ -1086,6 +1086,9 @@
             },
             "description": "Validation Error"
           },
+          "429": {
+            "description": "Per-user generation rate limit exceeded"
+          },
           "502": {
             "description": "Pack generation failed"
           },

@@ -25,6 +25,8 @@ workflows:
     title: Complete path item
   - id: WF-14
     title: Review resurfacing
+  - id: WF-15
+    title: Generate practice pack
   - id: WF-AUTH-SIGN-IN
     title: Sign in
   - id: WF-AUTH-SIGN-OUT

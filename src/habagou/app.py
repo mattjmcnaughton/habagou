@@ -17,6 +17,7 @@ from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
 from habagou.routers.v1 import characters, generation, packs, path, progress
+from habagou.services.rate_limit import FixedWindowRateLimiter
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
 
@@ -47,6 +48,14 @@ def create_app() -> FastAPI:
         same_site="lax",
         https_only=settings.session_cookie_secure,
     )
+    # Per-app so each create_app() (including every test app) gets a fresh
+    # limiter — no cross-request or cross-test state leaks through a module
+    # global. Applied to the billed draft endpoint via a router dependency.
+    app.state.generation_rate_limiter = FixedWindowRateLimiter(
+        limit=settings.generation_rate_limit_per_hour,
+        window_seconds=3600,
+    )
+
     setup_telemetry(app)
     _install_request_logging(app)
     _install_error_handlers(app)
@@ -136,6 +145,7 @@ def _http_error_code(status_code: int) -> str:
         404: "not_found",
         409: "conflict",
         422: "validation_error",
+        429: "rate_limited",
         502: "bad_gateway",
         503: "service_unavailable",
     }.get(status_code, f"http_{status_code}")

@@ -7,18 +7,39 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import FunctionModel
 from sqlalchemy import update
 
 from habagou import db
 from habagou.app import create_app
 from habagou.auth import AuthIdentity
+from habagou.config import settings
 from habagou.models import ReviewState
 from habagou.repositories import UserRepository
+from habagou.services.pack_generation import get_generation_agent
 from scripts.seed import SeedResult, emit_bootstrap_completed
 from tests.integration.conftest import pack_id_by_slug
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Sequence
+
+    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.models.function import AgentInfo
+
+
+def _draft_response(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """FunctionModel callback emitting a fixed corpus-valid draft (WF-15 draft)."""
+    draft = {
+        "title": "Workflow Greetings",
+        "characters": [{"hanzi": "你", "pinyin": "nǐ", "meaning": "you"}],
+    }
+    return ModelResponse(
+        parts=[ToolCallPart(tool_name=info.output_tools[0].name, args=draft)]
+    )
+
+
+_draft_response.__name__ = "draft_response"
 
 _WORKFLOW_ISSUER = "https://issuer.example.test"
 _WORKFLOW_SUBJECT = "workflow-subject"
@@ -52,6 +73,11 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-14": (
         {"path_item_completed"},
         {"activity", "pack_id", "kind", "user_id"},
+        "ok",
+    ),
+    "WF-15": (
+        {"pack_draft_generated", "generated_pack_saved"},
+        {"user_id"},
         "ok",
     ),
     "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),
@@ -141,6 +167,25 @@ async def test_all_workflows_emit_verification_events(
         await client.post(
             f"/api/v1/path/items/{review_item['id']}/complete",
             json={"duration_ms": 900},
+        ),
+        status_code=201,
+    )
+    # WF-15: draft a corpus-grounded pack (model stubbed) and save it. Setting
+    # the key builds the real OpenRouter model (no network); the override wins.
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+    with get_generation_agent().override(model=FunctionModel(_draft_response)):
+        await _ok(
+            await client.post("/api/v1/generation/draft", json={"topic": "greetings"})
+        )
+    await _ok(
+        await client.post(
+            "/api/v1/generation/packs",
+            json={
+                "draft": {
+                    "title": "Workflow Saved Pack",
+                    "characters": [{"hanzi": "你", "pinyin": "nǐ", "meaning": "you"}],
+                }
+            },
         ),
         status_code=201,
     )

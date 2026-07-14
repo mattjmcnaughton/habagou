@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     generation_model: str = "openai/gpt-5-mini"
     openrouter_api_key: str = ""
 
+    # Per-user cap on billed draft generations, counted in a fixed one-hour
+    # window (see ``services.rate_limit``). 0 or negative disables the cap.
+    generation_rate_limit_per_hour: int = 10
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")
