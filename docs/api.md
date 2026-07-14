@@ -156,9 +156,9 @@ does not change even if the underlying pack content changes later.
 
 Agent pack generation drafts a themed practice pack from a topic, grounded so it
 only ever references hanzi that exist in the stroke corpus (see
-[ADR 0010](adrs/0010-agent-pack-generation.md)). Both endpoints require a valid
-session. Generation is env-configured (`OPENROUTER_API_KEY`, `GENERATION_MODEL`);
-when unconfigured, `POST /generation/draft` returns 503.
+[ADR 0010](adrs/0010-agent-pack-generation.md)). Generation is env-configured
+(`OPENROUTER_API_KEY`, `GENERATION_MODEL`); when unconfigured,
+`POST /api/v1/generation/draft` returns 503.
 
 `POST /api/v1/generation/draft` body:
 
