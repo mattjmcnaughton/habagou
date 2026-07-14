@@ -128,6 +128,65 @@
         "title": "DailyGoalDTO",
         "type": "object"
       },
+      "GenerationDraftRequestDTO": {
+        "description": "Request to draft (or refine) a pack from a topic.\n\n``history`` is the opaque JSON message history returned by a prior draft\nturn (see :class:`GenerationDraftResponseDTO`); replaying it lets a\nrefinement turn keep the model's context. It is ``None`` on the first turn.",
+        "properties": {
+          "history": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History"
+          },
+          "topic": {
+            "minLength": 1,
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "GenerationDraftRequestDTO",
+        "type": "object"
+      },
+      "GenerationDraftResponseDTO": {
+        "description": "A drafted pack plus the updated conversation history to persist.\n\nThe client holds ``history`` between turns and passes it back on the next\n:class:`GenerationDraftRequestDTO` to refine the draft.",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/PackDraft"
+          },
+          "history": {
+            "items": {},
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "draft",
+          "history"
+        ],
+        "title": "GenerationDraftResponseDTO",
+        "type": "object"
+      },
+      "GenerationSavePackRequestDTO": {
+        "description": "Request to persist a finalized :class:`PackDraft` as an owned pack.",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/PackDraft"
+          }
+        },
+        "required": [
+          "draft"
+        ],
+        "title": "GenerationSavePackRequestDTO",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -244,6 +303,104 @@
           "sentences"
         ],
         "title": "PackDetailDTO",
+        "type": "object"
+      },
+      "PackDraft": {
+        "description": "Structured output the generation agent returns for a practice pack.",
+        "properties": {
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/PackDraftCharacter"
+            },
+            "minItems": 1,
+            "title": "Characters",
+            "type": "array"
+          },
+          "coverage_note": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Note"
+          },
+          "sentences": {
+            "items": {
+              "$ref": "#/components/schemas/PackDraftSentence"
+            },
+            "title": "Sentences",
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "characters"
+        ],
+        "title": "PackDraft",
+        "type": "object"
+      },
+      "PackDraftCharacter": {
+        "description": "A single drafted character with its model-generated gloss.",
+        "properties": {
+          "hanzi": {
+            "maxLength": 1,
+            "minLength": 1,
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "meaning": {
+            "minLength": 1,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "pinyin": {
+            "minLength": 1,
+            "title": "Pinyin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "meaning"
+        ],
+        "title": "PackDraftCharacter",
+        "type": "object"
+      },
+      "PackDraftSentence": {
+        "description": "A drafted example sentence for the sentence-tracing activity.",
+        "properties": {
+          "hanzi": {
+            "minLength": 1,
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "pinyin": {
+            "minLength": 1,
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "translation": {
+            "minLength": 1,
+            "title": "Translation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "translation"
+        ],
+        "title": "PackDraftSentence",
         "type": "object"
       },
       "PackProgressDTO": {
@@ -880,6 +1037,89 @@
         "summary": "Get Character Strokes",
         "tags": [
           "characters"
+        ]
+      }
+    },
+    "/api/v1/generation/draft": {
+      "post": {
+        "description": "Draft (or refine) a corpus-grounded pack for the caller's topic.",
+        "operationId": "generate_draft_api_v1_generation_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationDraftRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationDraftResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "description": "Pack generation failed"
+          },
+          "503": {
+            "description": "Pack generation is not configured"
+          }
+        },
+        "summary": "Generate Draft",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/api/v1/generation/packs": {
+      "post": {
+        "description": "Persist a finalized draft as a pack owned by the caller.",
+        "operationId": "save_pack_api_v1_generation_packs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationSavePackRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackDetailDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Draft references non-corpus characters"
+          }
+        },
+        "summary": "Save Pack",
+        "tags": [
+          "generation"
         ]
       }
     },

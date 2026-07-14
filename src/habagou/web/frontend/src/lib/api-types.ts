@@ -38,6 +38,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/generation/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Draft
+         * @description Draft (or refine) a corpus-grounded pack for the caller's topic.
+         */
+        post: operations["generate_draft_api_v1_generation_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/generation/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Pack
+         * @description Persist a finalized draft as a pack owned by the caller.
+         */
+        post: operations["save_pack_api_v1_generation_packs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/packs": {
         parameters: {
             query?: never;
@@ -305,6 +345,39 @@ export interface components {
             /** Target */
             target: number;
         };
+        /**
+         * GenerationDraftRequestDTO
+         * @description Request to draft (or refine) a pack from a topic.
+         *
+         *     ``history`` is the opaque JSON message history returned by a prior draft
+         *     turn (see :class:`GenerationDraftResponseDTO`); replaying it lets a
+         *     refinement turn keep the model's context. It is ``None`` on the first turn.
+         */
+        GenerationDraftRequestDTO: {
+            /** History */
+            history?: unknown[] | null;
+            /** Topic */
+            topic: string;
+        };
+        /**
+         * GenerationDraftResponseDTO
+         * @description A drafted pack plus the updated conversation history to persist.
+         *
+         *     The client holds ``history`` between turns and passes it back on the next
+         *     :class:`GenerationDraftRequestDTO` to refine the draft.
+         */
+        GenerationDraftResponseDTO: {
+            draft: components["schemas"]["PackDraft"];
+            /** History */
+            history: unknown[];
+        };
+        /**
+         * GenerationSavePackRequestDTO
+         * @description Request to persist a finalized :class:`PackDraft` as an owned pack.
+         */
+        GenerationSavePackRequestDTO: {
+            draft: components["schemas"]["PackDraft"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -350,6 +423,44 @@ export interface components {
             sentences: components["schemas"]["PackSentenceDTO"][];
             /** Title */
             title: string;
+        };
+        /**
+         * PackDraft
+         * @description Structured output the generation agent returns for a practice pack.
+         */
+        PackDraft: {
+            /** Characters */
+            characters: components["schemas"]["PackDraftCharacter"][];
+            /** Coverage Note */
+            coverage_note?: string | null;
+            /** Sentences */
+            sentences?: components["schemas"]["PackDraftSentence"][];
+            /** Title */
+            title: string;
+        };
+        /**
+         * PackDraftCharacter
+         * @description A single drafted character with its model-generated gloss.
+         */
+        PackDraftCharacter: {
+            /** Hanzi */
+            hanzi: string;
+            /** Meaning */
+            meaning: string;
+            /** Pinyin */
+            pinyin: string;
+        };
+        /**
+         * PackDraftSentence
+         * @description A drafted example sentence for the sentence-tracing activity.
+         */
+        PackDraftSentence: {
+            /** Hanzi */
+            hanzi: string;
+            /** Pinyin */
+            pinyin: string;
+            /** Translation */
+            translation: string;
         };
         /** PackProgressDTO */
         PackProgressDTO: {
@@ -618,6 +729,84 @@ export interface operations {
                 content?: never;
             };
             /** @description Path parameter must be exactly one grapheme */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    generate_draft_api_v1_generation_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerationDraftRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationDraftResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Pack generation failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pack generation is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    save_pack_api_v1_generation_packs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerationSavePackRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackDetailDTO"];
+                };
+            };
+            /** @description Draft references non-corpus characters */
             422: {
                 headers: {
                     [name: string]: unknown;
