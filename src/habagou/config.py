@@ -58,8 +58,9 @@ class Settings(BaseSettings):
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
 
-    # Agent pack generation (OpenAI models via OpenRouter). Empty key means
-    # generation is not configured; see ``generation_configured``.
+    # Agent pack generation (OpenAI models via OpenRouter). Generation is
+    # configured only when both the key and model are non-empty; see
+    # ``generation_configured``.
     generation_model: str = "openai/gpt-5-mini"
     openrouter_api_key: str = ""
 
