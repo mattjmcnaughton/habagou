@@ -253,6 +253,55 @@ async def test_draft_502_on_provider_connection_failure(
     assert response.json()["error"]["code"] == "bad_gateway"
 
 
+@pytest.mark.anyio
+async def test_draft_rate_limit_is_per_user(
+    current_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The limiter is built in create_app() from the setting, so the cap must be
+    # in place BEFORE the app is constructed (not via the shared client fixture).
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+    monkeypatch.setattr(settings, "generation_rate_limit_per_hour", 2)
+
+    async with db.async_session() as session:
+        other = await create_user(session, username="rate-limit-other", email=None)
+        await session.commit()
+        other_id = other.id
+
+    def respond(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(
+            parts=[
+                ToolCallPart(
+                    tool_name=info.output_tools[0].name,
+                    args=_draft("Greetings", ["你"]),
+                )
+            ]
+        )
+
+    respond.__name__ = "respond"
+
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(current_user.id))
+        with get_generation_agent().override(model=FunctionModel(respond)):
+            first = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+            second = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+            third = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+
+            assert first.status_code == 200, first.text
+            assert second.status_code == 200, second.text
+            # The third attempt inside the window is over the cap of 2.
+            assert third.status_code == 429, third.text
+            assert third.json()["error"]["code"] == "rate_limited"
+
+            # A different user has an independent window and still gets through.
+            client.cookies.update(auth_cookies(other_id))
+            other_response = await client.post(
+                "/api/v1/generation/draft", json={"topic": "t"}
+            )
+            assert other_response.status_code == 200, other_response.text
+
+
 # --- HAB-084: save endpoint ----------------------------------------------------
 
 

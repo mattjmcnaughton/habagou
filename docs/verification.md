@@ -179,6 +179,39 @@ Edge cases:
 - A unit that has never been completed (no `review_states` row) is never
   treated as due — it can only appear as `kind='new'`.
 
+### WF-15 — Generate practice pack
+
+Steps:
+
+1. A signed-in learner posts a topic to `POST /api/v1/generation/draft`.
+2. The API meters the request against the caller's hourly quota, then runs the
+   generation agent, which grounds every candidate glyph against the stroke
+   corpus (tool + output validator) before returning a corpus-valid draft plus
+   the conversation history for client-side refinement turns.
+3. The learner optionally refines across turns, then posts the finalized draft
+   to `POST /api/v1/generation/packs`, which persists it as a pack they own
+   (re-validating every glyph against the corpus at the repository layer).
+
+Invariants:
+
+- Every glyph in a drafted or saved pack — members and each sentence glyph —
+  exists in the stroke corpus; the corpus is the only source of truth.
+- Draft generation is capped per user in a fixed one-hour window (default 10;
+  see `services.rate_limit`). The counter increments on every authenticated
+  attempt, before the billed model call, so repeated failures still consume
+  quota. The cap is in-memory and per-process (single-machine deployment).
+- Saving is gated only by authentication and corpus validity, not the draft cap.
+
+Edge cases:
+
+- An over-quota draft returns 429 `rate_limited` and emits
+  `pack_draft_generated` with `outcome=error`.
+- Generation with no provider configured returns 503; a provider failure
+  returns 502; a malformed client-held history returns 422. Each emits
+  `pack_draft_generated` with `outcome=error`.
+- Saving a draft that references a non-corpus glyph returns 422 and emits
+  `generated_pack_saved` with `outcome=error`.
+
 ## 5. Production instrumentation
 
 Same vocabulary, three signal types. All flow through one tiny helper (`src/habagou/events.py`) so field names cannot drift.
@@ -200,6 +233,8 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `progress_summary_viewed` | WF-11 | `user_id`, `current_streak` |
 | `path_viewed` | WF-12 | `user_id`, `item_count`, `due_new`, `due_review` |
 | `path_item_completed` | WF-13/14 | `activity`, `pack_slug`, `kind`, `user_id`, `duration_ms` (client-reported) |
+| `pack_draft_generated` | WF-15 | `user_id`, `character_count` (`outcome=error` on rate-limit/unconfigured/provider failures) |
+| `generated_pack_saved` | WF-15 | `user_id`, `pack_id` |
 | `auth_signed_in` | WF-AUTH-SIGN-IN | `user_id`, `provider` |
 | `auth_signed_out` | WF-AUTH-SIGN-OUT | `user_id`, `provider` |
 | `auth_gate_rejected` | WF-AUTH-GATE | `path` |
