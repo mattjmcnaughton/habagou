@@ -36,3 +36,35 @@ def test_settings_normalizes_database_url_from_env(
     )
     settings = Settings()
     assert settings.database_url == "postgresql+asyncpg://u:p@host/db?ssl=require"
+
+
+def test_generation_defaults_unset() -> None:
+    settings = Settings()
+    assert settings.openrouter_api_key == ""
+    assert settings.generation_model
+    assert settings.generation_configured is False
+
+
+def test_generation_configured_true_when_key_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    settings = Settings()
+    assert settings.generation_configured is True
+
+
+def test_generation_configured_false_when_model_blank(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    monkeypatch.setenv("GENERATION_MODEL", "")
+    settings = Settings()
+    assert settings.generation_configured is False
+
+
+def test_create_app_boots_with_generation_key_unset() -> None:
+    from fastapi import FastAPI
+
+    from habagou.app import create_app
+
+    assert isinstance(create_app(), FastAPI)
