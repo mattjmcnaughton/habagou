@@ -9,6 +9,12 @@ candidate hanzi actually exist in the corpus (and how many strokes each takes, a
 difficulty signal). It returns corpus *membership only*: the corpus has no
 pinyin/meaning, so the model supplies every gloss itself.
 
+Layer 2 — :func:`validate_corpus_membership`: an output validator that rejects a
+finished :class:`~habagou.dtos.generation.PackDraft` referencing any non-corpus
+hanzi, so pydantic-ai feeds the error back and the model retries. It mirrors the
+seed write path (:func:`scripts.seed.required_hanzi`), which requires *every*
+character — pack members and each glyph within a sentence — to be in the corpus.
+
 The grounding logic takes a :class:`GenerationDeps` directly (not a
 ``RunContext``) so it is unit-testable without an agent or a database; the agent
 assembly wires it to ``RunContext.deps`` in the next batch.
@@ -20,9 +26,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel
+from pydantic_ai import ModelRetry
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+    from habagou.dtos.generation import PackDraft
 
 
 class CorpusReader(Protocol):
@@ -108,3 +117,49 @@ async def find_characters(deps: GenerationDeps, candidates: list[str]) -> Corpus
         if char in counts
     ]
     return CorpusCheck(found=found, dropped=dropped)
+
+
+def _draft_hanzi(draft: PackDraft) -> list[str]:
+    """Every hanzi a draft would trace, in first-seen order, deduped.
+
+    Mirrors :func:`scripts.seed.required_hanzi`: the pack's character members
+    plus *each* glyph in every sentence (sentences are traced glyph by glyph, so
+    every one of their characters must exist in the corpus too).
+    """
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for character in draft.characters:
+        if character.hanzi not in seen:
+            seen.add(character.hanzi)
+            ordered.append(character.hanzi)
+    for sentence in draft.sentences:
+        for char in sentence.hanzi:
+            if char not in seen:
+                seen.add(char)
+                ordered.append(char)
+    return ordered
+
+
+async def validate_corpus_membership(
+    deps: GenerationDeps, draft: PackDraft
+) -> PackDraft:
+    """Reject a draft referencing hanzi absent from the corpus (layer 2).
+
+    Collects every glyph the draft would trace — characters and each glyph in
+    every sentence — and raises :class:`pydantic_ai.ModelRetry` listing the
+    offenders when any are missing, so pydantic-ai feeds the message back and the
+    model retries. Returns the draft unchanged when every glyph is in the corpus.
+    """
+    hanzi = _draft_hanzi(draft)
+    if not hanzi:
+        return draft
+
+    missing = await deps.characters.missing_hanzi(hanzi)
+    if missing:
+        offenders = "".join(char for char in hanzi if char in missing)
+        raise ModelRetry(
+            "These characters are not in the stroke corpus and cannot appear in "
+            f"the pack: {offenders}. Call find_characters to check membership and "
+            "replace or remove them (including inside sentences)."
+        )
+    return draft

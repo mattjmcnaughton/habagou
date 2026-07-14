@@ -10,15 +10,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from habagou.dtos.generation import PackDraft
 from habagou.services.pack_generation import (
     CorpusCheck,
     GenerationDeps,
     find_characters,
+    validate_corpus_membership,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
+
+    from pydantic_ai.messages import ModelMessage
 
 
 class StubCorpus:
@@ -97,3 +104,134 @@ async def test_find_characters_empty_candidates() -> None:
 
     assert result.found == []
     assert result.dropped == []
+
+
+# --- HAB-080: output validator -------------------------------------------------
+
+
+def _character(hanzi: str) -> dict[str, str]:
+    return {"hanzi": hanzi, "pinyin": "x", "meaning": "x"}
+
+
+def _sentence(hanzi: str) -> dict[str, str]:
+    return {"hanzi": hanzi, "pinyin": "x", "translation": "x"}
+
+
+def _build_agent() -> Agent[GenerationDeps, PackDraft]:
+    """A throwaway agent wiring the validator to ``RunContext.deps``."""
+    agent = Agent[GenerationDeps, PackDraft](
+        output_type=PackDraft,
+        deps_type=GenerationDeps,
+    )
+
+    @agent.output_validator
+    async def _validate(ctx: RunContext[GenerationDeps], draft: PackDraft) -> PackDraft:
+        return await validate_corpus_membership(ctx.deps, draft)
+
+    return agent
+
+
+class Responder:
+    """A FunctionModel callback returning ``drafts`` in order, one per call.
+
+    Tracks ``call_count`` so tests can assert whether a retry happened.
+    """
+
+    # FunctionModel reads ``.__name__`` off its callback for the model name.
+    __name__ = "responder"
+
+    def __init__(self, drafts: list[dict[str, object]]) -> None:
+        self._drafts = drafts
+        self.call_count = 0
+
+    def __call__(
+        self, messages: Sequence[ModelMessage], info: AgentInfo
+    ) -> ModelResponse:
+        draft = self._drafts[self.call_count]
+        self.call_count += 1
+        tool_name = info.output_tools[0].name
+        return ModelResponse(parts=[ToolCallPart(tool_name=tool_name, args=draft)])
+
+
+@pytest.mark.anyio
+async def test_validator_passes_valid_draft_through_unchanged() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    draft = PackDraft.model_validate(
+        {
+            "title": "Greetings",
+            "characters": [_character("你"), _character("好")],
+            "sentences": [_sentence("你好")],
+        }
+    )
+
+    result = await validate_corpus_membership(deps, draft)
+
+    assert result is draft
+
+
+@pytest.mark.anyio
+async def test_validator_rejects_non_corpus_character() -> None:
+    deps = _deps({"你": 7})
+    draft = PackDraft.model_validate(
+        {"title": "Bad", "characters": [_character("你"), _character("龘")]}
+    )
+
+    with pytest.raises(ModelRetry) as excinfo:
+        await validate_corpus_membership(deps, draft)
+
+    assert "龘" in str(excinfo.value)
+    assert "你" not in str(excinfo.value)
+
+
+@pytest.mark.anyio
+async def test_validator_rejects_non_corpus_sentence_glyph() -> None:
+    # Every glyph inside a sentence must be in the corpus, mirroring the seed
+    # write path — even when all pack characters are valid.
+    deps = _deps({"你": 7, "好": 6})
+    draft = PackDraft.model_validate(
+        {
+            "title": "Sentence",
+            "characters": [_character("你"), _character("好")],
+            "sentences": [_sentence("你好龘")],
+        }
+    )
+
+    with pytest.raises(ModelRetry) as excinfo:
+        await validate_corpus_membership(deps, draft)
+
+    assert "龘" in str(excinfo.value)
+
+
+@pytest.mark.anyio
+async def test_agent_retries_until_draft_is_corpus_valid() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    agent = _build_agent()
+    respond = Responder(
+        [
+            # First response references a non-corpus glyph -> ModelRetry.
+            {"title": "First", "characters": [_character("你"), _character("龘")]},
+            # Second response is fully grounded.
+            {"title": "Second", "characters": [_character("你"), _character("好")]},
+        ]
+    )
+
+    result = await agent.run("make a pack", deps=deps, model=FunctionModel(respond))
+
+    # The retry happened (model called twice) and the valid draft won.
+    assert respond.call_count == 2
+    assert result.output.title == "Second"
+    assert [c.hanzi for c in result.output.characters] == ["你", "好"]
+
+
+@pytest.mark.anyio
+async def test_agent_accepts_valid_draft_without_retry() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    agent = _build_agent()
+    respond = Responder(
+        [{"title": "OK", "characters": [_character("你"), _character("好")]}]
+    )
+
+    result = await agent.run("make a pack", deps=deps, model=FunctionModel(respond))
+
+    assert respond.call_count == 1
+    assert result.output.title == "OK"
