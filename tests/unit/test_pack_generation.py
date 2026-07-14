@@ -508,3 +508,19 @@ async def test_message_history_round_trips_through_helpers(
     # And it reconstructs the exact same messages.
     loaded = pack_generation.load_message_history(dumped)
     assert loaded == result.messages
+
+
+# --- HAB-084: save-time color defaulting ---------------------------------------
+
+
+def test_color_for_title_is_deterministic_and_from_palette() -> None:
+    # A draft carries no color; the save path derives one from the title. The
+    # pick must be stable (same title -> same color, across processes) and drawn
+    # only from the curated palette.
+    first = pack_generation._color_for_title("Greetings")
+    again = pack_generation._color_for_title("Greetings")
+    other = pack_generation._color_for_title("Numbers and counting")
+
+    assert first == again
+    assert first in pack_generation._CURATED_COLORS
+    assert other in pack_generation._CURATED_COLORS

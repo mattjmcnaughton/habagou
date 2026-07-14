@@ -1,8 +1,9 @@
 """Agent pack-generation API routes (Epic 7).
 
-Draft/refine a Chinese-character practice pack from a topic (HAB-083). The model
-is grounded against the stroke corpus through the generation agent's tool +
-output validator.
+Draft/refine a Chinese-character practice pack from a topic (HAB-083) and save a
+finalized draft as an owned pack (HAB-084). The model is grounded against the
+stroke corpus through the generation agent's tool + output validator; every
+glyph in a saved pack is corpus-validated again at the repository layer.
 """
 
 from __future__ import annotations
@@ -24,8 +25,10 @@ from habagou.dependencies import get_current_user
 from habagou.dtos.generation import (
     GenerationDraftRequestDTO,
     GenerationDraftResponseDTO,
+    GenerationSavePackRequestDTO,
     PackDraft,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
 )
+from habagou.dtos.packs import PackDetailDTO
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
 from habagou.services.pack_generation import (
     GenerationDeps,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
@@ -34,7 +37,9 @@ from habagou.services.pack_generation import (
     generate_pack_draft,
     get_generation_agent,
     load_message_history,
+    save_pack_draft,
 )
+from habagou.services.packs import PackService
 
 router = APIRouter(prefix="/api/v1/generation", tags=["generation"])
 
@@ -83,3 +88,32 @@ async def generate_draft(
         draft=result.draft,
         history=dump_message_history(result.messages),
     )
+
+
+@router.post(
+    "/packs",
+    response_model=PackDetailDTO,
+    status_code=status.HTTP_201_CREATED,
+    responses={422: {"description": "Draft references non-corpus characters"}},
+)
+async def save_pack(
+    payload: GenerationSavePackRequestDTO,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> PackDetailDTO:
+    """Persist a finalized draft as a pack owned by the caller."""
+    try:
+        pack = await save_pack_draft(
+            session, draft=payload.draft, owner_id=current_user.id
+        )
+    except ValueError as exc:
+        # Grounding layer 3 (repository) rejected a non-corpus glyph.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    detail = await PackService(session).get_visible(pack.id, current_user)
+    # Just created and owned by the caller, so it is always visible.
+    assert detail is not None
+    return detail
