@@ -28,6 +28,7 @@ dependencies = [
     "authlib>=1.7.2",
     "itsdangerous>=2.2.0",
     "httpx>=0.28.1",
+    "pydantic-ai-slim[openai]>=2.9.0",
 ]
 
 [project.urls]
