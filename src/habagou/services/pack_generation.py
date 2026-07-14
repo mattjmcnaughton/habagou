@@ -26,12 +26,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from pydantic import BaseModel
-from pydantic_ai import ModelRetry
+from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+from habagou.config import settings
+from habagou.dtos.generation import PackDraft
+from habagou.repositories.characters import CharacterRepository
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from habagou.dtos.generation import PackDraft
+    from pydantic_ai.messages import ModelMessage
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class CorpusReader(Protocol):
@@ -154,3 +161,158 @@ async def validate_corpus_membership(
             "replace or remove them (including inside sentences)."
         )
     return draft
+
+
+# --- HAB-081: assembled agent, model construction, and service entry point -----
+
+# Bound how many times a ModelRetry (from the tool or the output validator) can
+# bounce a response back to the model before the run fails, so a model that
+# never grounds itself can't loop forever.
+_GENERATION_RETRIES = 3
+
+SYSTEM_PROMPT = """\
+You build a focused Chinese-character practice pack for a stroke-tracing app \
+from the user's topic.
+
+The stroke corpus is the ONLY source of truth for which characters are \
+traceable. Your training memory does NOT count: a character you "know" exists \
+is unusable unless the corpus confirms it. Before finalizing a pack you MUST \
+check every candidate hanzi with the find_characters tool, and only keep the \
+ones it reports as found.
+
+You supply the glosses yourself, because the corpus stores none: give each \
+character its pinyin (with tone marks, e.g. "nǐ", not "ni3") and a concise \
+English meaning.
+
+Sentences are optional. Include a few short practice sentences only when they \
+help; EVERY character in a sentence must also be confirmed by find_characters, \
+because sentences are traced glyph by glyph. By convention sentences are \
+punctuation-free: the corpus never contains punctuation, so never write ，, 。, \
+？, ！ or any other punctuation mark.
+
+When some characters the user asked for are not in the corpus, say so honestly \
+in coverage_note (for example "found 6 of 8 requested characters; 望 and 憧 \
+aren't in the corpus yet") rather than silently shrinking the pack and hiding \
+the gap.
+
+Keep packs focused: roughly 5-12 characters unless the user asks for a \
+different size. On a refinement turn, adjust the previous draft to the new \
+request instead of starting over from scratch.\
+"""
+
+
+class GenerationNotConfiguredError(RuntimeError):
+    """Raised when a generation run is attempted without model configuration.
+
+    The router batch maps this to a "generation disabled" response instead of a
+    500 when ``settings.generation_configured`` is False (no OpenRouter key).
+    """
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    """What a generation run returns: the draft plus the full message history.
+
+    ``messages`` is the complete conversation after the run (prior turns plus
+    this turn's request and response); the router persists it client-side so a
+    later refinement turn can be replayed as ``message_history``. Use
+    :func:`dump_message_history` / :func:`load_message_history` to (de)serialize
+    it — see HAB-082.
+    """
+
+    draft: PackDraft
+    messages: list[ModelMessage]
+
+
+def _build_generation_agent() -> Agent[GenerationDeps, PackDraft]:
+    """Assemble the pack-generation agent with tool + validator wired.
+
+    The agent is built WITHOUT a bound model so it can be imported and unit
+    tested with no configuration and no network: the run path supplies the model
+    at call time (:func:`_build_model`), and tests inject a ``TestModel`` /
+    ``FunctionModel`` via the run's ``model=`` argument or ``agent.override``.
+    """
+    # Explicit specialization: ty otherwise mis-infers the agent's output type.
+    agent = Agent[GenerationDeps, PackDraft](
+        output_type=PackDraft,
+        deps_type=GenerationDeps,
+        retries=_GENERATION_RETRIES,
+        system_prompt=SYSTEM_PROMPT,
+    )
+
+    @agent.tool(name="find_characters")
+    async def _find_characters(
+        ctx: RunContext[GenerationDeps], candidates: list[str]
+    ) -> CorpusCheck:
+        """Check which candidate hanzi exist in the traceable stroke corpus.
+
+        Pass the characters (or short strings) you are considering. Multi-glyph
+        strings are split into individual characters. The corpus is the only
+        source of truth for what can be traced, so call this before finalizing
+        the pack. Returns each found hanzi with its stroke count (a difficulty
+        signal) and the candidates that are absent, so you can drop or replace
+        them. The corpus has no pinyin or meanings — supply those yourself.
+        """
+        return await find_characters(ctx.deps, candidates)
+
+    @agent.output_validator
+    async def _validate(ctx: RunContext[GenerationDeps], draft: PackDraft) -> PackDraft:
+        return await validate_corpus_membership(ctx.deps, draft)
+
+    return agent
+
+
+# Built once at import time; safe because no model is bound (no network, no
+# configuration required). Routers depend on it via ``get_generation_agent``.
+_generation_agent = _build_generation_agent()
+
+
+def get_generation_agent() -> Agent[GenerationDeps, PackDraft]:
+    """FastAPI dependency returning the shared generation agent.
+
+    Trivial and argument-free so integration/e2e tests can swap it wholesale via
+    ``app.dependency_overrides[get_generation_agent]``.
+    """
+    return _generation_agent
+
+
+def _build_model() -> OpenAIChatModel:
+    """Construct the OpenRouter-backed model for a generation run.
+
+    Lazy and gated: only built when generation is configured. Constructing the
+    model performs no network I/O; the request happens when the agent runs.
+    """
+    if not settings.generation_configured:
+        raise GenerationNotConfiguredError(
+            "Pack generation is not configured: set OPENROUTER_API_KEY (and "
+            "GENERATION_MODEL) to enable it."
+        )
+    return OpenAIChatModel(
+        settings.generation_model,
+        provider=OpenRouterProvider(api_key=settings.openrouter_api_key),
+    )
+
+
+async def generate_pack_draft(
+    agent: Agent[GenerationDeps, PackDraft],
+    *,
+    session: AsyncSession,
+    topic: str,
+    history: list[ModelMessage] | None = None,
+) -> GenerationResult:
+    """Run the agent to draft a pack for ``topic`` and return draft + history.
+
+    Assembles :class:`GenerationDeps` around a real ``CharacterRepository`` bound
+    to ``session``, supplies the OpenRouter model at call time, and threads prior
+    ``history`` so refinement turns keep context (HAB-082). Returns the validated
+    :class:`~habagou.dtos.generation.PackDraft` alongside the full updated message
+    history for the caller to persist.
+    """
+    deps = GenerationDeps(characters=CharacterRepository(session))
+    result = await agent.run(
+        topic,
+        deps=deps,
+        model=_build_model(),
+        message_history=history,
+    )
+    return GenerationResult(draft=result.output, messages=result.all_messages())
