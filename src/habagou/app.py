@@ -16,7 +16,7 @@ from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
-from habagou.routers.v1 import characters, packs, path, progress
+from habagou.routers.v1 import characters, generation, packs, path, progress
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
 
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(characters.router)
+    app.include_router(generation.router)
     app.include_router(packs.router)
     app.include_router(path.router)
     app.include_router(progress.router)
@@ -135,6 +136,7 @@ def _http_error_code(status_code: int) -> str:
         404: "not_found",
         409: "conflict",
         422: "validation_error",
+        502: "bad_gateway",
         503: "service_unavailable",
     }.get(status_code, f"http_{status_code}")
 
