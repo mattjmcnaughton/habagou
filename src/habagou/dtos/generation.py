@@ -40,4 +40,4 @@ class PackDraft(BaseModel):
     title: NonEmptyStr
     characters: Annotated[list[PackDraftCharacter], Field(min_length=1)]
     sentences: list[PackDraftSentence] = Field(default_factory=list)
-    coverage_note: str | None = None
+    coverage_note: NonEmptyStr | None = None
