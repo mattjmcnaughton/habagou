@@ -23,10 +23,11 @@ assembly wires it to ``RunContext.deps`` in the next batch.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
@@ -316,3 +317,28 @@ async def generate_pack_draft(
         message_history=history,
     )
     return GenerationResult(draft=result.output, messages=result.all_messages())
+
+
+# --- HAB-082: message-history (de)serialization for client-side round-trips ----
+
+
+def dump_message_history(messages: list[ModelMessage]) -> list[Any]:
+    """Serialize a run's message history to JSON-able Python.
+
+    The endpoint holds the conversation client-side between turns, so it needs
+    the pydantic-ai messages as plain JSON-serializable data (lists/dicts). Round
+    trips with :func:`load_message_history` via pydantic-ai's message-history type
+    adapter, which owns the wire schema for the discriminated message union.
+    """
+    return ModelMessagesTypeAdapter.dump_python(messages, mode="json")
+
+
+def load_message_history(data: list[Any]) -> list[ModelMessage]:
+    """Rebuild a message history from :func:`dump_message_history` output.
+
+    The inverse of :func:`dump_message_history`: turns the JSON-able payload the
+    client sent back into ``list[ModelMessage]`` suitable for ``agent.run``'s
+    ``message_history`` (threaded through ``history`` on
+    :func:`generate_pack_draft`).
+    """
+    return ModelMessagesTypeAdapter.validate_python(data)
