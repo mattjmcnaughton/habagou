@@ -22,6 +22,7 @@ assembly wires it to ``RunContext.deps`` in the next batch.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -34,12 +35,20 @@ from pydantic_ai.providers.openrouter import OpenRouterProvider
 from habagou.config import settings
 from habagou.dtos.generation import PackDraft
 from habagou.repositories.characters import CharacterRepository
+from habagou.repositories.packs import (
+    PackCharacterInput,
+    PackRepository,
+    PackSentenceInput,
+)
 
 if TYPE_CHECKING:
+    import uuid
     from collections.abc import Iterable
 
     from pydantic_ai.messages import ModelMessage
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from habagou.models import Pack
 
 
 class CorpusReader(Protocol):
@@ -358,3 +367,69 @@ def load_message_history(data: list[Any]) -> list[ModelMessage]:
     :func:`generate_pack_draft`).
     """
     return ModelMessagesTypeAdapter.validate_python(data)
+
+
+# --- HAB-084: persist a finalized draft as an owned pack -----------------------
+
+# The curated palette owned packs draw from (mirrors the seed packs' colors in
+# ``scripts.seed.SEED_PACKS``). A draft carries no color, so one is picked
+# deterministically from the title (below).
+_CURATED_COLORS: tuple[str, ...] = ("#c4633f", "#3f8a86", "#5b5fa8", "#b5852e")
+
+# Owned packs sort after the curated packs (whose sort_order is 1-4), tie-broken
+# by id — matching ``PackRepository.list_visible``'s ``(sort_order, id)`` order.
+_OWNED_PACK_SORT_ORDER = 1000
+
+
+def _color_for_title(title: str) -> str:
+    """Deterministically pick a curated color for a pack title.
+
+    Keyed on a stable hash of the title (not Python's per-process salted
+    ``hash``) so the same title always yields the same color across processes.
+    """
+    digest = hashlib.sha256(title.encode("utf-8")).digest()
+    return _CURATED_COLORS[digest[0] % len(_CURATED_COLORS)]
+
+
+async def save_pack_draft(
+    session: AsyncSession,
+    *,
+    draft: PackDraft,
+    owner_id: uuid.UUID,
+) -> Pack:
+    """Persist a finalized :class:`PackDraft` as a pack owned by ``owner_id``.
+
+    Supplies the save-time defaults a draft omits — ``glyph`` (the first
+    character's hanzi), ``color`` (a deterministic curated pick, see
+    :func:`_color_for_title`), and ``sort_order`` (:data:`_OWNED_PACK_SORT_ORDER`,
+    so owned packs list after curated ones) — maps the draft's characters and
+    sentences onto the repository's input value objects, and commits. The
+    repository re-validates every glyph against the corpus (grounding layer 3),
+    raising ``ValueError`` for any non-corpus glyph; that propagates to the
+    caller, which surfaces it as a 422.
+    """
+    pack = await PackRepository(session).create(
+        owner_id=owner_id,
+        title=draft.title,
+        glyph=draft.characters[0].hanzi,
+        color=_color_for_title(draft.title),
+        sort_order=_OWNED_PACK_SORT_ORDER,
+        characters=[
+            PackCharacterInput(
+                hanzi=character.hanzi,
+                pinyin=character.pinyin,
+                meaning=character.meaning,
+            )
+            for character in draft.characters
+        ],
+        sentences=[
+            PackSentenceInput(
+                hanzi=sentence.hanzi,
+                pinyin=sentence.pinyin,
+                translation=sentence.translation,
+            )
+            for sentence in draft.sentences
+        ],
+    )
+    await session.commit()
+    return pack

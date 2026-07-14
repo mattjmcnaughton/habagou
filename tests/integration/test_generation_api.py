@@ -209,3 +209,131 @@ async def test_draft_refinement_turn_replays_prior_history(
     prompts = _prompt_texts(respond.messages_per_call[1])
     assert any("greetings for beginners" in text for text in prompts)
     assert any("make it harder" in text for text in prompts)
+
+
+# --- HAB-084: save endpoint ----------------------------------------------------
+
+
+def _sentence(hanzi: str) -> dict[str, str]:
+    return {"hanzi": hanzi, "pinyin": "x", "translation": "x"}
+
+
+def _save_body(
+    title: str,
+    hanzi: list[str],
+    sentences: list[str] | None = None,
+) -> dict[str, object]:
+    draft: dict[str, object] = {
+        "title": title,
+        "characters": [_character(char) for char in hanzi],
+    }
+    if sentences is not None:
+        draft["sentences"] = [_sentence(text) for text in sentences]
+    return {"draft": draft}
+
+
+@pytest.mark.anyio
+async def test_save_persists_owned_pack_visible_to_owner(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(
+        "/api/v1/generation/packs",
+        json=_save_body("My Saved Pack", ["你", "好", "我"], sentences=["你好"]),
+    )
+
+    assert response.status_code == 201, response.text
+    detail = response.json()
+    pack_id = detail["id"]
+    assert detail["title"] == "My Saved Pack"
+    # glyph defaults to the first character's hanzi; color is a curated pick.
+    assert detail["glyph"] == "你"
+    assert detail["color"] in {"#c4633f", "#3f8a86", "#5b5fa8", "#b5852e"}
+    assert [c["hanzi"] for c in detail["characters"]] == ["你", "好", "我"]
+    assert [s["hanzi"] for s in detail["sentences"]] == ["你好"]
+
+    # It shows up in the owner's catalog (list_visible)...
+    listed = await client.get("/api/v1/packs")
+    assert listed.status_code == 200
+    assert pack_id in {pack["id"] for pack in listed.json()}
+
+    # ...and its full detail is retrievable (traceable end to end).
+    fetched = await client.get(f"/api/v1/packs/{pack_id}")
+    assert fetched.status_code == 200
+    assert fetched.json()["id"] == pack_id
+
+
+@pytest.mark.anyio
+async def test_saved_pack_is_invisible_to_other_users(
+    client: AsyncClient,
+) -> None:
+    created = await client.post(
+        "/api/v1/generation/packs",
+        json=_save_body("Private Pack", ["你", "好"]),
+    )
+    assert created.status_code == 201, created.text
+    pack_id = created.json()["id"]
+
+    async with db.async_session() as session:
+        other = await create_user(session, username="other-gen-user", email=None)
+        await session.commit()
+        other_id = other.id
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as other:
+        other.cookies.update(auth_cookies(other_id))
+
+        catalog = await other.get("/api/v1/packs")
+        assert catalog.status_code == 200
+        assert pack_id not in {pack["id"] for pack in catalog.json()}
+
+        # A foreign owned pack is indistinguishable from a missing one: 404.
+        detail = await other.get(f"/api/v1/packs/{pack_id}")
+        assert detail.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_save_422_on_non_corpus_glyph(client: AsyncClient) -> None:
+    # POST straight to save (bypassing the grounded draft endpoint) with a
+    # non-corpus character: the repository (layer 3) rejects it, surfaced as 422.
+    response = await client.post(
+        "/api/v1/generation/packs",
+        json=_save_body("Ungrounded", ["你", "龘"]),
+    )
+
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["error"]["code"] == "validation_error"
+    assert "龘" in body["error"]["message"]
+
+
+@pytest.mark.anyio
+async def test_save_requires_authentication() -> None:
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/api/v1/generation/packs",
+            json=_save_body("Nope", ["你"]),
+        )
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "unauthenticated"
+
+
+@pytest.mark.anyio
+async def test_path_serves_only_global_content_after_save(
+    client: AsyncClient,
+) -> None:
+    # The Learning Path is global-only: saving an owned pack must not inject it
+    # into the path (a decided Epic-7 invariant).
+    created = await client.post(
+        "/api/v1/generation/packs",
+        json=_save_body("Path Excluded", ["你", "好"]),
+    )
+    assert created.status_code == 201, created.text
+    saved_title = created.json()["title"]
+
+    path = await client.get("/api/v1/path")
+    assert path.status_code == 200
+    pack_titles = {item["pack"]["title"] for item in path.json()["items"]}
+    assert saved_title not in pack_titles
+    # The path is still populated from the seeded global packs.
+    assert pack_titles <= {"Greetings", "Numbers", "Family", "Food & drink"}
