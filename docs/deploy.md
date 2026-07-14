@@ -90,6 +90,18 @@ path. Non-secret config lives in `fly.toml` `[env]` (including
 `HABAGOU_RUN_BOOTSTRAP=0` so app machines skip bootstrap, plus
 `OIDC_PROVIDER=auth0` and `SESSION_COOKIE_SECURE=true`).
 
+```sh
+# Optional — agent pack generation (OpenAI models via OpenRouter). Without the
+# key, generation is disabled and POST /api/v1/generation/draft returns 503;
+# the rest of the app is unaffected. See docs/adrs/0010-agent-pack-generation.md.
+flyctl secrets set OPENROUTER_API_KEY='<OpenRouter API key>'
+```
+
+`GENERATION_MODEL` (default `openai/gpt-5-mini`) and
+`GENERATION_RATE_LIMIT_PER_HOUR` (default 10, per-user, in-memory and
+single-process) are non-secret and only need setting to override the defaults —
+put them in `fly.toml` `[env]` if you do.
+
 ### Auth0 configuration
 
 Create an Auth0 **Regular Web Application**. Its callback URL must be the

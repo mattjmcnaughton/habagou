@@ -42,8 +42,8 @@ src/habagou/
     scheduling.py      # pure Leitner-ladder scheduler (queue generation, ladder update)
   routers/
     health.py          # healthz/readyz
-    v1/                # packs, characters, progress, path
-  services/            # business logic
+    v1/                # packs, characters, progress, path, generation
+  services/            # business logic (incl. pack_generation agent, rate_limit)
   repositories/        # SQLAlchemy data access (one module per bounded context)
   models/              # SQLAlchemy models (one module per bounded context)
   dtos/                # Pydantic API DTOs
@@ -63,16 +63,29 @@ algorithm can be swapped (e.g. for SM-2/FSRS) without touching the service,
 router, or API contract. See [docs/api.md](api.md) for the endpoint contract
 and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.
 
+Agent pack generation follows the same layering: `routers/v1/generation.py` ->
+`services/pack_generation.py` (a pydantic-ai agent, OpenAI models via
+OpenRouter) -> `repositories/` (`CharacterRepository`, `PackRepository`), with
+draft shapes in `dtos/generation.py`. The model is grounded so a generated pack
+only references hanzi that exist in the stroke corpus, in three layers: a
+`find_characters` agent tool (corpus membership + stroke counts, no glosses), an
+output validator that retries the model on any non-corpus glyph, and
+`PackRepository.create` re-validating every glyph at save. Drafts persist as
+private owned packs; the draft endpoint is capped by a per-user in-memory
+`services/rate_limit.py` window. See
+[ADR 0010](adrs/0010-agent-pack-generation.md).
+
 ## Data Model
 
 - `characters`: pinned Hanzi Writer stroke JSON imported into Postgres.
 - `packs`: learning packs with nullable `owner_id` and sort order. `owner_id
   IS NULL` is a global, curated, seed-managed pack visible to everyone;
   non-null is a private pack visible only to its owner (created via
-  `PackRepository.create(owner_id=...)`, the write path the Epic 7 agent
+  `PackRepository.create(owner_id=...)`, the write path agent pack generation
   uses). See
   [ADR 0009](adrs/0009-pack-ownership.md) for why ownership replaced the
-  earlier lifecycle status.
+  earlier lifecycle status and [ADR 0010](adrs/0010-agent-pack-generation.md)
+  for the generation flow.
 - `pack_characters`: pack-specific pinyin/meaning metadata.
 - `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
 - `users`: authenticated learner accounts keyed by provider issuer + subject.

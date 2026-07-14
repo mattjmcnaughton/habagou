@@ -8,7 +8,7 @@ Habagou is a full-stack web app for practicing Hanzi handwriting. Characters are
 - **Match** — a timed matching game pairing characters with their pinyin and meaning.
 - **Sentence** — trace every character of short sentences, reinforcing characters in context.
 
-Progress is tracked per user. v1 ships without authentication — everyone acts as a shared **guest user** — but the data model is user-centric from day one so real accounts can be added without a migration rewrite. AI-assisted pack generation is on the v2 roadmap; v1 packs are curated and seeded.
+Progress is tracked per user. v1 ships without authentication — everyone acts as a shared **guest user** — but the data model is user-centric from day one so real accounts can be added without a migration rewrite. Alongside the curated, seeded packs, learners can generate their own private packs from a topic with a corpus-grounded agent (OpenAI models via OpenRouter; see [ADR 0010](docs/adrs/0010-agent-pack-generation.md)).
 
 ## Stack
 
