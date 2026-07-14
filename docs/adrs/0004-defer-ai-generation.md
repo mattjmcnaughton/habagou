@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted.
+Accepted, then superseded by [ADR 0010](0010-agent-pack-generation.md), which
+ships agent pack generation and reverses this deferral. (The `packs.status`
+forward-compat hook this ADR preserved was earlier superseded by
+[ADR 0009](0009-pack-ownership.md).)
 
 ## Context
 

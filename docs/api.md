@@ -146,3 +146,73 @@ does not change even if the underlying pack content changes later.
   the Leitner ladder (see `docs/product/prd-path.md` FR-26).
 - 409 — the item was already completed.
 - 404 — `item_id` does not exist for the current user.
+
+### Generation
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| POST | `/api/v1/generation/draft` | Draft (or refine) a corpus-grounded pack from a topic |
+| POST | `/api/v1/generation/packs` | Persist a finalized draft as a pack owned by the current user |
+
+Agent pack generation drafts a themed practice pack from a topic, grounded so it
+only ever references hanzi that exist in the stroke corpus (see
+[ADR 0010](adrs/0010-agent-pack-generation.md)). Both endpoints require a valid
+session. Generation is env-configured (`OPENROUTER_API_KEY`, `GENERATION_MODEL`);
+when unconfigured, `POST /generation/draft` returns 503.
+
+`POST /api/v1/generation/draft` body:
+
+```json
+{
+  "topic": "ordering food at a restaurant",
+  "history": null
+}
+```
+
+- `topic` — required, 1–2000 chars.
+- `history` — the opaque message-history array returned by a prior draft turn,
+  or `null` on the first turn. The client holds it between turns and passes it
+  back to refine the draft; there is no server-side conversation store.
+
+-> 200
+
+```json
+{
+  "draft": {
+    "title": "At the Restaurant",
+    "characters": [
+      { "hanzi": "菜", "pinyin": "cài", "meaning": "dish; vegetable" }
+    ],
+    "sentences": [
+      { "hanzi": "我要茶", "pinyin": "wǒ yào chá", "translation": "I want tea" }
+    ],
+    "coverage_note": "found 6 of 8 requested characters; 望 and 憧 aren't in the corpus yet"
+  },
+  "history": [ /* opaque, pass back on the next refinement turn */ ]
+}
+```
+
+- `draft.characters` — 1–30 members, each with a model-supplied pinyin and
+  meaning (the corpus stores no glosses).
+- `draft.sentences` — up to 12 optional practice sentences; every glyph is also
+  corpus-validated.
+- `coverage_note` — a non-null honest note when some requested characters are
+  absent from the corpus, rather than silently shrinking the pack.
+- 429 — the caller exceeded `GENERATION_RATE_LIMIT_PER_HOUR` (default 10, counted
+  per attempt).
+- 502 — the generation run failed (provider/model error).
+- 503 — generation is not configured (`OPENROUTER_API_KEY` unset).
+- 422 — `history` is present but is not a valid generation message history.
+
+`POST /api/v1/generation/packs` body:
+
+```json
+{ "draft": { /* a PackDraft returned by /generation/draft */ } }
+```
+
+-> 201 — a `PackDetailDTO` for the newly created pack, owned by and visible only
+to the caller. Glyph, color, and sort order are defaulted at save time; owned
+packs list after curated ones.
+
+- 422 — the draft references a character absent from the stroke corpus
+  (re-validated at save).
