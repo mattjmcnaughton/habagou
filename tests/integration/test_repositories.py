@@ -156,6 +156,19 @@ async def test_character_repository_reads_strokes_and_missing_set() -> None:
 
 
 @pytest.mark.anyio
+async def test_character_repository_reads_stroke_counts() -> None:
+    async with db.async_session() as session:
+        repository = CharacterRepository(session)
+        counts = await repository.stroke_counts(["你", "好", "☂"])
+        empty = await repository.stroke_counts([])
+
+    # Corpus members carry their stroke count; non-members are simply absent.
+    assert counts.keys() == {"你", "好"}
+    assert all(isinstance(value, int) and value > 0 for value in counts.values())
+    assert empty == {}
+
+
+@pytest.mark.anyio
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
     async with db.async_session() as session:
         user = await create_user(session)
