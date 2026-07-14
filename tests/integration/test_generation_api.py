@@ -98,6 +98,7 @@ def _prompt_texts(messages: Sequence[ModelMessage]) -> list[str]:
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_returns_corpus_valid_draft_and_history(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -120,6 +121,7 @@ async def test_draft_returns_corpus_valid_draft_and_history(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_retries_through_postgres_grounding(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -147,6 +149,7 @@ async def test_draft_retries_through_postgres_grounding(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_requires_authentication() -> None:
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -159,6 +162,7 @@ async def test_draft_requires_authentication() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_503_when_generation_unconfigured(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -178,6 +182,7 @@ async def test_draft_503_when_generation_unconfigured(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_refinement_turn_replays_prior_history(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -213,6 +218,7 @@ async def test_draft_refinement_turn_replays_prior_history(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_422_on_malformed_history(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -233,6 +239,7 @@ async def test_draft_422_on_malformed_history(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_502_on_provider_connection_failure(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -254,6 +261,7 @@ async def test_draft_502_on_provider_connection_failure(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_draft_rate_limit_is_per_user(
     current_user: User,
     monkeypatch: pytest.MonkeyPatch,
@@ -324,6 +332,7 @@ def _save_body(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_save_persists_owned_pack_visible_to_owner(
     client: AsyncClient,
 ) -> None:
@@ -354,6 +363,7 @@ async def test_save_persists_owned_pack_visible_to_owner(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_saved_pack_is_invisible_to_other_users(
     client: AsyncClient,
 ) -> None:
@@ -382,6 +392,7 @@ async def test_saved_pack_is_invisible_to_other_users(
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_save_422_on_non_corpus_glyph(client: AsyncClient) -> None:
     # POST straight to save (bypassing the grounded draft endpoint) with a
     # non-corpus character: the repository (layer 3) rejects it, surfaced as 422.
@@ -397,6 +408,7 @@ async def test_save_422_on_non_corpus_glyph(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_save_requires_authentication() -> None:
     transport = ASGITransport(app=create_app())
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -410,6 +422,7 @@ async def test_save_requires_authentication() -> None:
 
 
 @pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
 async def test_path_serves_only_global_content_after_save(
     client: AsyncClient,
 ) -> None:
@@ -428,3 +441,31 @@ async def test_path_serves_only_global_content_after_save(
     assert saved_title not in pack_titles
     # The path is still populated from the seeded global packs.
     assert pack_titles <= {"Greetings", "Numbers", "Family", "Food & drink"}
+
+
+@pytest.mark.anyio
+@pytest.mark.workflow("WF-15")
+async def test_failed_draft_attempts_consume_quota(
+    current_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Count-on-attempt: a draft rejected because generation is unconfigured
+    # still burns a quota slot, so failures cannot be retried for free.
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+    monkeypatch.setattr(settings, "generation_rate_limit_per_hour", 2)
+
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(current_user.id))
+        first = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+        assert first.status_code == 503, first.text
+
+        # The failed attempt consumed a slot: one success remains, then 429.
+        monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+        respond = _Responder([_draft("Greetings", ["你"])])
+        with get_generation_agent().override(model=FunctionModel(respond)):
+            second = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+            third = await client.post("/api/v1/generation/draft", json={"topic": "t"})
+
+        assert second.status_code == 200, second.text
+        assert third.status_code == 429, third.text
