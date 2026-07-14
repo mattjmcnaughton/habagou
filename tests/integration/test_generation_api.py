@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai.exceptions import ModelAPIError
 from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
@@ -209,6 +210,47 @@ async def test_draft_refinement_turn_replays_prior_history(
     prompts = _prompt_texts(respond.messages_per_call[1])
     assert any("greetings for beginners" in text for text in prompts)
     assert any("make it harder" in text for text in prompts)
+
+
+@pytest.mark.anyio
+async def test_draft_422_on_malformed_history(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The client-held history is opaque JSON; a corrupted or hand-crafted
+    # payload must surface as the caller's error, never a 500.
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await client.post(
+        "/api/v1/generation/draft",
+        json={"topic": "greetings", "history": [{"not": "a valid message"}]},
+    )
+
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["error"]["code"] == "validation_error"
+    assert "history" in body["error"]["message"]
+
+
+@pytest.mark.anyio
+async def test_draft_502_on_provider_connection_failure(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A network failure reaching the provider raises ModelAPIError (not its
+    # ModelHTTPError subclass); the endpoint maps it to 502, not 500.
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    def explode(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelResponse:
+        raise ModelAPIError(model_name="openai/gpt-5-mini", message="conn refused")
+
+    with get_generation_agent().override(model=FunctionModel(explode)):
+        response = await client.post(
+            "/api/v1/generation/draft", json={"topic": "greetings"}
+        )
+
+    assert response.status_code == 502, response.text
+    assert response.json()["error"]["code"] == "bad_gateway"
 
 
 # --- HAB-084: save endpoint ----------------------------------------------------

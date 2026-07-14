@@ -135,6 +135,7 @@
             "anyOf": [
               {
                 "items": {},
+                "maxItems": 200,
                 "type": "array"
               },
               {
@@ -144,6 +145,7 @@
             "title": "History"
           },
           "topic": {
+            "maxLength": 2000,
             "minLength": 1,
             "title": "Topic",
             "type": "string"
@@ -312,6 +314,7 @@
             "items": {
               "$ref": "#/components/schemas/PackDraftCharacter"
             },
+            "maxItems": 30,
             "minItems": 1,
             "title": "Characters",
             "type": "array"
@@ -319,6 +322,7 @@
           "coverage_note": {
             "anyOf": [
               {
+                "maxLength": 1000,
                 "minLength": 1,
                 "type": "string"
               },
@@ -332,10 +336,12 @@
             "items": {
               "$ref": "#/components/schemas/PackDraftSentence"
             },
+            "maxItems": 12,
             "title": "Sentences",
             "type": "array"
           },
           "title": {
+            "maxLength": 120,
             "minLength": 1,
             "title": "Title",
             "type": "string"
@@ -358,11 +364,13 @@
             "type": "string"
           },
           "meaning": {
+            "maxLength": 200,
             "minLength": 1,
             "title": "Meaning",
             "type": "string"
           },
           "pinyin": {
+            "maxLength": 200,
             "minLength": 1,
             "title": "Pinyin",
             "type": "string"
@@ -380,16 +388,19 @@
         "description": "A drafted example sentence for the sentence-tracing activity.",
         "properties": {
           "hanzi": {
+            "maxLength": 64,
             "minLength": 1,
             "title": "Hanzi",
             "type": "string"
           },
           "pinyin": {
+            "maxLength": 512,
             "minLength": 1,
             "title": "Pinyin",
             "type": "string"
           },
           "translation": {
+            "maxLength": 512,
             "minLength": 1,
             "title": "Translation",
             "type": "string"

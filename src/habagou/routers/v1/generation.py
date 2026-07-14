@@ -11,8 +11,9 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import ValidationError
 from pydantic_ai import Agent  # noqa: TC002 - FastAPI resolves annotations.
-from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
+from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotations.
     AsyncSession,
 )
@@ -63,9 +64,19 @@ async def generate_draft(
     # next batch, which registers WF-15 in workflows.yml. Emitting a WF-15
     # literal here now would break the event-catalog coverage test
     # (tests/unit/test_events.py); this endpoint is the seam for it.
-    history = (
-        load_message_history(payload.history) if payload.history is not None else None
-    )
+    try:
+        history = (
+            load_message_history(payload.history)
+            if payload.history is not None
+            else None
+        )
+    except ValidationError as exc:
+        # The client-held history is opaque JSON; a corrupted or hand-crafted
+        # payload is the caller's error, not a server fault.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="history is not a valid generation message history",
+        ) from exc
     try:
         result = await generate_pack_draft(
             agent,
@@ -78,7 +89,9 @@ async def generate_draft(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="pack generation is not configured",
         ) from exc
-    except (UnexpectedModelBehavior, ModelHTTPError) as exc:
+    except (UnexpectedModelBehavior, ModelAPIError) as exc:
+        # ModelAPIError covers provider HTTP errors and connection/timeout
+        # failures alike (ModelHTTPError is its subclass).
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="pack generation failed",
