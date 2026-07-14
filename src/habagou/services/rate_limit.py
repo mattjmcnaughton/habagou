@@ -73,6 +73,7 @@ class FixedWindowRateLimiter:
         if not self.enabled:
             return True
         now = self._clock()
+        self._prune(now)
         window = self._windows.get(key)
         if window is None or now - window.start >= self._window_seconds:
             self._windows[key] = _Window(start=now, count=1)
@@ -81,3 +82,18 @@ class FixedWindowRateLimiter:
             return False
         window.count += 1
         return True
+
+    def _prune(self, now: float) -> None:
+        """Drop expired windows so the map stays bounded by *active* keys.
+
+        Without pruning, one entry would accumulate per user id for the life of
+        the process. Growth is slow (keys only exist for authenticated users),
+        so a sweep on every acquire is cheap at this deployment's scale.
+        """
+        expired = [
+            key
+            for key, window in self._windows.items()
+            if now - window.start >= self._window_seconds
+        ]
+        for key in expired:
+            del self._windows[key]

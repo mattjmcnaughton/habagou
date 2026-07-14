@@ -74,3 +74,16 @@ def test_defaults_to_monotonic_clock() -> None:
     limiter = FixedWindowRateLimiter(limit=1, window_seconds=3600)
     assert limiter.acquire("user") is True
     assert limiter.acquire("user") is False
+
+
+def test_expired_windows_are_pruned() -> None:
+    # Stale keys must not accumulate for the life of the process.
+    clock = _FakeClock()
+    limiter = FixedWindowRateLimiter(limit=1, window_seconds=60, clock=clock)
+
+    assert limiter.acquire("gone-user") is True
+    clock.now = 61.0
+    assert limiter.acquire("active-user") is True
+
+    assert "gone-user" not in limiter._windows
+    assert "active-user" in limiter._windows
