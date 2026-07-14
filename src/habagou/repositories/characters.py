@@ -33,3 +33,20 @@ class CharacterRepository:
         )
         existing = set(result.scalars())
         return required - existing
+
+    async def stroke_counts(self, hanzi: Iterable[str]) -> dict[str, int]:
+        """Stroke count for each requested hanzi that exists in the corpus.
+
+        One query. Missing hanzi are simply absent from the returned mapping, so
+        callers can use it both as a difficulty signal and as a membership
+        witness for the found set.
+        """
+        wanted = set(hanzi)
+        if not wanted:
+            return {}
+        result = await self.session.execute(
+            select(Character.hanzi, Character.stroke_count).where(
+                Character.hanzi.in_(wanted)
+            )
+        )
+        return {row.hanzi: row.stroke_count for row in result}
