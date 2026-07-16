@@ -8,13 +8,13 @@ Habagou is a full-stack web app for practicing Hanzi handwriting. Characters are
 - **Match** — a timed matching game pairing characters with their pinyin and meaning.
 - **Sentence** — trace every character of short sentences, reinforcing characters in context.
 
-Progress is tracked per user. v1 ships without authentication — everyone acts as a shared **guest user** — but the data model is user-centric from day one so real accounts can be added without a migration rewrite. Alongside the curated, seeded packs, learners can generate their own private packs from a topic with a corpus-grounded agent (OpenAI models via OpenRouter; see [ADR 0010](docs/adrs/0010-agent-pack-generation.md)).
+Progress is tracked per user. v1 ships without authentication — everyone acts as a shared **guest user** — but the data model is user-centric from day one so real accounts can be added without a migration rewrite. Alongside the curated, seeded packs, learners can generate their own private packs from a topic with a corpus-grounded agent (OpenAI-compatible models via OpenRouter; see [ADR 0010](docs/adrs/0010-agent-pack-generation.md)).
 
 ## Stack
 
 | Layer | Technology |
 | ----- | ---------- |
-| Backend | Python 3.12, FastAPI, uvicorn, structlog, pydantic-settings |
+| Backend | Python 3.12, FastAPI, uvicorn, pydantic-ai, Logfire, structlog, pydantic-settings |
 | Database | PostgreSQL 16, SQLAlchemy 2 (async, asyncpg), Alembic |
 | Frontend | React 19, TypeScript, Vite, TanStack Router + Query, Tailwind CSS |
 | Handwriting | [Hanzi Writer](https://hanziwriter.org/) + `hanzi-writer-data` stroke corpus |

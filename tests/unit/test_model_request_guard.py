@@ -7,12 +7,21 @@ network, while stubbed ``TestModel`` runs still work.
 
 from __future__ import annotations
 
+import os
+
 import pydantic_ai.models
 import pytest
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
+
+from habagou.config import settings
+
+
+def test_live_openrouter_credentials_are_scrubbed() -> None:
+    assert os.environ["OPENROUTER_API_KEY"] == ""
+    assert settings.openrouter_api_key == ""
 
 
 def test_guard_is_active() -> None:

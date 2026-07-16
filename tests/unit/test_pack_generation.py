@@ -374,14 +374,14 @@ def test_build_model_builds_openrouter_model_when_configured(
 ) -> None:
     monkeypatch.setattr(pack_generation.settings, "openrouter_api_key", "sk-test")
     monkeypatch.setattr(
-        pack_generation.settings, "generation_model", "openai/gpt-5-mini"
+        pack_generation.settings, "generation_model", "deepseek/deepseek-v4-flash"
     )
 
     model = pack_generation._build_model()
 
     # Built against OpenRouter with the configured model; no request is made.
     assert isinstance(model, OpenAIChatModel)
-    assert model.model_name == "openai/gpt-5-mini"
+    assert model.model_name == "deepseek/deepseek-v4-flash"
     assert model.system == "openrouter"
     assert "openrouter" in model.base_url
 

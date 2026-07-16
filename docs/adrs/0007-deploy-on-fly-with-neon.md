@@ -26,6 +26,10 @@ persistent volume is required.
   release tag; GHCR is retained as a published artifact, not the deploy source).
 - Leave `OTEL_EXPORTER_OTLP_ENDPOINT` empty for now.
 
+Update (2026-07-17): Logfire is now the production trace exporter when a
+`LOGFIRE_TOKEN` secret is present. The generic OTLP endpoint remains an optional
+fallback, but is no longer set to an empty value in `fly.toml`.
+
 ## Consequences
 
 - Cutover and ongoing ops are documented in [deploy.md](../deploy.md).

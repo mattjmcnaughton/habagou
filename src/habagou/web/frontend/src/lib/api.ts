@@ -18,6 +18,11 @@ export type ProgressSummary = components["schemas"]["ProgressSummaryDTO"];
 export type StrokeData = CharacterJson;
 export type AuthUser = components["schemas"]["UserDTO"];
 export type AuthSession = components["schemas"]["SessionDTO"];
+export type GenerationStatus = components["schemas"]["GenerationStatusDTO"];
+export type PackDraft = components["schemas"]["PackDraft"];
+export type DraftCharacter = components["schemas"]["PackDraftCharacter"];
+export type DraftSentence = components["schemas"]["PackDraftSentence"];
+export type GenerationDraftResponse = components["schemas"]["GenerationDraftResponseDTO"];
 
 export type {
   CompletePathItemBody,
@@ -147,6 +152,33 @@ export function getPath({
   }
   const query = params.toString();
   return apiFetch<PathResponse>(apiV1Path(query ? `/path?${query}` : "/path"));
+}
+
+export function getGenerationStatus(): Promise<GenerationStatus> {
+  return apiFetch<GenerationStatus>(apiV1Path("/generation/status"));
+}
+
+export function generateDraft(
+  topic: string,
+  history?: unknown[],
+): Promise<GenerationDraftResponse> {
+  // JSON.stringify drops undefined properties, so a first-turn `history` of
+  // undefined is omitted from the wire body and matches GenerationDraftRequestDTO.
+  const body: components["schemas"]["GenerationDraftRequestDTO"] = { topic, history };
+  return apiFetch<GenerationDraftResponse>(apiV1Path("/generation/draft"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function saveGeneratedPack(draft: PackDraft): Promise<PackDetail> {
+  const body: components["schemas"]["GenerationSavePackRequestDTO"] = { draft };
+  return apiFetch<PackDetail>(apiV1Path("/generation/packs"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 export function completePathItem(

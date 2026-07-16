@@ -116,6 +116,59 @@ provider's issuer URL, and provide that application's `OIDC_CLIENT_ID` and
 issuer and continues to identify users by the stable `iss` and `sub` claims.
 Register Habagou's `/auth/callback` URL with the provider.
 
+## Agent pack generation (LLM features)
+
+Agent pack generation drafts a themed practice pack from a topic, grounded
+against the stroke corpus (see
+[ADR 0010](adrs/0010-agent-pack-generation.md) and the API in
+[api.md](api.md#generation)). It is **optional and off by default**: with no
+API key set, the rest of the app is unaffected.
+
+**Enable it locally.** Put an [OpenRouter](https://openrouter.ai/) API key in
+`.env` (the app reads `.env` on startup):
+
+```sh
+OPENROUTER_API_KEY=sk-or-...        # required to enable generation
+GENERATION_MODEL=deepseek/deepseek-v4-flash  # optional; default shown (via OpenRouter)
+GENERATION_RATE_LIMIT_PER_HOUR=10   # optional; per user, 0 or negative disables the cap
+LOGFIRE_TOKEN=                      # optional; enables API, database, and AI trace export
+```
+
+FastAPI requests, SQLAlchemy queries, and Pydantic AI calls are instrumented
+with Logfire. The SDK uses
+`send_to_logfire="if-token-present"`, so the app boots and generation works
+normally when `LOGFIRE_TOKEN` is absent; only remote trace export is disabled.
+System metrics are not instrumented. Pydantic AI spans include the full
+generation conversation (user messages, replayed history, tool activity, and
+model responses) for review in Logfire.
+
+**When it is disabled** (no key), `GET /api/v1/generation/status` returns
+`{"enabled": false}`, the frontend hides the "Create a pack" entry point, and
+`POST /api/v1/generation/draft` returns 503. Nothing else changes.
+
+**Develop the chat UI without a key or any provider.**
+`scripts/e2e_backend.py` serves the real API and seeded corpus with a
+deterministic, network-free generation model (zero provider calls) — the same
+stub the Playwright suite runs against. Start it in place of `just dev-be`, on
+the port `just dev-fe` proxies to, with the usual backend env (`DATABASE_URL`,
+OIDC, `SESSION_SECRET_KEY`):
+
+```sh
+just bootstrap
+# stub backend: real API + seeded corpus, fake key, stubbed model, cap disabled
+GENERATION_RATE_LIMIT_PER_HOUR=0 uv run uvicorn scripts.e2e_backend:create_stub_app \
+    --factory --host 127.0.0.1 --port "${HABAGOU_PORT:-8000}"
+```
+
+In another shell run `just dev-fe`; its Vite dev server proxies `/api` to that
+backend port, so the "Create a pack" flow works end to end with no OpenRouter
+account.
+
+**PR CI makes zero real LLM calls.** The e2e suite drives the stub above, and
+the backend test tiers force a `TestModel`/`FunctionModel` via `Agent.override`.
+The one real-provider contract test is marked `@pytest.mark.external` and runs
+only via `just test-external`, never in `just gate` or the PR suite.
+
 ## Common Tasks
 
 ```sh

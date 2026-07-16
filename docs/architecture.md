@@ -64,7 +64,7 @@ router, or API contract. See [docs/api.md](api.md) for the endpoint contract
 and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.
 
 Agent pack generation follows the same layering: `routers/v1/generation.py` ->
-`services/pack_generation.py` (a pydantic-ai agent, OpenAI models via
+`services/pack_generation.py` (a pydantic-ai agent, OpenAI-compatible models via
 OpenRouter) -> `repositories/` (`CharacterRepository`, `PackRepository`), with
 draft shapes in `dtos/generation.py`. The model is grounded so a generated pack
 only references hanzi that exist in the stroke corpus, in three layers: a
@@ -74,6 +74,13 @@ output validator that retries the model on any non-corpus glyph, and
 private owned packs; the draft endpoint is capped by a per-user in-memory
 `services/rate_limit.py` window. See
 [ADR 0010](adrs/0010-agent-pack-generation.md).
+
+FastAPI requests, SQLAlchemy queries, and Pydantic AI runs are instrumented with
+Logfire. The token is optional (`send_to_logfire="if-token-present"`), and no
+system metrics instrumentation is enabled. User prompts and model responses are
+included in Pydantic AI spans so generation conversations can be reviewed in
+Logfire. The existing optional generic OTLP exporter continues to share the same
+OpenTelemetry provider.
 
 ## Data Model
 

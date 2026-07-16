@@ -91,16 +91,36 @@ path. Non-secret config lives in `fly.toml` `[env]` (including
 `OIDC_PROVIDER=auth0` and `SESSION_COOKIE_SECURE=true`).
 
 ```sh
-# Optional — agent pack generation (OpenAI models via OpenRouter). Without the
-# key, generation is disabled and POST /api/v1/generation/draft returns 503;
-# the rest of the app is unaffected. See docs/adrs/0010-agent-pack-generation.md.
-flyctl secrets set OPENROUTER_API_KEY='<OpenRouter API key>'
+# Optional — agent pack generation (OpenAI-compatible models via OpenRouter).
+# LOGFIRE_TOKEN enables API, database, and AI trace export; it is not required
+# for app startup.
+flyctl secrets set \
+  OPENROUTER_API_KEY='<OpenRouter API key>' \
+  LOGFIRE_TOKEN='<Logfire write token>'
 ```
 
-`GENERATION_MODEL` (default `openai/gpt-5-mini`) and
+Without `OPENROUTER_API_KEY`, generation is disabled and
+`POST /api/v1/generation/draft` returns 503; the rest of the app is unaffected.
+Without `LOGFIRE_TOKEN`, the app and generation still work, but traces are not
+exported to Logfire. System metrics are not instrumented, and Pydantic AI spans
+include the full generation conversation (user messages, replayed history, tool
+activity, and model responses). Treat Logfire as a store of user content and
+apply an appropriate retention and access policy.
+
+`GENERATION_MODEL` (default `deepseek/deepseek-v4-flash`) and
 `GENERATION_RATE_LIMIT_PER_HOUR` (default 10, per-user, in-memory and
 single-process) are non-secret and only need setting to override the defaults —
 put them in `fly.toml` `[env]` if you do.
+
+Once the key is live, the frontend "Create a pack" entry point appears on its
+own: the SPA reads `GET /api/v1/generation/status` (`{"enabled": true}` when
+configured) and unhides it — no rebuild or extra deploy beyond
+`flyctl secrets set`. The rate limiter is in-memory and per-process, so each Fly
+machine meters its own window; scaling past one machine multiplies the effective
+per-user hourly cap by the machine count (a shared store would be needed to cap
+globally — see [ADR 0010](adrs/0010-agent-pack-generation.md)). To exercise this
+flow locally, see
+[development.md](development.md#agent-pack-generation-llm-features).
 
 ### Auth0 configuration
 

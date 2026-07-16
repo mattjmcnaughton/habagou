@@ -242,9 +242,16 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable. Likewise, `path_item_completed` is derived from the same write that appends the `source='path'` completion row and updates `review_states`; WF-14 (review resurfacing) has no dedicated event of its own — it is proven by a later `path_viewed`/`path_item_completed` pair on a `kind='review'` item, the same way WF-03/04/05 share `activity_completed`.
 
-### 5.2 Traces (OpenTelemetry — scaffolded in, exports when configured)
+### 5.2 Traces (OpenTelemetry + optional Logfire)
 
-Scaffold with the template's `enable_otel=true`: FastAPI + SQLAlchemy auto-instrumentation, OTLP exporter active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no-op locally). Workflow outcomes are emitted as structured events from `events.py`.
+FastAPI requests, SQLAlchemy queries, and Pydantic AI calls are instrumented with
+Logfire and share its OpenTelemetry provider with the optional generic OTLP
+exporter. Logfire export only occurs when `LOGFIRE_TOKEN` is present; tokenless
+local/test startup is a supported no-export path. System metrics instrumentation
+is intentionally not enabled. Pydantic AI spans include the full generation
+conversation so user messages, replayed history, tool activity, and model
+responses can be reviewed in Logfire. Workflow outcomes are emitted as structured events from
+`events.py`.
 
 ### 5.3 Environment tiers & live validation loops
 

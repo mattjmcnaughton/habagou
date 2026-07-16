@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader } from "../components/app-header";
 import { useLogout } from "../components/use-logout";
-import { getProgressSummary, listPacks } from "../lib/api";
+import { getGenerationStatus, getProgressSummary, listPacks } from "../lib/api";
 import type { ProgressSummary } from "../lib/api";
 
 export const Route = createFileRoute("/packs/")({
@@ -13,6 +13,9 @@ function PackLibrary() {
   const { displayName, handleLogout } = useLogout();
   const packs = useQuery({ queryKey: ["packs"], queryFn: listPacks });
   const progress = useQuery({ queryKey: ["progress"], queryFn: getProgressSummary });
+  // A status-probe failure must never break the library, so the card only
+  // appears once the server reports generation is configured (issue #102 / S6-A).
+  const generation = useQuery({ queryKey: ["generation-status"], queryFn: getGenerationStatus });
 
   return (
     <main className="min-h-screen bg-ink px-4 py-5 text-porcelain sm:px-6">
@@ -28,6 +31,8 @@ function PackLibrary() {
         />
 
         {progress.data ? <HomeProgress progress={progress.data} /> : null}
+
+        {generation.data?.enabled ? <CreatePackCard /> : null}
 
         <section className="mt-4 rounded-lg border border-white/10 bg-panel shadow-panel">
           <div className="flex items-center gap-5 border-b border-white/10 p-5">
@@ -84,6 +89,37 @@ function PackLibrary() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function CreatePackCard() {
+  return (
+    <Link
+      aria-label="Create a pack — describe a topic and we'll draft characters and sentences"
+      className="mt-4 grid grid-cols-[3.5rem_1fr_auto] items-center gap-4 rounded-lg border border-dashed border-jade/40 bg-jade/[0.04] p-4 text-left transition-colors hover:border-jade/60 hover:bg-jade/[0.08]"
+      to="/packs/generate"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-14 w-14 items-center justify-center rounded-md bg-jade/10 font-hanzi text-3xl text-jade"
+      >
+        造
+      </span>
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-semibold leading-6">Create a pack</span>
+          <span className="rounded-full border border-jade/30 bg-jade/10 px-2 py-0.5 text-xs font-semibold text-jade">
+            AI · BETA
+          </span>
+        </span>
+        <span className="mt-0.5 block text-sm leading-5 text-mist">
+          Describe a topic — we'll draft characters &amp; sentences.
+        </span>
+      </span>
+      <span className="text-2xl text-jade/70" aria-hidden="true">
+        ›
+      </span>
+    </Link>
   );
 }
 

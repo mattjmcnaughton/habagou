@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     otel_exporter_otlp_endpoint: str = ""
+    logfire_token: str = ""
     require_frontend: bool = False
 
     database_url: str = "postgresql+asyncpg://localhost:5432/habagou"
@@ -58,10 +59,10 @@ class Settings(BaseSettings):
     oidc_client_id: str = ""
     oidc_client_secret: str = ""
 
-    # Agent pack generation (OpenAI models via OpenRouter). Generation is
+    # Agent pack generation (OpenAI-compatible models via OpenRouter). Generation is
     # configured only when both the key and model are non-empty; see
     # ``generation_configured``.
-    generation_model: str = "openai/gpt-5-mini"
+    generation_model: str = "deepseek/deepseek-v4-flash"
     openrouter_api_key: str = ""
 
     # Per-user cap on billed draft generations, counted in a fixed one-hour

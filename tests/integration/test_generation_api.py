@@ -249,7 +249,9 @@ async def test_draft_502_on_provider_connection_failure(
     monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
 
     def explode(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelResponse:
-        raise ModelAPIError(model_name="openai/gpt-5-mini", message="conn refused")
+        raise ModelAPIError(
+            model_name="deepseek/deepseek-v4-flash", message="conn refused"
+        )
 
     with get_generation_agent().override(model=FunctionModel(explode)):
         response = await client.post(
@@ -308,6 +310,50 @@ async def test_draft_rate_limit_is_per_user(
                 "/api/v1/generation/draft", json={"topic": "t"}
             )
             assert other_response.status_code == 200, other_response.text
+
+
+# --- Issue #102: status probe (entry-point gating) -----------------------------
+
+
+@pytest.mark.anyio
+async def test_status_reports_disabled_when_generation_unconfigured(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # No OpenRouter key: the probe reports the "Create a pack" entry point should
+    # stay hidden. Pinned to "" so the result is independent of the test env.
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+
+    response = await client.get("/api/v1/generation/status")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"enabled": False}
+
+
+@pytest.mark.anyio
+async def test_status_reports_enabled_when_generation_configured(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Both key and model set: the frontend may surface the entry point.
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await client.get("/api/v1/generation/status")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"enabled": True}
+
+
+@pytest.mark.anyio
+async def test_status_requires_authentication() -> None:
+    # The probe follows the same auth gate as the other read endpoints (GET
+    # /api/v1/packs): an anonymous caller is rejected, not served.
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/generation/status")
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "unauthenticated"
 
 
 # --- HAB-084: save endpoint ----------------------------------------------------

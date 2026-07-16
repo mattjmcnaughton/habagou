@@ -144,7 +144,7 @@ smoke BASE_URL_ARG="":
 
 # Run tests that hit external services
 test-external:
-    uv run pytest -m external
+    HABAGOU_ALLOW_EXTERNAL_MODEL_REQUESTS=1 uv run pytest -m external
 
 # Export the committed OpenAPI artifact
 openapi-export:

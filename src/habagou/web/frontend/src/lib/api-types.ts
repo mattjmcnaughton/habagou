@@ -78,6 +78,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/generation/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Generation Status
+         * @description Report whether pack generation is available, for entry-point gating.
+         *
+         *     The frontend calls this to decide whether to show the "Create a pack" entry
+         *     point (issue #102): the button stays hidden when generation is unconfigured,
+         *     so a user is never routed into a flow the ``/draft`` endpoint can only 503.
+         *
+         *     Deliberately cheap: no DB access beyond the auth lookup, no rate limiting,
+         *     and no workflow event — it is a stateless readiness probe over a config
+         *     flag, not a step in any tracked workflow (WF-15 covers the draft/save
+         *     actions). Auth matches the other pack read endpoints (e.g.
+         *     ``GET /api/v1/packs``); the flag is server-wide, not per-user.
+         */
+        get: operations["get_generation_status_api_v1_generation_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/packs": {
         parameters: {
             query?: never;
@@ -377,6 +407,21 @@ export interface components {
          */
         GenerationSavePackRequestDTO: {
             draft: components["schemas"]["PackDraft"];
+        };
+        /**
+         * GenerationStatusDTO
+         * @description Whether agent pack generation is available, for entry-point gating.
+         *
+         *     The frontend calls this before deciding whether to surface the "Create a
+         *     pack" entry point (issue #102 / mockup): when generation is unconfigured the
+         *     button stays hidden, so a user is never offered a flow that can only 503.
+         *     ``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`
+         *     (True only when both the OpenRouter key and the model are set); it is not a
+         *     per-user capability, just a server-wide readiness flag.
+         */
+        GenerationStatusDTO: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -819,6 +864,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    get_generation_status_api_v1_generation_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerationStatusDTO"];
+                };
             };
         };
     };
