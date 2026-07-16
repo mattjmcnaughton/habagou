@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
     AsyncSession,
 )
 
+from habagou.config import settings
 from habagou.db import get_session
 from habagou.dependencies import get_current_user
 
@@ -27,6 +28,7 @@ from habagou.dtos.generation import (
     GenerationDraftRequestDTO,
     GenerationDraftResponseDTO,
     GenerationSavePackRequestDTO,
+    GenerationStatusDTO,
     PackDraft,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
 )
 from habagou.dtos.packs import PackDetailDTO
@@ -57,6 +59,25 @@ def get_generation_rate_limiter(request: Request) -> FixedWindowRateLimiter:
     """
     limiter: FixedWindowRateLimiter = request.app.state.generation_rate_limiter
     return limiter
+
+
+@router.get("/status", response_model=GenerationStatusDTO)
+async def get_generation_status(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> GenerationStatusDTO:
+    """Report whether pack generation is available, for entry-point gating.
+
+    The frontend calls this to decide whether to show the "Create a pack" entry
+    point (issue #102): the button stays hidden when generation is unconfigured,
+    so a user is never routed into a flow the ``/draft`` endpoint can only 503.
+
+    Deliberately cheap: no DB access beyond the auth lookup, no rate limiting,
+    and no workflow event — it is a stateless readiness probe over a config
+    flag, not a step in any tracked workflow (WF-15 covers the draft/save
+    actions). Auth matches the other pack read endpoints (e.g.
+    ``GET /api/v1/packs``); the flag is server-wide, not per-user.
+    """
+    return GenerationStatusDTO(enabled=settings.generation_configured)
 
 
 @router.post(

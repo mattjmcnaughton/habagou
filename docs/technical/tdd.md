@@ -188,7 +188,7 @@ Human local development does not require Docker — see [DEVEX.md](../devex.md) 
 - **docker-compose.yml**: `app` + `db` (postgres:16, named volume). App entrypoint bootstraps (migrate → import → seed) when `HABAGOU_RUN_BOOTSTRAP` defaults to `1`, then uvicorn.
 - **Fly.io**: `fly.toml` scale-to-zero public HTTP service; `release_command` runs bootstrap once per deploy; app machines set `HABAGOU_RUN_BOOTSTRAP=0`. Secrets via `fly secrets` (`DATABASE_URL`, optional `ADMIN_TOKEN`).
 - **Config**: 12-factor via env (`DATABASE_URL`, `ADMIN_TOKEN`, `LOG_LEVEL`); `.env.example` enumerates everything. No secrets beyond `ADMIN_TOKEN` / `DATABASE_URL` in v1.
-- **Logging & metrics**: structlog JSON (template default) with request logging including resolved user id; workflow events and OTel counters via `events.py` per VERIFICATION §5. OTLP export active only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (left empty in production for now).
+- **Logging & metrics**: structlog JSON (template default) with request logging including resolved user id; workflow events and OTel counters via `events.py` per VERIFICATION §5. Logfire instruments FastAPI, SQLAlchemy, and pydantic-ai when `LOGFIRE_TOKEN` is set; the generic OTLP exporter remains an optional fallback through `OTEL_EXPORTER_OTLP_ENDPOINT`.
 - **CI**: GitHub Actions — fmt, lint, typecheck (ruff/ty/Biome/tsc), unit on every PR; integration with a Postgres service container; e2e on PRs to main. Release workflow publishes a GHCR image and `flyctl deploy --remote-only`s (Fly builds).
 
 ## 9. Licensing

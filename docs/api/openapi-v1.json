@@ -189,6 +189,20 @@
         "title": "GenerationSavePackRequestDTO",
         "type": "object"
       },
+      "GenerationStatusDTO": {
+        "description": "Whether agent pack generation is available, for entry-point gating.\n\nThe frontend calls this before deciding whether to surface the \"Create a\npack\" entry point (issue #102 / mockup): when generation is unconfigured the\nbutton stays hidden, so a user is never offered a flow that can only 503.\n``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`\n(True only when both the OpenRouter key and the model are set); it is not a\nper-user capability, just a server-wide readiness flag.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "GenerationStatusDTO",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1132,6 +1146,28 @@
           }
         },
         "summary": "Save Pack",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/api/v1/generation/status": {
+      "get": {
+        "description": "Report whether pack generation is available, for entry-point gating.\n\nThe frontend calls this to decide whether to show the \"Create a pack\" entry\npoint (issue #102): the button stays hidden when generation is unconfigured,\nso a user is never routed into a flow the ``/draft`` endpoint can only 503.\n\nDeliberately cheap: no DB access beyond the auth lookup, no rate limiting,\nand no workflow event \u2014 it is a stateless readiness probe over a config\nflag, not a step in any tracked workflow (WF-15 covers the draft/save\nactions). Auth matches the other pack read endpoints (e.g.\n``GET /api/v1/packs``); the flag is server-wide, not per-user.",
+        "operationId": "get_generation_status_api_v1_generation_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStatusDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Generation Status",
         "tags": [
           "generation"
         ]

@@ -151,6 +151,7 @@ does not change even if the underlying pack content changes later.
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
+| GET | `/api/v1/generation/status` | Report whether generation is configured (entry-point gating) |
 | POST | `/api/v1/generation/draft` | Draft (or refine) a corpus-grounded pack from a topic |
 | POST | `/api/v1/generation/packs` | Persist a finalized draft as a pack owned by the current user |
 
@@ -158,7 +159,10 @@ Agent pack generation drafts a themed practice pack from a topic, grounded so it
 only ever references hanzi that exist in the stroke corpus (see
 [ADR 0010](adrs/0010-agent-pack-generation.md)). Generation is env-configured
 (`OPENROUTER_API_KEY`, `GENERATION_MODEL`); when unconfigured,
-`POST /api/v1/generation/draft` returns 503.
+`POST /api/v1/generation/draft` returns 503. The frontend calls the
+`GET /api/v1/generation/status` probe (`{"enabled": bool}`) to hide the
+"Create a pack" entry point while generation is unconfigured, so a user is
+never routed into a flow the `/draft` endpoint can only 503.
 
 `POST /api/v1/generation/draft` body:
 

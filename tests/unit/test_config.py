@@ -1,5 +1,7 @@
 """Unit tests for application settings helpers."""
 
+from pathlib import Path
+
 import pytest
 
 from habagou.config import Settings, normalize_database_url
@@ -38,11 +40,26 @@ def test_settings_normalizes_database_url_from_env(
     assert settings.database_url == "postgresql+asyncpg://u:p@host/db?ssl=require"
 
 
-def test_generation_defaults_unset() -> None:
+def test_generation_defaults_unset(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("GENERATION_MODEL", raising=False)
+    monkeypatch.chdir(tmp_path)
     settings = Settings()
     assert settings.openrouter_api_key == ""
-    assert settings.generation_model
+    assert settings.generation_model == "deepseek/deepseek-v4-flash"
     assert settings.generation_configured is False
+    assert settings.logfire_token == ""
+
+
+def test_logfire_token_reads_from_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LOGFIRE_TOKEN", "test-logfire-token")
+    settings = Settings()
+    assert settings.logfire_token == "test-logfire-token"
 
 
 def test_generation_configured_true_when_key_set(

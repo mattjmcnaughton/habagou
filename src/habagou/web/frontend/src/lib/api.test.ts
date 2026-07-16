@@ -1,18 +1,26 @@
+import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { generationDraftFailure, generationHistory, packDraft } from "../mocks/handlers";
+import { server } from "../mocks/server";
 import {
   type ApiError,
+  API_V1_BASE,
   apiFetch,
   completePathItem,
   createCompletion,
+  generateDraft,
+  getGenerationStatus,
   getPath,
   getProgressSummary,
   listPacks,
   logout,
+  saveGeneratedPack,
 } from "./api";
 
 describe("apiFetch", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("returns parsed JSON for successful responses", async () => {
@@ -191,5 +199,65 @@ describe("apiFetch", () => {
       `/api/v1/progress/summary?tz_offset_minutes=${new Date().getTimezoneOffset()}`,
       undefined,
     );
+  });
+});
+
+describe("generation API", () => {
+  it("[WF-15] reads the generation status flag", async () => {
+    await expect(getGenerationStatus()).resolves.toEqual({ enabled: true });
+  });
+
+  it("[WF-15] drafts a pack and returns the draft with opaque history", async () => {
+    const result = await generateDraft("restaurant");
+
+    expect(result.draft.title).toBe(packDraft.title);
+    expect(result.draft.coverage_note).toBe(packDraft.coverage_note);
+    expect(result.history).toEqual(generationHistory);
+  });
+
+  it("[WF-15] omits history on the first turn", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ draft: packDraft, history: [] });
+      }),
+    );
+
+    await generateDraft("restaurant");
+
+    expect(received).toEqual({ topic: "restaurant" });
+  });
+
+  it("[WF-15] replays prior history on a refinement turn", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ draft: packDraft, history: [] });
+      }),
+    );
+
+    await generateDraft("add drinks", generationHistory);
+
+    expect(received).toEqual({ topic: "add drinks", history: generationHistory });
+  });
+
+  it("[WF-15] saves a generated pack and returns pack detail", async () => {
+    const result = await saveGeneratedPack(packDraft);
+
+    expect(result.title).toBe(packDraft.title);
+    expect(result.char_count).toBe(packDraft.characters.length);
+    expect(result.id).toBeTruthy();
+  });
+
+  it("[WF-15] surfaces a 429 rate limit as an ApiError", async () => {
+    server.use(generationDraftFailure(429));
+
+    await expect(generateDraft("restaurant")).rejects.toMatchObject({
+      code: "rate_limited",
+      name: "ApiError",
+      status: 429,
+    } satisfies Partial<ApiError>);
   });
 });

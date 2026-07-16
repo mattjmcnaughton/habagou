@@ -3,7 +3,10 @@ import type {
   AuthSession,
   CompletePathItemResponse,
   CompletionResponse,
+  GenerationDraftResponse,
+  GenerationStatus,
   PackDetail,
+  PackDraft,
   PackSummary,
   PathItem,
   PathResponse,
@@ -280,6 +283,106 @@ function pathPage(cursor: number, limit: number): PathResponse {
   };
 }
 
+// Agent pack generation (issue #102). Status gates the entry point; a draft
+// turn returns a PackDraft plus opaque conversation history the client replays.
+// A coherent restaurant-themed draft matching the mockup. The coverage_note is
+// an honest shortfall note in the agent's canonical "found N of M" shape (see
+// services/pack_generation.py's system prompt) so preview tests can assert the
+// gap is surfaced rather than hidden.
+export const packDraft: PackDraft = {
+  title: "At the Restaurant",
+  characters: [
+    { hanzi: "点", pinyin: "diǎn", meaning: "to order" },
+    { hanzi: "菜", pinyin: "cài", meaning: "dish, vegetable" },
+    { hanzi: "饭", pinyin: "fàn", meaning: "rice, meal" },
+    { hanzi: "要", pinyin: "yào", meaning: "to want" },
+    { hanzi: "吃", pinyin: "chī", meaning: "to eat" },
+    { hanzi: "喝", pinyin: "hē", meaning: "to drink" },
+  ],
+  sentences: [
+    { hanzi: "我要点菜", pinyin: "wǒ yào diǎn cài", translation: "I want to order food" },
+    { hanzi: "我要吃饭", pinyin: "wǒ yào chī fàn", translation: "I want to eat" },
+  ],
+  coverage_note:
+    "Found 6 of 8 requested words; 菜单 (menu) and 服务员 (waiter) are multi-character words that aren't in the corpus yet.",
+};
+
+// Opaque, client-held message history echoed back from a draft turn.
+export const generationHistory: unknown[] = [
+  { role: "user", content: "restaurant" },
+  { role: "assistant", content: "drafted a restaurant pack" },
+];
+
+function savedPackFromDraft(draft: PackDraft): PackDetail {
+  return {
+    id: crypto.randomUUID(),
+    title: draft.title,
+    glyph: draft.characters[0]?.hanzi ?? "字",
+    color: "#c4633f",
+    char_count: draft.characters.length,
+    sentence_count: draft.sentences?.length ?? 0,
+    progress: {
+      trace: { completed: false, completion_count: 0, best_duration_ms: null },
+      match: { completed: false, completion_count: 0, best_duration_ms: null },
+      sentence: { completed: false, completion_count: 0, best_duration_ms: null },
+    },
+    characters: draft.characters.map((character) => ({
+      hanzi: character.hanzi,
+      pinyin: character.pinyin,
+      meaning: character.meaning,
+    })),
+    sentences: (draft.sentences ?? []).map((sentence) => ({
+      hanzi: sentence.hanzi,
+      pinyin: sentence.pinyin,
+      translation: sentence.translation,
+    })),
+  };
+}
+
+// Mirror app.py's `_http_error_code`: the real server derives the envelope
+// `code` from the HTTP status, so mock failures must do the same to stay honest.
+function httpErrorCode(status: number): string {
+  const codes: Record<number, string> = {
+    401: "unauthenticated",
+    404: "not_found",
+    409: "conflict",
+    422: "validation_error",
+    429: "rate_limited",
+    502: "bad_gateway",
+    503: "service_unavailable",
+  };
+  return codes[status] ?? `http_${status}`;
+}
+
+// Error-variant handlers for tests to install via `server.use(...)`. `code`
+// defaults to the status-derived code the real server would emit; pass an
+// override only when a test needs a specific (honest) code.
+export function generationDraftFailure(status: number, code = httpErrorCode(status)) {
+  return http.post(`${API_V1}/generation/draft`, () =>
+    HttpResponse.json(
+      { error: { code, message: `generation failed (${status})`, request_id: "mock-request" } },
+      { status },
+    ),
+  );
+}
+
+export function generationSaveFailure(status: number, code = httpErrorCode(status)) {
+  return http.post(`${API_V1}/generation/packs`, () =>
+    HttpResponse.json(
+      {
+        error: {
+          code,
+          // The real save-rejection is HTTPException(detail=str(exc)) with no
+          // `details`: the offending glyph list lands in `message`.
+          message: "pack references characters missing from corpus: 𡘙",
+          request_id: "mock-request",
+        },
+      },
+      { status },
+    ),
+  );
+}
+
 export const handlers = [
   http.get(`${API_V1}/auth/session`, () => {
     return HttpResponse.json<AuthSession>(authenticatedSession);
@@ -289,6 +392,19 @@ export const handlers = [
   }),
   http.get(`${API_V1}/packs`, () => {
     return HttpResponse.json<PackSummary[]>(packSummaries);
+  }),
+  http.get(`${API_V1}/generation/status`, () => {
+    return HttpResponse.json<GenerationStatus>({ enabled: true });
+  }),
+  http.post(`${API_V1}/generation/draft`, () => {
+    return HttpResponse.json<GenerationDraftResponse>({
+      draft: packDraft,
+      history: generationHistory,
+    });
+  }),
+  http.post(`${API_V1}/generation/packs`, async ({ request }) => {
+    const body = (await request.json()) as { draft: PackDraft };
+    return HttpResponse.json<PackDetail>(savedPackFromDraft(body.draft), { status: 201 });
   }),
   http.get(`${API_V1}/progress/summary`, () => {
     return HttpResponse.json<ProgressSummary>(mockProgressSummary());

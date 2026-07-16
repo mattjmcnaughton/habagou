@@ -25,7 +25,14 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: `bash -lc 'cd ../../../.. && just bootstrap && uv run uvicorn habagou.app:app --host 127.0.0.1 --port ${backendPort}'`,
+          // Test-only stub backend (scripts/e2e_backend.py): the real API and
+          // seeded corpus, but a deterministic, network-free generation model.
+          // --factory defers the settings mutation + model override to
+          // create_stub_app() rather than running them at import time.
+          // GENERATION_RATE_LIMIT_PER_HOUR=0 disables the per-user draft cap so
+          // the two Playwright projects sharing this one backend + Keycloak user
+          // never trip it.
+          command: `bash -lc 'cd ../../../.. && just bootstrap && GENERATION_RATE_LIMIT_PER_HOUR=0 uv run uvicorn scripts.e2e_backend:create_stub_app --factory --host 127.0.0.1 --port ${backendPort}'`,
           reuseExistingServer: true,
           timeout: 120_000,
           url: `${backendURL}/readyz`,

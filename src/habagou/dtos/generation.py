@@ -77,3 +77,17 @@ class GenerationSavePackRequestDTO(BaseModel):
     """Request to persist a finalized :class:`PackDraft` as an owned pack."""
 
     draft: PackDraft
+
+
+class GenerationStatusDTO(BaseModel):
+    """Whether agent pack generation is available, for entry-point gating.
+
+    The frontend calls this before deciding whether to surface the "Create a
+    pack" entry point (issue #102 / mockup): when generation is unconfigured the
+    button stays hidden, so a user is never offered a flow that can only 503.
+    ``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`
+    (True only when both the OpenRouter key and the model are set); it is not a
+    per-user capability, just a server-wide readiness flag.
+    """
+
+    enabled: bool

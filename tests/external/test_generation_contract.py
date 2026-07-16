@@ -11,7 +11,8 @@ which target the other ``tests/*`` directories) and gated behind
 Keyless-safe: it skips cleanly when ``OPENROUTER_API_KEY`` is unset, so the
 target can be invoked without credentials. When a key is present it locally
 lifts the suite-wide ``ALLOW_MODEL_REQUESTS`` guard with
-``override_allow_model_requests(True)``.
+``override_allow_model_requests(True)``. ``just test-external`` also sets the
+test-only opt-in that prevents ``tests/conftest.py`` from scrubbing the key.
 
 No database: the corpus seam is an in-memory stub (mirroring the ``StubCorpus``
 pattern in ``tests/unit/test_pack_generation.py``) seeded with a realistic set

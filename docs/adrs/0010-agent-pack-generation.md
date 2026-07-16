@@ -33,9 +33,9 @@ three layers, private-by-ownership, behind two authenticated endpoints.
 
 **Agent.** A pydantic-ai `Agent[GenerationDeps, PackDraft]`
 (`pydantic-ai-slim[openai]`) whose structured output is a validated `PackDraft`.
-The provider is **OpenAI models via OpenRouter** (`OpenAIChatModel` +
+The provider is **OpenAI-compatible models via OpenRouter** (`OpenAIChatModel` +
 `OpenRouterProvider`), env-configured: `GENERATION_MODEL` (default
-`openai/gpt-5-mini`) and `OPENROUTER_API_KEY`. OpenRouter gives us a single
+`deepseek/deepseek-v4-flash`) and `OPENROUTER_API_KEY`. OpenRouter gives us a single
 billing/routing seam and easy model swaps without a code change. When the key is
 unset, generation is disabled and both endpoints return 503.
 
