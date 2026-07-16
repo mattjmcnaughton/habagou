@@ -1,3 +1,24 @@
+# [1.5.0](https://github.com/mattjmcnaughton/habagou/compare/v1.4.0...v1.5.0) (2026-07-16)
+
+
+### Bug Fixes
+
+* **packs:** corpus-validate sentence glyphs in pack create ([efd1dd6](https://github.com/mattjmcnaughton/habagou/commit/efd1dd6738dd9facce430d59157ec2dd817e881c))
+
+
+### Features
+
+* **api:** add pack generation draft endpoint ([b305bbe](https://github.com/mattjmcnaughton/habagou/commit/b305bbe060441a83a5c210401354b9892de1ff36))
+* **api:** add pack generation save endpoint ([ff1a4ba](https://github.com/mattjmcnaughton/habagou/commit/ff1a4ba8dccc615665937a8f14f9ec71c8ecad85))
+* **api:** rate limit generation and emit WF-15 events ([2edbbbc](https://github.com/mattjmcnaughton/habagou/commit/2edbbbc7535705dbdd0253271df5e764b090ff62))
+* **config:** add generation provider settings ([ddc40b4](https://github.com/mattjmcnaughton/habagou/commit/ddc40b4287d33b69eafbd44d09687b3a1b2a94c5))
+* **deps:** add pydantic-ai for agent pack generation ([68d3069](https://github.com/mattjmcnaughton/habagou/commit/68d306970e9337f33aacc14dbb44ff3b977bb3c8))
+* **dtos:** add PackDraft generation output schema ([77b8ebb](https://github.com/mattjmcnaughton/habagou/commit/77b8ebb5fa537b17c48525a320145b7e8206163d))
+* **generation:** add find_characters grounding tool ([65141cd](https://github.com/mattjmcnaughton/habagou/commit/65141cd0462ec51c2dbb38e2b5f4bc1d878210cf))
+* **generation:** add generation service with injected agent ([1e28eec](https://github.com/mattjmcnaughton/habagou/commit/1e28eecd45b9039c93cb20a85315967e59503088))
+* **generation:** reject non-corpus hanzi in agent output ([78d0528](https://github.com/mattjmcnaughton/habagou/commit/78d0528c38d2415c45e26948a4929cc160a80e62))
+* **generation:** thread multi-turn message history ([7d6f4eb](https://github.com/mattjmcnaughton/habagou/commit/7d6f4ebed08bf2d6a26b6bf668578e2f9bc519bf))
+
 # [1.4.0](https://github.com/mattjmcnaughton/habagou/compare/v1.3.0...v1.4.0) (2026-07-13)
 
 
