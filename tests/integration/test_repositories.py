@@ -169,6 +169,30 @@ async def test_character_repository_reads_stroke_counts() -> None:
 
 
 @pytest.mark.anyio
+async def test_character_repository_all_hanzi_is_sorted_and_cached() -> None:
+    from habagou.repositories.characters import reset_all_hanzi_cache
+
+    async with db.async_session() as session:
+        repository = CharacterRepository(session)
+        hanzi = await repository.all_hanzi()
+        again = await repository.all_hanzi()
+
+    # Every seeded character is present, codepoint-sorted and deduped.
+    assert "你" in hanzi
+    assert "好" in hanzi
+    assert list(hanzi) == sorted(hanzi)
+    assert len(set(hanzi)) == len(hanzi)
+    # A second call returns the very same cached object (no re-query)...
+    assert again is hanzi
+    # ...until the cache is reset, after which a fresh tuple is produced.
+    reset_all_hanzi_cache()
+    async with db.async_session() as session:
+        refreshed = await CharacterRepository(session).all_hanzi()
+    assert refreshed == hanzi
+    assert refreshed is not hanzi
+
+
+@pytest.mark.anyio
 async def test_progress_repository_records_aggregates_and_deletes() -> None:
     async with db.async_session() as session:
         user = await create_user(session)

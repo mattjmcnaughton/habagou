@@ -23,6 +23,10 @@ from scripts.e2e_backend import stub_generation_model
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+# The characters the deterministic stub drafts trace (see ``scripts.e2e_backend``:
+# the 4-character starter draft plus the 2 added on refinement), codepoint-sorted.
+_STUB_DRAFT_HANZI: tuple[str, ...] = tuple(sorted("你好我谢水茶"))
+
 
 class _AcceptingCorpus:
     """Corpus seam that treats every hanzi as present (the CI full-corpus case).
@@ -37,6 +41,11 @@ class _AcceptingCorpus:
 
     async def stroke_counts(self, hanzi: Iterable[str]) -> dict[str, int]:
         return {char: 5 for char in set(hanzi)}
+
+    async def all_hanzi(self) -> tuple[str, ...]:
+        # The stub model ignores the corpus block, so the exact set only needs to
+        # be type-correct; return the characters the stub drafts actually use.
+        return _STUB_DRAFT_HANZI
 
 
 class _RejectFirstThenAcceptCorpus:
@@ -58,6 +67,9 @@ class _RejectFirstThenAcceptCorpus:
 
     async def stroke_counts(self, hanzi: Iterable[str]) -> dict[str, int]:
         return {char: 5 for char in set(hanzi)}
+
+    async def all_hanzi(self) -> tuple[str, ...]:
+        return _STUB_DRAFT_HANZI
 
 
 def _deps() -> GenerationDeps:

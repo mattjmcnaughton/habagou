@@ -20,6 +20,7 @@ from alembic import command
 from habagou import db
 from habagou.config import settings
 from habagou.models import Pack, PackCharacter, User
+from habagou.repositories.characters import reset_all_hanzi_cache
 from scripts.import_stroke_data import archive_path, import_corpus
 from scripts.seed import seed_database
 
@@ -56,6 +57,17 @@ def template_database(base_database_url: URL) -> Generator[None]:
     finally:
         asyncio.run(db.dispose_engine())
         asyncio.run(_drop_database(base_database_url))
+
+
+@pytest.fixture(autouse=True)
+def _reset_corpus_cache() -> None:
+    """Clear the process-wide corpus cache so it never leaks across tests.
+
+    ``CharacterRepository.all_hanzi`` memoizes the corpus at module scope; each
+    test runs against its own fresh template database, so the cache must start
+    empty to avoid one test's corpus bleeding into another's.
+    """
+    reset_all_hanzi_cache()
 
 
 @pytest.fixture(autouse=True)
