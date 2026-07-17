@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/mattjmcnaughton/habagou/compare/v1.5.0...v1.6.0) (2026-07-17)
+
+
+### Features
+
+* **generation:** add AI pack creation and observability ([65497cd](https://github.com/mattjmcnaughton/habagou/commit/65497cd69782d51d57b31dfdb3bed34c37927068)), closes [#102](https://github.com/mattjmcnaughton/habagou/issues/102) [#106](https://github.com/mattjmcnaughton/habagou/issues/106)
+
 # [1.5.0](https://github.com/mattjmcnaughton/habagou/compare/v1.4.0...v1.5.0) (2026-07-16)
 
 
