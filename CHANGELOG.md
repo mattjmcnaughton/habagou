@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/mattjmcnaughton/habagou/compare/v1.6.0...v1.6.1) (2026-07-17)
+
+
+### Performance Improvements
+
+* **generation:** front-load the traceable corpus into the agent prompt ([75d0846](https://github.com/mattjmcnaughton/habagou/commit/75d08468f0db79e9559294ba04e2e31e11407b16))
+
 # [1.6.0](https://github.com/mattjmcnaughton/habagou/compare/v1.5.0...v1.6.0) (2026-07-17)
 
 
