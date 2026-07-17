@@ -100,6 +100,9 @@ class _StubCorpus:
             char: self._strokes[char] for char in set(hanzi) if char in self._strokes
         }
 
+    async def all_hanzi(self) -> tuple[str, ...]:
+        return tuple(sorted(self._strokes))
+
 
 def _drafted_glyphs(draft: PackDraft) -> set[str]:
     """Every glyph the draft would trace: members plus each sentence glyph."""

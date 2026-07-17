@@ -23,9 +23,11 @@ assembly wires it to ``RunContext.deps`` in the next batch.
 from __future__ import annotations
 
 import hashlib
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
+import structlog
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.messages import ModelMessagesTypeAdapter
@@ -61,6 +63,8 @@ class CorpusReader(Protocol):
     async def missing_hanzi(self, hanzi: Iterable[str]) -> set[str]: ...
 
     async def stroke_counts(self, hanzi: Iterable[str]) -> dict[str, int]: ...
+
+    async def all_hanzi(self) -> tuple[str, ...]: ...
 
 
 @dataclass(frozen=True)
@@ -133,6 +137,37 @@ async def find_characters(deps: GenerationDeps, candidates: list[str]) -> Corpus
     return CorpusCheck(found=found, dropped=dropped)
 
 
+# Sentinels around the corpus block in the system prompt. Explicit markers keep
+# the ~9k-character run readable to the model (and greppable in tests) without
+# per-character separators, which would triple the token cost.
+_CORPUS_OPEN = "<corpus>"
+_CORPUS_CLOSE = "</corpus>"
+
+
+async def corpus_membership_prompt(deps: GenerationDeps) -> str:
+    """Build the system-prompt block listing every traceable corpus character.
+
+    Handed to the model up front so it can pick pack members directly from the
+    corpus instead of guessing from training memory and round-tripping through
+    ``find_characters`` to verify them — the round trips that dominate generation
+    latency. Membership only (no stroke counts, which would roughly triple the
+    block; those stay available via ``find_characters``).
+
+    The character run is a single unbroken, codepoint-sorted string between
+    :data:`_CORPUS_OPEN` / :data:`_CORPUS_CLOSE`. It is deterministic so the
+    system prompt is byte-identical across the calls of a generation session,
+    which is what lets provider-side prompt caching reuse it.
+    """
+    hanzi = await deps.characters.all_hanzi()
+    return (
+        "The complete traceable stroke corpus is listed between the markers "
+        f"below — all {len(hanzi)} characters that may appear in a pack. Any "
+        "character in this list is confirmed traceable and needs no tool check; "
+        "any character NOT in it can never be used, no matter how common it "
+        f"seems.\n{_CORPUS_OPEN}{''.join(hanzi)}{_CORPUS_CLOSE}"
+    )
+
+
 def _draft_hanzi(draft: PackDraft) -> list[str]:
     """Every hanzi a draft would trace, in first-seen order, deduped.
 
@@ -187,17 +222,21 @@ You build a focused Chinese-character practice pack for a stroke-tracing app \
 from the user's topic.
 
 The stroke corpus is the ONLY source of truth for which characters are \
-traceable. Your training memory does NOT count: a character you "know" exists \
-is unusable unless the corpus confirms it. Before finalizing a pack you MUST \
-check every candidate hanzi with the find_characters tool, and only keep the \
-ones it reports as found.
+traceable, and the complete corpus is listed for you in this prompt (between \
+the <corpus> markers). Your training memory does NOT count: a character you \
+"know" exists is unusable unless it appears in that list. Pick every pack \
+character and every sentence glyph directly from the corpus list. Use the \
+find_characters tool only when you want a character's stroke count as a \
+difficulty signal, or to double-check a specific character you are unsure \
+about — you do NOT need to call it for characters you can already see in the \
+list.
 
 You supply the glosses yourself, because the corpus stores none: give each \
 character its pinyin (with tone marks, e.g. "nǐ", not "ni3") and a concise \
 English meaning.
 
 Sentences are optional. Include a few short practice sentences only when they \
-help; EVERY character in a sentence must also be confirmed by find_characters, \
+help; EVERY character in a sentence must also appear in the corpus list, \
 because sentences are traced glyph by glyph. By convention sentences are \
 punctuation-free: the corpus never contains punctuation, so never write ，, 。, \
 ？, ！ or any other punctuation mark.
@@ -251,6 +290,17 @@ def _build_generation_agent() -> Agent[GenerationDeps, PackDraft]:
         retries=_GENERATION_RETRIES,
         system_prompt=SYSTEM_PROMPT,
     )
+
+    @agent.system_prompt
+    async def _corpus_membership(ctx: RunContext[GenerationDeps]) -> str:
+        """Append the full traceable corpus to the system prompt (see Move A).
+
+        Registered without ``dynamic=True`` so pydantic-ai evaluates it once on
+        the first turn and replays the resulting ``SystemPromptPart`` verbatim
+        from ``message_history`` on refinement turns — keeping the prompt prefix
+        byte-identical across a session for provider-side prompt caching.
+        """
+        return await corpus_membership_prompt(ctx.deps)
 
     @agent.tool(name="find_characters")
     async def _find_characters(
@@ -335,11 +385,35 @@ async def generate_pack_draft(
     history for the caller to persist.
     """
     deps = GenerationDeps(characters=CharacterRepository(session))
-    result = await agent.run(
-        topic,
-        deps=deps,
-        model=_build_model(),
-        message_history=history,
+    logger = structlog.get_logger("habagou.generation")
+    # An empty client-held history is a fresh first turn (pydantic-ai treats []
+    # like None), so only a non-empty history counts as a refinement.
+    refinement = bool(history)
+    started_at = time.monotonic()
+    try:
+        result = await agent.run(
+            topic,
+            deps=deps,
+            model=_build_model(),
+            message_history=history,
+        )
+    except Exception:
+        # The worst latency cases (retry exhaustion, provider errors) raise here;
+        # log them too so they are not invisible to the round-trip metric.
+        logger.warning(
+            "generation_run_failed",
+            duration_ms=round((time.monotonic() - started_at) * 1000),
+            refinement=refinement,
+        )
+        raise
+    # ``requests`` is pydantic-ai's own count of model round trips for this run;
+    # it is the signal for whether the corpus-in-prompt change (Move A) actually
+    # cut the guess -> find_characters -> retry loop that dominates latency.
+    logger.info(
+        "generation_run_completed",
+        model_requests=result.usage.requests,
+        duration_ms=round((time.monotonic() - started_at) * 1000),
+        refinement=refinement,
     )
     return GenerationResult(draft=result.output, messages=result.all_messages())
 

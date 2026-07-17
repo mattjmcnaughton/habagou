@@ -20,9 +20,12 @@ from pydantic_ai.models.test import TestModel
 from habagou.dtos.generation import PackDraft
 from habagou.services import pack_generation
 from habagou.services.pack_generation import (
+    _CORPUS_CLOSE,
+    _CORPUS_OPEN,
     CorpusCheck,
     GenerationDeps,
     GenerationNotConfiguredError,
+    corpus_membership_prompt,
     find_characters,
     validate_corpus_membership,
 )
@@ -47,6 +50,9 @@ class StubCorpus:
         return {
             char: self._strokes[char] for char in set(hanzi) if char in self._strokes
         }
+
+    async def all_hanzi(self) -> tuple[str, ...]:
+        return tuple(sorted(self._strokes))
 
 
 def _deps(strokes: dict[str, int]) -> GenerationDeps:
@@ -524,3 +530,118 @@ def test_color_for_title_is_deterministic_and_from_palette() -> None:
     assert first == again
     assert first in pack_generation._CURATED_COLORS
     assert other in pack_generation._CURATED_COLORS
+
+
+# --- Move A: corpus membership in the system prompt ----------------------------
+
+
+def _system_prompt_texts(messages: Sequence[ModelMessage]) -> list[str]:
+    """Every system-prompt string across a message history (for assertions)."""
+    from pydantic_ai.messages import SystemPromptPart
+
+    texts: list[str] = []
+    for message in messages:
+        for part in getattr(message, "parts", []):
+            if isinstance(part, SystemPromptPart) and isinstance(part.content, str):
+                texts.append(part.content)
+    return texts
+
+
+@pytest.mark.anyio
+async def test_corpus_membership_prompt_lists_sorted_corpus() -> None:
+    deps = _deps({"好": 6, "你": 7, "我": 7})
+
+    block = await corpus_membership_prompt(deps)
+    again = await corpus_membership_prompt(deps)
+
+    # The character run sits between the sentinels, codepoint-sorted, unbroken.
+    assert _CORPUS_OPEN in block
+    assert _CORPUS_CLOSE in block
+    run = block[
+        block.index(_CORPUS_OPEN) + len(_CORPUS_OPEN) : block.index(_CORPUS_CLOSE)
+    ]
+    assert run == "".join(sorted({"你", "好", "我"}))
+    # The exact count is reported (not just any digit).
+    assert "all 3 characters" in block
+    # Deterministic: identical across calls (the prompt-caching invariant).
+    assert block == again
+
+
+@pytest.mark.anyio
+async def test_corpus_membership_prompt_handles_empty_corpus() -> None:
+    # An unimported corpus must not blow up: the run between the sentinels is
+    # simply empty and the count reads zero.
+    block = await corpus_membership_prompt(_deps({}))
+
+    assert f"{_CORPUS_OPEN}{_CORPUS_CLOSE}" in block
+    assert "all 0 characters" in block
+
+
+@pytest.mark.anyio
+async def test_real_agent_injects_corpus_into_system_prompt() -> None:
+    deps = _deps({"你": 7, "好": 6})
+    agent = pack_generation.get_generation_agent()
+    respond = _CapturingResponder(
+        [{"title": "Grounded", "characters": [_character("你"), _character("好")]}]
+    )
+
+    await agent.run("make a pack", deps=deps, model=FunctionModel(respond))
+
+    # The corpus block reached the model in a system prompt on the first call.
+    system_texts = _system_prompt_texts(respond.messages_per_call[0])
+    joined = "\n".join(system_texts)
+    assert _CORPUS_OPEN in joined
+    assert "你" in joined
+    assert "好" in joined
+
+
+@pytest.mark.anyio
+async def test_corpus_block_appears_once_across_a_refinement_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The membership block is evaluated on turn 1 and replayed verbatim from
+    # history on refinement — it must NOT be re-appended, or the prompt prefix
+    # would drift and defeat provider-side prompt caching.
+    corpus = StubCorpus({"你": 7, "好": 6})
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    respond = _CapturingResponder(
+        [
+            {"title": "First", "characters": [_character("你")]},
+            {"title": "Second", "characters": [_character("你"), _character("好")]},
+        ]
+    )
+    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    agent = pack_generation.get_generation_agent()
+
+    first = await pack_generation.generate_pack_draft(
+        agent, session=_stub_session(), topic="greetings"
+    )
+    await pack_generation.generate_pack_draft(
+        agent, session=_stub_session(), topic="make it harder", history=first.messages
+    )
+
+    # On the refinement turn, exactly one message carries a system prompt — the
+    # turn-1 request replayed from history. The fresh request adds no new system
+    # prompt, so the ~9k-char corpus block is not duplicated into the uncached
+    # suffix (the prompt-caching invariant).
+    from pydantic_ai.messages import SystemPromptPart
+
+    second_call_messages = respond.messages_per_call[1]
+    messages_with_system_prompt = [
+        message
+        for message in second_call_messages
+        if any(
+            isinstance(part, SystemPromptPart) for part in getattr(message, "parts", [])
+        )
+    ]
+    assert len(messages_with_system_prompt) == 1
+    # And that single replayed system prompt still carries the corpus block.
+    assert any(
+        _CORPUS_OPEN in text
+        for text in _system_prompt_texts(messages_with_system_prompt)
+    )
+    # The prompt-caching invariant proper: the turn-2 system prompt is
+    # byte-identical to turn-1's (replayed from history, never regenerated).
+    assert _system_prompt_texts(respond.messages_per_call[0]) == _system_prompt_texts(
+        second_call_messages
+    )
