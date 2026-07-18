@@ -35,6 +35,8 @@ export const packSummaries: PackSummary[] = [
     color: "#c4633f",
     char_count: 5,
     sentence_count: 3,
+    // Curated global pack: not owned by the signed-in user, so undeletable.
+    owned: false,
     progress: {
       trace: { completed: false, completion_count: 0, best_duration_ms: null },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -48,6 +50,8 @@ export const packSummaries: PackSummary[] = [
     color: "#3f8a86",
     char_count: 5,
     sentence_count: 2,
+    // Curated global pack: not owned by the signed-in user, so undeletable.
+    owned: false,
     progress: {
       trace: { completed: true, completion_count: 1, best_duration_ms: 1500 },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -321,6 +325,8 @@ function savedPackFromDraft(draft: PackDraft): PackDetail {
     color: "#c4633f",
     char_count: draft.characters.length,
     sentence_count: draft.sentences?.length ?? 0,
+    // Freshly generated packs are always owned by their creator.
+    owned: true,
     progress: {
       trace: { completed: false, completion_count: 0, best_duration_ms: null },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -361,6 +367,24 @@ export function generationDraftFailure(status: number, code = httpErrorCode(stat
   return http.post(`${API_V1}/generation/draft`, () =>
     HttpResponse.json(
       { error: { code, message: `generation failed (${status})`, request_id: "mock-request" } },
+      { status },
+    ),
+  );
+}
+
+// Pack-deletion error variant for tests to install via `server.use(...)`. Use
+// 403 (curated/foreign pack) or 404 (nonexistent/foreign pack); `code` defaults
+// to the status-derived code the real server would emit.
+export function packDeleteFailure(status: number, code = httpErrorCode(status)) {
+  return http.delete(`${API_V1}/packs/:packId`, () =>
+    HttpResponse.json(
+      {
+        error: {
+          code,
+          message: `pack could not be deleted (${status})`,
+          request_id: "mock-request",
+        },
+      },
       { status },
     ),
   );
@@ -419,6 +443,30 @@ export const handlers = [
       );
     }
     return HttpResponse.json<PackDetail>(pack);
+  }),
+  http.delete(`${API_V1}/packs/:packId`, ({ params }) => {
+    const packId = String(params.packId);
+    const pack = packDetails[packId];
+    if (!pack) {
+      return HttpResponse.json(
+        { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
+        { status: 404 },
+      );
+    }
+    // The real server rejects deleting a curated (unowned) pack with 403.
+    if (!pack.owned) {
+      return HttpResponse.json(
+        {
+          error: {
+            code: "http_403",
+            message: "cannot delete a curated pack",
+            request_id: "mock-request",
+          },
+        },
+        { status: 403 },
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
   }),
   http.get(`${API_V1}/characters/:hanzi/strokes`, () => {
     return HttpResponse.json({

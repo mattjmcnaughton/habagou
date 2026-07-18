@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid  # noqa: TC003 - used in runtime method signatures.
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from habagou.dtos.packs import (
@@ -25,8 +26,17 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+class PackDeletion(Enum):
+    """Outcome of an attempt to delete a pack on a user's behalf."""
+
+    NOT_FOUND = "not_found"
+    FORBIDDEN = "forbidden"
+    DELETED = "deleted"
+
+
 class PackService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.pack_repository = PackRepository(session)
         self.progress_repository = ProgressRepository(session)
 
@@ -66,6 +76,28 @@ class PackService:
             ],
         )
 
+    async def delete(self, pack_id: uuid.UUID, user: User) -> PackDeletion:
+        """Delete a pack on ``user``'s behalf.
+
+        Not visible (nonexistent or owned by someone else) is indistinguishable
+        from missing, so both return :attr:`PackDeletion.NOT_FOUND`. A visible
+        but unowned pack is a global, curated pack — deletable only by the seed
+        pipeline, never a learner — so it returns :attr:`PackDeletion.FORBIDDEN`.
+        An owned pack is removed (the database cascades its children) and yields
+        :attr:`PackDeletion.DELETED`.
+        """
+        # Visibility (global or owned) is enforced in the repository query, so
+        # ownership is the only distinction left to draw in Python.
+        pack = await self.pack_repository.get_visible(pack_id, user.id)
+        if pack is None:
+            return PackDeletion.NOT_FOUND
+        if pack.owner_id != user.id:
+            return PackDeletion.FORBIDDEN
+
+        await self.pack_repository.delete(pack.id)
+        await self.session.commit()
+        return PackDeletion.DELETED
+
     async def _summary(self, item: PackWithCounts, user: User) -> PackSummaryDTO:
         progress = await self.progress_repository.per_pack_aggregate(
             user_id=user.id,
@@ -78,6 +110,7 @@ class PackService:
             color=item.pack.color,
             char_count=item.character_count,
             sentence_count=item.sentence_count,
+            owned=item.pack.owner_id == user.id,
             progress=pack_progress_dto(progress),
         )
 

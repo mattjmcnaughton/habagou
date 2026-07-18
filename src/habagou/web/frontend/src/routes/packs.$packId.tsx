@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PackDetail } from "../lib/api";
-import { getPack, resetPackProgress } from "../lib/api";
+import { deletePack, getPack, resetPackProgress } from "../lib/api";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
 export const Route = createFileRoute("/packs/$packId")({
@@ -36,6 +36,7 @@ const activities = [
 function PackScreen() {
   const { packId } = Route.useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
   useEffect(() => {
     if (pack.data) {
@@ -53,11 +54,32 @@ function PackScreen() {
     },
   });
 
+  const remove = useMutation({
+    mutationFn: () => deletePack(packId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["packs"] });
+      queryClient.removeQueries({ queryKey: ["pack", packId] });
+      void navigate({ to: "/" });
+    },
+  });
+
   function resetProgress() {
     if (!window.confirm(`Reset your progress for ${pack.data?.title ?? "this pack"}?`)) {
       return;
     }
     reset.mutate();
+  }
+
+  function deleteThisPack() {
+    const title = pack.data?.title ?? "this pack";
+    if (
+      !window.confirm(
+        `Delete "${title}"? This permanently removes the pack and your progress for it.`,
+      )
+    ) {
+      return;
+    }
+    remove.mutate();
   }
 
   return (
@@ -178,6 +200,32 @@ function PackScreen() {
                     {reset.isPending ? "Retrying..." : "Retry reset"}
                   </button>
                 </div>
+              ) : null}
+
+              {pack.data.owned ? (
+                <>
+                  <button
+                    className="mt-3 w-full rounded-md border border-clay/40 px-4 py-3 text-sm font-semibold text-clay transition-colors hover:bg-clay/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={remove.isPending}
+                    onClick={deleteThisPack}
+                    type="button"
+                  >
+                    {remove.isPending ? "Deleting..." : "Delete this pack"}
+                  </button>
+                  {remove.isError ? (
+                    <div className="mt-3" role="alert">
+                      <p className="text-sm text-clay">Pack could not be deleted.</p>
+                      <button
+                        className="mt-3 rounded-md border border-clay/40 px-3 py-2 text-sm font-semibold text-porcelain transition-colors hover:bg-clay/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate()}
+                        type="button"
+                      >
+                        {remove.isPending ? "Retrying..." : "Retry delete"}
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </div>
           </>

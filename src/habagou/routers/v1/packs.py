@@ -13,7 +13,7 @@ from habagou.dependencies import get_current_user
 from habagou.dtos.packs import PackDetailDTO, PackSummaryDTO
 from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
-from habagou.services.packs import PackService
+from habagou.services.packs import PackDeletion, PackService
 
 router = APIRouter(prefix="/api/v1/packs", tags=["packs"])
 
@@ -54,3 +54,39 @@ async def get_pack(
             )
 
         return pack
+
+
+@router.delete(
+    "/{pack_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        403: {"description": "Cannot delete a curated pack"},
+        404: {"description": "Pack not found"},
+    },
+)
+async def delete_pack(
+    pack_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    async with workflow_event(
+        "pack_deleted",
+        workflow="WF-02",
+        pack_id=str(pack_id),
+        user_id=str(current_user.id),
+    ) as event:
+        outcome = await PackService(session).delete(pack_id, current_user)
+        if outcome is PackDeletion.NOT_FOUND:
+            event.outcome = "error"
+            event.fields["reason"] = "pack_not_found"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="pack not found",
+            )
+        if outcome is PackDeletion.FORBIDDEN:
+            event.outcome = "error"
+            event.fields["reason"] = "curated_pack"
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="cannot delete a curated pack",
+            )

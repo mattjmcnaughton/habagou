@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import selectinload
 
 from habagou.models import Character, Pack, PackCharacter, PackSentence
@@ -122,6 +122,18 @@ class PackRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def delete(self, pack_id: uuid.UUID) -> None:
+        """Delete a pack row by id.
+
+        Only the ``packs`` row is removed here; every dependent table
+        (``pack_characters``, ``pack_sentences``, ``activity_completions``,
+        ``path_items``, ``review_states``) carries ``ON DELETE CASCADE`` on its
+        ``pack_id`` FK, so the database removes the pack's children in the same
+        transaction. Callers must confirm the pack is deletable (visible and
+        owned) first; this method does not re-check.
+        """
+        await self.session.execute(delete(Pack).where(Pack.id == pack_id))
 
     async def create(
         self,
