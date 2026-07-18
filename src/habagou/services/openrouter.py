@@ -19,6 +19,20 @@ from habagou.config import settings
 # process — a handful outside of tests.
 _model_cache: dict[tuple[str, str], OpenAIChatModel] = {}
 
+# Display names for the admin model picker. Ids outside this map (e.g. an
+# operator-configured default) fall back to the raw OpenRouter id, which is
+# accurate if less pretty — never a blocker for adding a model.
+_MODEL_LABELS = {
+    "anthropic/claude-sonnet-5": "Claude Sonnet 5",
+    "minimax/minimax-m3": "MiniMax M3",
+    "openai/gpt-5.6-terra": "GPT-5.6 Terra",
+}
+
+
+def model_label(model_id: str) -> str:
+    """Human-readable picker label for an OpenRouter model id."""
+    return _MODEL_LABELS.get(model_id, model_id)
+
 
 def build_openrouter_model(model_name: str) -> OpenAIChatModel:
     """Return a cached OpenRouter-backed model for ``model_name``.

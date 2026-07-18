@@ -337,18 +337,20 @@ def get_generation_agent() -> Agent[GenerationDeps, PackDraft]:
     return _generation_agent
 
 
-def _build_model() -> OpenAIChatModel:
+def _build_model(model_id: str | None = None) -> OpenAIChatModel:
     """Return the OpenRouter-backed model for a generation run.
 
     Lazy and gated: only built when generation is configured, then cached for
     reuse by the shared :mod:`habagou.services.openrouter` builder.
+    ``model_id`` is the admin-selected override (already allowlist-validated at
+    the API boundary); ``None`` runs the configured default.
     """
     if not settings.generation_configured:
         raise GenerationNotConfiguredError(
             "Pack generation is not configured: set OPENROUTER_API_KEY (and "
             "GENERATION_MODEL) to enable it."
         )
-    return build_openrouter_model(settings.generation_model)
+    return build_openrouter_model(model_id or settings.generation_model)
 
 
 async def generate_pack_draft(
@@ -357,11 +359,13 @@ async def generate_pack_draft(
     session: AsyncSession,
     topic: str,
     history: list[ModelMessage] | None = None,
+    model_id: str | None = None,
 ) -> GenerationResult:
     """Run the agent to draft a pack for ``topic`` and return draft + history.
 
     Assembles :class:`GenerationDeps` around a real ``CharacterRepository`` bound
-    to ``session``, supplies the OpenRouter model at call time, and threads prior
+    to ``session``, supplies the OpenRouter model at call time (``model_id``
+    overrides the configured default for admin callers), and threads prior
     ``history`` so refinement turns keep context (HAB-082). Returns the validated
     :class:`~habagou.dtos.generation.PackDraft` alongside the full updated message
     history for the caller to persist.
@@ -371,12 +375,15 @@ async def generate_pack_draft(
     # An empty client-held history is a fresh first turn (pydantic-ai treats []
     # like None), so only a non-empty history counts as a refinement.
     refinement = bool(history)
+    # Resolved for logging so per-model comparisons never depend on knowing the
+    # server default at read time.
+    model = model_id or settings.generation_model
     started_at = time.monotonic()
     try:
         result = await agent.run(
             topic,
             deps=deps,
-            model=_build_model(),
+            model=_build_model(model_id),
             message_history=history,
         )
     except Exception:
@@ -386,6 +393,7 @@ async def generate_pack_draft(
             "generation_run_failed",
             duration_ms=round((time.monotonic() - started_at) * 1000),
             refinement=refinement,
+            model=model,
         )
         raise
     # ``requests`` is pydantic-ai's own count of model round trips for this run;
@@ -396,6 +404,7 @@ async def generate_pack_draft(
         model_requests=result.usage.requests,
         duration_ms=round((time.monotonic() - started_at) * 1000),
         refinement=refinement,
+        model=model,
     )
     return GenerationResult(draft=result.output, messages=result.all_messages())
 

@@ -157,5 +157,23 @@ async def test_session_probe_reports_authenticated_user(client: AsyncClient) -> 
             "username": "session-user",
             "display_name": "Test User",
             "email": "test@example.com",
+            "is_admin": False,
         },
     }
+
+
+@pytest.mark.anyio
+async def test_session_probe_reports_admin_for_admin_domain_email(
+    client: AsyncClient,
+) -> None:
+    async with db.async_session() as session:
+        user = await create_user(
+            session, username="admin-user", email="matt@mattjmcnaughton.com"
+        )
+        await session.commit()
+    client.cookies.update(auth_cookies(user.id))
+
+    response = await client.get("/api/v1/auth/session")
+
+    assert response.status_code == 200
+    assert response.json()["user"]["is_admin"] is True

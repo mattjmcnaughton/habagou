@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 )
 
 from habagou.auth import fetch_identity, oauth
+from habagou.authz import is_admin
 from habagou.config import settings
 from habagou.db import get_session
 from habagou.dependencies import get_optional_current_user
@@ -93,5 +94,6 @@ async def get_auth_session(
             username=user.username,
             display_name=user.display_name,
             email=user.email,
+            is_admin=is_admin(user),
         ),
     )

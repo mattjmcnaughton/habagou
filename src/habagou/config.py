@@ -79,6 +79,17 @@ class Settings(BaseSettings):
     # relative to pack drafts. 0 or negative disables the cap.
     practice_rate_limit_per_hour: int = 60
 
+    # Comma-separated email domains whose (non-guest) users are admins; see
+    # ``habagou.authz.is_admin``. Matched exactly (no subdomains) and
+    # case-insensitively against the part after the final ``@``.
+    admin_email_domains: str = "mattjmcnaughton.com"
+
+    # Comma-separated OpenRouter model ids admins may select for the AI chats
+    # (pack generation and conversational practice), in display order. Each
+    # feature's configured default model is always selectable and need not be
+    # listed; see ``generation_model_ids`` / ``practice_model_ids``.
+    admin_chat_models: str = "anthropic/claude-sonnet-5,minimax/minimax-m3"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")
@@ -95,6 +106,34 @@ class Settings(BaseSettings):
     def practice_configured(self) -> bool:
         """Whether conversational practice can run (API key and model set)."""
         return bool(self.openrouter_api_key) and bool(self.practice_model)
+
+    @property
+    def admin_email_domain_set(self) -> frozenset[str]:
+        """Parsed ``admin_email_domains``: lowercased, stripped, empties dropped."""
+        return frozenset(
+            domain.strip().lower()
+            for domain in self.admin_email_domains.split(",")
+            if domain.strip()
+        )
+
+    def _selectable_model_ids(self, default: str) -> tuple[str, ...]:
+        """The admin-selectable model ids for a feature: default first, deduped."""
+        ordered = [default] if default else []
+        for model_id in self.admin_chat_models.split(","):
+            candidate = model_id.strip()
+            if candidate and candidate not in ordered:
+                ordered.append(candidate)
+        return tuple(ordered)
+
+    @property
+    def generation_model_ids(self) -> tuple[str, ...]:
+        """Model ids an admin may select for pack generation (allowlist)."""
+        return self._selectable_model_ids(self.generation_model)
+
+    @property
+    def practice_model_ids(self) -> tuple[str, ...]:
+        """Model ids an admin may select for conversational practice."""
+        return self._selectable_model_ids(self.practice_model)
 
 
 settings = Settings()

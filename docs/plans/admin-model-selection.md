@@ -1,8 +1,20 @@
 # Plan — Admin user class + AI model selection
 
-**Status: ready to hand off.** Self-contained implementation plan for an
-implementing agent. Ordered tickets with dependencies and acceptance criteria
-(AC), following the conventions of [tickets.md](../tickets.md).
+**Status: executed** (see execution notes below). Self-contained
+implementation plan for an implementing agent. Ordered tickets with
+dependencies and acceptance criteria (AC), following the conventions of
+[tickets.md](../tickets.md).
+
+> **Execution notes.** Between planning and execution, main gained a second AI
+> chat (conversational practice, ADR 0011) and a shared cached OpenRouter
+> builder (`services/openrouter.py`). The implementation therefore covers
+> **both** chats with one shared allowlist — `ADMIN_CHAT_MODELS` (not the
+> planned `ADMIN_GENERATION_MODELS`) plus per-feature
+> `generation_model_ids`/`practice_model_ids` (each feature's default model
+> prepended) — and mirrors the status/`model`-override API shape onto
+> `/api/v1/practice/status` and `/api/v1/practice/turn`. ADM-02's cache
+> refactor was already done upstream; only labels and the override parameter
+> were added. Everything else landed as planned.
 
 Branch: `claude/admin-class-model-selection-ixgqf0`. Suggested commit split:
 one commit for ADM-01 (admin class), one for ADM-02..ADM-05 (model selection),

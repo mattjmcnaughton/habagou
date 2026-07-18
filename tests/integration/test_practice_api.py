@@ -336,7 +336,7 @@ async def test_status_reports_disabled_when_practice_unconfigured(
     response = await client.get("/api/v1/practice/status")
 
     assert response.status_code == 200, response.text
-    assert response.json() == {"enabled": False}
+    assert response.json() == {"enabled": False, "models": None, "default_model": None}
 
 
 @pytest.mark.anyio
@@ -349,7 +349,7 @@ async def test_status_reports_enabled_when_practice_configured(
     response = await client.get("/api/v1/practice/status")
 
     assert response.status_code == 200, response.text
-    assert response.json() == {"enabled": True}
+    assert response.json() == {"enabled": True, "models": None, "default_model": None}
 
 
 @pytest.mark.anyio
@@ -360,3 +360,105 @@ async def test_status_requires_authentication() -> None:
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "unauthenticated"
+
+
+# --- Admin model selection ------------------------------------------------------
+
+
+@pytest.fixture
+async def admin_client() -> AsyncGenerator[AsyncClient]:
+    async with db.async_session() as session:
+        admin = await create_user(
+            session, username="practice-admin", email="matt@mattjmcnaughton.com"
+        )
+        await session.commit()
+        admin_id = admin.id
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        client.cookies.update(auth_cookies(admin_id))
+        yield client
+
+
+@pytest.mark.anyio
+async def test_status_lists_models_for_admin(
+    admin_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await admin_client.get("/api/v1/practice/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["enabled"] is True
+    assert body["default_model"] == settings.practice_model
+    assert [option["id"] for option in body["models"]] == list(
+        settings.practice_model_ids
+    )
+
+
+@pytest.mark.anyio
+async def test_status_hides_models_from_non_admin(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await client.get("/api/v1/practice/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["enabled"] is True
+    assert body["models"] is None
+    assert body["default_model"] is None
+
+
+@pytest.mark.anyio
+@pytest.mark.workflow("WF-16")
+async def test_turn_accepts_allowlisted_model_from_admin(
+    admin_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+    respond = _Responder([_turn("你好")])
+
+    with get_practice_agent().override(model=FunctionModel(respond)):
+        response = await admin_client.post(
+            "/api/v1/practice/turn",
+            json={"message": "ordering food", "model": "minimax/minimax-m3"},
+        )
+
+    assert response.status_code == 200, response.text
+    assert respond.call_count == 1
+
+
+@pytest.mark.anyio
+async def test_turn_rejects_model_from_non_admin(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await client.post(
+        "/api/v1/practice/turn",
+        json={"message": "ordering food", "model": "minimax/minimax-m3"},
+    )
+
+    assert response.status_code == 403
+    assert "admin" in response.json()["error"]["message"]
+
+
+@pytest.mark.anyio
+async def test_turn_rejects_model_outside_allowlist(
+    admin_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "openrouter_api_key", "sk-test")
+
+    response = await admin_client.post(
+        "/api/v1/practice/turn",
+        json={"message": "ordering food", "model": "someone/not-a-real-model"},
+    )
+
+    assert response.status_code == 422
+    assert "minimax/minimax-m3" in response.json()["error"]["message"]

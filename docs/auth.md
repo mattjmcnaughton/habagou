@@ -49,6 +49,27 @@ identity-mapping test first. In particular, ensure the provider returns the
 claims needed for a pleasant display name and username; an email may be absent
 for some social connections.
 
+## Admin users
+
+Habagou has a single elevated user class: **admin**. Admin status is *derived,
+not stored* — a non-guest user is an admin when their email's domain (the part
+after the final `@`, compared exactly and case-insensitively; subdomains and
+lookalike suffixes do not match) is listed in `ADMIN_EMAIL_DOMAINS` (default
+`mattjmcnaughton.com`). See `habagou.authz.is_admin`.
+
+Because the email is refreshed from the identity provider on every sign-in,
+classification self-heals with no migration, role table, or management UI. The
+trust anchor is the OIDC provider's `email` claim: acceptable for the
+first-party Keycloak/Auth0 setups. If a provider is ever added whose emails
+are not verified (e.g. some social connections), gate that provider's email
+claim before trusting it here.
+
+What admins currently unlock: selecting the AI model used by the AI chats
+(pack generation and conversational practice) — surfaced to the frontend via
+`is_admin` on `GET /api/v1/auth/session` and the `models` list on the two
+status probes, and enforced server-side by the draft/turn endpoints (403 for a
+non-admin override, 422 off-allowlist).
+
 ## Provider configuration
 
 | Setting | Purpose | Local / CI | Production with Auth0 |

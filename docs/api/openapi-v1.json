@@ -41,6 +41,25 @@
         "title": "ActivityType",
         "type": "string"
       },
+      "ChatModelOptionDTO": {
+        "description": "One selectable model: the OpenRouter id plus a display label.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ChatModelOptionDTO",
+        "type": "object"
+      },
       "CompletionCreateDTO": {
         "properties": {
           "activity": {
@@ -144,6 +163,19 @@
             ],
             "title": "History"
           },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
           "topic": {
             "maxLength": 2000,
             "minLength": 1,
@@ -190,11 +222,36 @@
         "type": "object"
       },
       "GenerationStatusDTO": {
-        "description": "Whether agent pack generation is available, for entry-point gating.\n\nThe frontend calls this before deciding whether to surface the \"Create a\npack\" entry point (issue #102 / mockup): when generation is unconfigured the\nbutton stays hidden, so a user is never offered a flow that can only 503.\n``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`\n(True only when both the OpenRouter key and the model are set); it is not a\nper-user capability, just a server-wide readiness flag.",
+        "description": "Whether agent pack generation is available, for entry-point gating.\n\nThe frontend calls this before deciding whether to surface the \"Create a\npack\" entry point (issue #102 / mockup): when generation is unconfigured the\nbutton stays hidden, so a user is never offered a flow that can only 503.\n``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`\n(True only when both the OpenRouter key and the model are set); it is not a\nper-user capability, just a server-wide readiness flag.\n\n``models`` and ``default_model`` are the admin model picker's data: the\nselectable OpenRouter models (default first) and the id that runs when the\nrequest carries no override. Both are ``None`` for non-admin callers \u2014 the\nresponse itself gates the picker UI \u2014 and when generation is unconfigured.",
         "properties": {
+          "default_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Model"
+          },
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatModelOptionDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Models"
           }
         },
         "required": [
@@ -867,11 +924,36 @@
         "type": "object"
       },
       "PracticeStatusDTO": {
-        "description": "Whether conversational practice is available, for entry-point gating.\n\n``enabled`` mirrors :attr:`habagou.config.Settings.practice_configured`.\nThe Practice tab renders regardless (hiding a tab on an async fetch would\nshift the app shell); the practice screen itself shows an unavailable\nstate when this reports ``False``, so a user is never routed into a flow\nthe ``/turn`` endpoint can only 503.",
+        "description": "Whether conversational practice is available, for entry-point gating.\n\n``enabled`` mirrors :attr:`habagou.config.Settings.practice_configured`.\nThe Practice tab renders regardless (hiding a tab on an async fetch would\nshift the app shell); the practice screen itself shows an unavailable\nstate when this reports ``False``, so a user is never routed into a flow\nthe ``/turn`` endpoint can only 503.\n\n``models`` and ``default_model`` are the admin model picker's data,\nmirroring :class:`habagou.dtos.generation.GenerationStatusDTO`: ``None``\nfor non-admin callers (the response gates the picker UI) and when practice\nis unconfigured.",
         "properties": {
+          "default_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Model"
+          },
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatModelOptionDTO"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Models"
           }
         },
         "required": [
@@ -933,6 +1015,19 @@
             "minLength": 1,
             "title": "Message",
             "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
           }
         },
         "required": [
@@ -1075,6 +1170,11 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
           },
           "username": {
             "title": "Username",
@@ -1224,15 +1324,11 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Model selection requires an admin account"
+          },
           "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
+            "description": "Requested model is not selectable"
           },
           "429": {
             "description": "Per-user generation rate limit exceeded"
@@ -1287,7 +1383,7 @@
     },
     "/api/v1/generation/status": {
       "get": {
-        "description": "Report whether pack generation is available, for entry-point gating.\n\nThe frontend calls this to decide whether to show the \"Create a pack\" entry\npoint (issue #102): the button stays hidden when generation is unconfigured,\nso a user is never routed into a flow the ``/draft`` endpoint can only 503.\n\nDeliberately cheap: no DB access beyond the auth lookup, no rate limiting,\nand no workflow event \u2014 it is a stateless readiness probe over a config\nflag, not a step in any tracked workflow (WF-15 covers the draft/save\nactions). Auth matches the other pack read endpoints (e.g.\n``GET /api/v1/packs``); the flag is server-wide, not per-user.",
+        "description": "Report whether pack generation is available, for entry-point gating.\n\nThe frontend calls this to decide whether to show the \"Create a pack\" entry\npoint (issue #102): the button stays hidden when generation is unconfigured,\nso a user is never routed into a flow the ``/draft`` endpoint can only 503.\n\nDeliberately cheap: no DB access beyond the auth lookup, no rate limiting,\nand no workflow event \u2014 it is a stateless readiness probe over a config\nflag, not a step in any tracked workflow (WF-15 covers the draft/save\nactions). Auth matches the other pack read endpoints (e.g.\n``GET /api/v1/packs``); the flag is server-wide, not per-user.\n\nFor admin callers (and only when generation is configured) the response\nalso carries the selectable models and the server default, which is what\nrenders the model picker \u2014 ``models`` stays ``None`` for everyone else.",
         "operationId": "get_generation_status_api_v1_generation_status_get",
         "responses": {
           "200": {
@@ -1541,7 +1637,7 @@
     },
     "/api/v1/practice/status": {
       "get": {
-        "description": "Report whether conversational practice is available, for UI gating.\n\nThe Practice tab always renders; the practice screen calls this to decide\nbetween the topic picker and an unavailable state, so a user is never\nrouted into a flow the ``/turn`` endpoint can only 503. Deliberately\ncheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness\nprobe over a config flag \u2014 no rate limiting, no workflow event.",
+        "description": "Report whether conversational practice is available, for UI gating.\n\nThe Practice tab always renders; the practice screen calls this to decide\nbetween the topic picker and an unavailable state, so a user is never\nrouted into a flow the ``/turn`` endpoint can only 503. Deliberately\ncheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness\nprobe over a config flag \u2014 no rate limiting, no workflow event.\n\nFor admin callers (and only when practice is configured) the response also\ncarries the selectable models and the server default, which is what\nrenders the model picker \u2014 ``models`` stays ``None`` for everyone else.",
         "operationId": "get_practice_status_api_v1_practice_status_get",
         "responses": {
           "200": {
@@ -1586,15 +1682,11 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Model selection requires an admin account"
+          },
           "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
+            "description": "Requested model is not selectable"
           },
           "429": {
             "description": "Per-user practice rate limit exceeded"
