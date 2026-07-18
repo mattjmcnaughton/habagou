@@ -18,6 +18,7 @@ from habagou.config import settings
 from habagou.models import ReviewState
 from habagou.repositories import UserRepository
 from habagou.services.pack_generation import get_generation_agent
+from habagou.services.practice_chat import get_practice_agent
 from scripts.seed import SeedResult, emit_bootstrap_completed
 from tests.integration.conftest import pack_id_by_slug
 
@@ -40,6 +41,17 @@ def _draft_response(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelR
 
 
 _draft_response.__name__ = "draft_response"
+
+
+def _turn_response(messages: Sequence[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """FunctionModel callback emitting a fixed tutor turn (WF-16)."""
+    turn = {"segments": [{"hanzi": "你好", "pinyin": "nǐ hǎo", "english": "Hello"}]}
+    return ModelResponse(
+        parts=[ToolCallPart(tool_name=info.output_tools[0].name, args=turn)]
+    )
+
+
+_turn_response.__name__ = "turn_response"
 
 _WORKFLOW_ISSUER = "https://issuer.example.test"
 _WORKFLOW_SUBJECT = "workflow-subject"
@@ -80,6 +92,7 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
         {"user_id"},
         "ok",
     ),
+    "WF-16": ({"practice_turn_completed"}, {"user_id", "segment_count"}, "ok"),
     "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-SIGN-OUT": ({"auth_signed_out"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-GATE": ({"auth_gate_rejected"}, {"path"}, "error"),
@@ -189,6 +202,13 @@ async def test_all_workflows_emit_verification_events(
         ),
         status_code=201,
     )
+    # WF-16: one conversational practice turn (model stubbed the same way).
+    with get_practice_agent().override(model=FunctionModel(_turn_response)):
+        await _ok(
+            await client.post(
+                "/api/v1/practice/turn", json={"message": "ordering food"}
+            )
+        )
     await _ok(await client.delete(f"/api/v1/progress/packs/{greetings_id}"))
     await _ok(await client.get("/readyz"))
     await _ok(await client.post("/auth/logout"), status_code=204)

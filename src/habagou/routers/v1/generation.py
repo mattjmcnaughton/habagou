@@ -34,13 +34,15 @@ from habagou.dtos.generation import (
 from habagou.dtos.packs import PackDetailDTO
 from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
+from habagou.services.message_history import (
+    dump_message_history,
+    load_message_history,
+)
 from habagou.services.pack_generation import (
     GenerationDeps,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
     GenerationNotConfiguredError,
-    dump_message_history,
     generate_pack_draft,
     get_generation_agent,
-    load_message_history,
     save_pack_draft,
 )
 from habagou.services.packs import PackService

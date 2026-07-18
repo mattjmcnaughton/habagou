@@ -10,6 +10,9 @@ import type {
   PackSummary,
   PathItem,
   PathResponse,
+  PracticeStatus,
+  PracticeTurn,
+  PracticeTurnResponse,
   ProgressReset,
   ProgressSummary,
 } from "../lib/api";
@@ -345,6 +348,28 @@ function savedPackFromDraft(draft: PackDraft): PackDetail {
   };
 }
 
+// Conversational practice (WF-16). Status gates the screen; a turn returns a
+// structured PracticeTurn (per-sentence hanzi/pinyin/English segments) plus
+// opaque conversation history the client replays on the next turn.
+export const practiceOpeningTurn: PracticeTurn = {
+  segments: [
+    { hanzi: "你好", pinyin: "nǐ hǎo", english: "Hello!" },
+    { hanzi: "你想吃什么", pinyin: "nǐ xiǎng chī shénme", english: "What do you want to eat?" },
+  ],
+  english_aside: null,
+};
+
+export const practiceAsideTurn: PracticeTurn = {
+  segments: [{ hanzi: "我们继续吧", pinyin: "wǒmen jìxù ba", english: "Let's continue!" }],
+  english_aside: "它 means 'it' — it's used for things, not people.",
+};
+
+// Opaque, client-held message history echoed back from a practice turn.
+export const practiceHistory: unknown[] = [
+  { role: "user", content: "ordering food" },
+  { role: "assistant", content: "opened the conversation" },
+];
+
 // Mirror app.py's `_http_error_code`: the real server derives the envelope
 // `code` from the HTTP status, so mock failures must do the same to stay honest.
 function httpErrorCode(status: number): string {
@@ -407,6 +432,15 @@ export function generationSaveFailure(status: number, code = httpErrorCode(statu
   );
 }
 
+export function practiceTurnFailure(status: number, code = httpErrorCode(status)) {
+  return http.post(`${API_V1}/practice/turn`, () =>
+    HttpResponse.json(
+      { error: { code, message: `practice failed (${status})`, request_id: "mock-request" } },
+      { status },
+    ),
+  );
+}
+
 export const handlers = [
   http.get(`${API_V1}/auth/session`, () => {
     return HttpResponse.json<AuthSession>(authenticatedSession);
@@ -419,6 +453,15 @@ export const handlers = [
   }),
   http.get(`${API_V1}/generation/status`, () => {
     return HttpResponse.json<GenerationStatus>({ enabled: true });
+  }),
+  http.get(`${API_V1}/practice/status`, () => {
+    return HttpResponse.json<PracticeStatus>({ enabled: true });
+  }),
+  http.post(`${API_V1}/practice/turn`, () => {
+    return HttpResponse.json<PracticeTurnResponse>({
+      turn: practiceOpeningTurn,
+      history: practiceHistory,
+    });
   }),
   http.post(`${API_V1}/generation/draft`, () => {
     return HttpResponse.json<GenerationDraftResponse>({

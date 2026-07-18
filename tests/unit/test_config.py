@@ -48,7 +48,7 @@ def test_generation_defaults_unset(
     monkeypatch.chdir(tmp_path)
     settings = Settings()
     assert settings.openrouter_api_key == ""
-    assert settings.generation_model == "deepseek/deepseek-v4-flash"
+    assert settings.generation_model == "openai/gpt-5.6-terra"
     assert settings.generation_configured is False
     assert settings.logfire_token == ""
 

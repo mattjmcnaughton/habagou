@@ -249,3 +249,62 @@ packs list after curated ones.
 
 - 422 — the draft references a character absent from the stroke corpus
   (re-validated at save).
+
+### Practice
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/v1/practice/status` | Report whether practice is configured (screen gating) |
+| POST | `/api/v1/practice/turn` | Run one conversational practice turn |
+
+Conversational practice is a text chat with an AI tutor on a learner-chosen
+topic (see [ADR 0011](adrs/0011-conversational-practice-agent.md)). It shares
+the OpenRouter key with generation but has its own model (`PRACTICE_MODEL`)
+and its own hourly cap. Conversations are ephemeral and client-held: there is
+no server-side conversation store and nothing is persisted. The frontend calls
+the `GET /api/v1/practice/status` probe (`{"enabled": bool}`) to show an
+unavailable state (the Practice tab itself always renders) while practice is
+unconfigured.
+
+`POST /api/v1/practice/turn` body:
+
+```json
+{
+  "message": "ordering food at a restaurant",
+  "history": null
+}
+```
+
+- `message` — required, 1–2000 chars. On the first turn it is the learner's
+  chosen topic (the tutor opens the conversation from it); on later turns it
+  is the learner's chat input — English, Chinese, or mixed.
+- `history` — the opaque message-history array returned by a prior turn, or
+  `null` on the first turn. The client holds it between turns and passes it
+  back; discarding it is how a conversation ends.
+
+-> 200
+
+```json
+{
+  "turn": {
+    "segments": [
+      { "hanzi": "你好", "pinyin": "nǐ hǎo", "english": "Hello!" },
+      { "hanzi": "你想吃什么", "pinyin": "nǐ xiǎng chī shénme", "english": "What do you want to eat?" }
+    ],
+    "english_aside": null
+  },
+  "history": [ /* opaque, pass back on the next turn */ ]
+}
+```
+
+- `turn.segments` — 1–8 per-sentence segments, each carrying the sentence
+  three ways. All glosses are model-supplied and unverified (contained to one
+  ephemeral reply). The UI shows hanzi + pinyin and reveals `english` per
+  segment on tap.
+- `turn.english_aside` — non-null only when the learner asked for help in
+  English ("break glass"); rendered apart from the Chinese segments.
+- 429 — the caller exceeded `PRACTICE_RATE_LIMIT_PER_HOUR` (default 60,
+  counted per attempt).
+- 502 — the practice turn failed (provider/model error).
+- 503 — practice is not configured (`OPENROUTER_API_KEY` unset).
+- 422 — `history` is present but is not a valid practice message history.
