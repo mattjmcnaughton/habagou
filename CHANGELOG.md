@@ -1,3 +1,15 @@
+# [1.8.0](https://github.com/mattjmcnaughton/habagou/compare/v1.7.0...v1.8.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **practice:** retire stale Try again buttons and fail closed on status probe ([8d8cb01](https://github.com/mattjmcnaughton/habagou/commit/8d8cb018e53bd26544a340fd9ba5b4fc8050293f))
+
+
+### Features
+
+* **practice:** conversational practice agent (WF-16) ([f84f6ef](https://github.com/mattjmcnaughton/habagou/commit/f84f6efab5b27419cc44f264d141f9fa9d371179))
+
 # [1.7.0](https://github.com/mattjmcnaughton/habagou/compare/v1.6.1...v1.7.0) (2026-07-18)
 
 
