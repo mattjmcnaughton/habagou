@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import type { ChatModelOption, PackDraft } from "../lib/api";
+import type { PackDraft } from "../lib/api";
+import { ModelPicker } from "../components/model-picker";
 import { ApiError, generateDraft, getGenerationStatus, saveGeneratedPack } from "../lib/api";
 import type { ChatEntry, ChatFailureKind, GenerationChatState } from "../lib/generation-chat";
 import {
@@ -102,6 +103,14 @@ function GeneratePack() {
   // choice, so it renders nothing either.
   const modelOptions = status.data?.models ?? null;
   const showModelPicker = modelOptions !== null && modelOptions.length >= 2;
+  // Never send an override the picker isn't currently offering: a status
+  // refetch can withdraw the whole list (admin flag lost) or delist just the
+  // selected id (allowlist change on redeploy), and a stale selection must
+  // not reach the wire either way — undefined falls back to the server default.
+  const effectiveModel =
+    showModelPicker && model !== undefined && modelOptions.some((option) => option.id === model)
+      ? model
+      : undefined;
 
   const draftMutation = useMutation({
     mutationFn: (vars: {
@@ -152,12 +161,10 @@ function GeneratePack() {
     }
     setState((current) => beginTurn(current, trimmed));
     setTopic("");
-    // Never send an override the picker didn't offer: if a status refetch
-    // withdraws the list mid-session, a stale selection must not reach the wire.
     draftMutation.mutate({
       topic: trimmed,
       history: state.history,
-      model: showModelPicker ? model : undefined,
+      model: effectiveModel,
     });
   }
 
@@ -184,7 +191,7 @@ function GeneratePack() {
     draftMutation.mutate({
       topic: previous,
       history: state.history,
-      model: showModelPicker ? model : undefined,
+      model: effectiveModel,
     });
   }
 
@@ -261,50 +268,6 @@ function GeneratePack() {
         />
       </div>
     </main>
-  );
-}
-
-// Admin-only model picker (ADM-04): a compact chip row above the composer,
-// rendered only when the status response carries a selectable model list — the
-// server omits it for non-admins, so their UI is untouched. A `selected` of
-// undefined means "server default"; choosing the default chip clears the
-// override rather than pinning it, so the request stays model-free.
-function ModelPicker({
-  defaultModel,
-  disabled,
-  models,
-  onSelect,
-  selected,
-}: {
-  defaultModel: string | null;
-  disabled: boolean;
-  models: ChatModelOption[];
-  onSelect: (model: string | undefined) => void;
-  selected: string | undefined;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 pt-3">
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Model</span>
-      {models.map((option) => {
-        const active = selected === undefined ? option.id === defaultModel : option.id === selected;
-        return (
-          <button
-            aria-pressed={active}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40 ${
-              active
-                ? "border-jade/40 bg-jade/10 text-jade"
-                : "border-white/10 text-mist hover:border-white/25 hover:text-porcelain"
-            }`}
-            disabled={disabled}
-            key={option.id}
-            onClick={() => onSelect(option.id === defaultModel ? undefined : option.id)}
-            type="button"
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

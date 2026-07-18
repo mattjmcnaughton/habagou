@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import type { ChatModelOption, PracticeSegment, PracticeTurn } from "../lib/api";
+import type { PracticeSegment, PracticeTurn } from "../lib/api";
+import { ModelPicker } from "../components/model-picker";
 import { getPracticeStatus, practiceTurn } from "../lib/api";
 import type { PracticeChatState, PracticeEntry, PracticeFailureKind } from "../lib/practice-chat";
 import {
@@ -91,6 +92,14 @@ function PracticeScreen() {
   // choice, so it renders nothing either.
   const modelOptions = status.data?.models ?? null;
   const showModelPicker = modelOptions !== null && modelOptions.length >= 2;
+  // Never send an override the picker isn't currently offering: a status
+  // refetch can withdraw the whole list (admin flag lost) or delist just the
+  // selected id (allowlist change on redeploy), and a stale selection must
+  // not reach the wire either way — undefined falls back to the server default.
+  const effectiveModel =
+    showModelPicker && model !== undefined && modelOptions.some((option) => option.id === model)
+      ? model
+      : undefined;
 
   const turnMutation = useMutation({
     mutationFn: (vars: {
@@ -117,12 +126,10 @@ function PracticeScreen() {
     }
     setState((current) => beginTurn(current, trimmed));
     setDraftText("");
-    // Never send an override the picker didn't offer: if a status refetch
-    // withdraws the list mid-session, a stale selection must not reach the wire.
     turnMutation.mutate({
       message: trimmed,
       history: state.history,
-      model: showModelPicker ? model : undefined,
+      model: effectiveModel,
     });
   }
 
@@ -138,7 +145,7 @@ function PracticeScreen() {
     turnMutation.mutate({
       message: previous,
       history: state.history,
-      model: showModelPicker ? model : undefined,
+      model: effectiveModel,
     });
   }
 
@@ -228,50 +235,6 @@ function PracticeScreen() {
         value={draftText}
       />
     </PracticeShell>
-  );
-}
-
-// Admin-only model picker (ADM-04): a compact chip row above the composer,
-// rendered only when the status response carries a selectable model list — the
-// server omits it for non-admins, so their UI is untouched. A `selected` of
-// undefined means "server default"; choosing the default chip clears the
-// override rather than pinning it, so the request stays model-free.
-function ModelPicker({
-  defaultModel,
-  disabled,
-  models,
-  onSelect,
-  selected,
-}: {
-  defaultModel: string | null;
-  disabled: boolean;
-  models: ChatModelOption[];
-  onSelect: (model: string | undefined) => void;
-  selected: string | undefined;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 pt-3">
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Model</span>
-      {models.map((option) => {
-        const active = selected === undefined ? option.id === defaultModel : option.id === selected;
-        return (
-          <button
-            aria-pressed={active}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40 ${
-              active
-                ? "border-jade/40 bg-jade/10 text-jade"
-                : "border-white/10 text-mist hover:border-white/25 hover:text-porcelain"
-            }`}
-            disabled={disabled}
-            key={option.id}
-            onClick={() => onSelect(option.id === defaultModel ? undefined : option.id)}
-            type="button"
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

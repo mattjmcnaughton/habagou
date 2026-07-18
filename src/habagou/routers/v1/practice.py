@@ -89,7 +89,10 @@ async def get_practice_status(
     response_model=PracticeTurnResponseDTO,
     responses={
         403: {"description": "Model selection requires an admin account"},
-        422: {"description": "Requested model is not selectable"},
+        422: {
+            "description": "Replayed history is invalid, or the requested "
+            "model is not selectable"
+        },
         429: {"description": "Per-user practice rate limit exceeded"},
         502: {"description": "Practice turn failed"},
         503: {"description": "Conversational practice is not configured"},

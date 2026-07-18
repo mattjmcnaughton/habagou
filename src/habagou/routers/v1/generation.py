@@ -101,7 +101,10 @@ async def get_generation_status(
     response_model=GenerationDraftResponseDTO,
     responses={
         403: {"description": "Model selection requires an admin account"},
-        422: {"description": "Requested model is not selectable"},
+        422: {
+            "description": "Replayed history is invalid, or the requested "
+            "model is not selectable"
+        },
         429: {"description": "Per-user generation rate limit exceeded"},
         502: {"description": "Pack generation failed"},
         503: {"description": "Pack generation is not configured"},

@@ -59,10 +59,12 @@ lookalike suffixes do not match) is listed in `ADMIN_EMAIL_DOMAINS` (default
 
 Because the email is refreshed from the identity provider on every sign-in,
 classification self-heals with no migration, role table, or management UI. The
-trust anchor is the OIDC provider's `email` claim: acceptable for the
-first-party Keycloak/Auth0 setups. If a provider is ever added whose emails
-are not verified (e.g. some social connections), gate that provider's email
-claim before trusting it here.
+trust anchor is the OIDC provider's `email` claim, and the claim mapping
+enforces it: a token carrying `email_verified: false` has its email dropped
+before it is stored (see `habagou.auth._oidc_identity`), so a self-signup with
+an unverified admin-domain address can never classify as admin. Providers that
+omit the flag entirely keep their email — acceptable for the first-party
+Keycloak/Auth0 setups, but worth rechecking if a new connection is added.
 
 What admins currently unlock: selecting the AI model used by the AI chats
 (pack generation and conversational practice) — surfaced to the frontend via

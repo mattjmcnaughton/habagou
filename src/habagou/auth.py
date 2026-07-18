@@ -48,6 +48,12 @@ def _oidc_identity(token: dict[str, Any]) -> AuthIdentity:
     username = str(claims.get("preferred_username") or claims.get("email") or subject)
     display_name = str(claims.get("name") or username)
     email = claims.get("email")
+    # An email the provider itself marks unverified must never become identity
+    # data: admin classification (habagou.authz) derives from the email domain,
+    # so trusting it would let a self-signup mint an admin address. An absent
+    # claim keeps the email (matching providers that omit the flag entirely).
+    if claims.get("email_verified") is False:
+        email = None
 
     if not issuer or not subject or not username:
         raise ValueError("OIDC token is missing required identity claims")

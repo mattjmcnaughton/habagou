@@ -1328,7 +1328,7 @@
             "description": "Model selection requires an admin account"
           },
           "422": {
-            "description": "Requested model is not selectable"
+            "description": "Replayed history is invalid, or the requested model is not selectable"
           },
           "429": {
             "description": "Per-user generation rate limit exceeded"
@@ -1686,7 +1686,7 @@
             "description": "Model selection requires an admin account"
           },
           "422": {
-            "description": "Requested model is not selectable"
+            "description": "Replayed history is invalid, or the requested model is not selectable"
           },
           "429": {
             "description": "Per-user practice rate limit exceeded"

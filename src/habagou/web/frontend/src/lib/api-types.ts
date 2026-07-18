@@ -982,7 +982,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Requested model is not selectable */
+            /** @description Replayed history is invalid, or the requested model is not selectable */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1294,7 +1294,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Requested model is not selectable */
+            /** @description Replayed history is invalid, or the requested model is not selectable */
             422: {
                 headers: {
                     [name: string]: unknown;
