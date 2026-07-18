@@ -224,6 +224,7 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 |---|---|---|
 | `bootstrap_completed` | WF-01 | `chars_imported`, `packs_seeded`, `migrations_applied` |
 | `pack_list_served` / `pack_served` | WF-02 | `pack_slug`, `pack_count` |
+| `pack_deleted` | WF-02 | `pack_id`, `user_id` (`outcome=error` with `reason` on not-found/curated) |
 | `activity_completed` | WF-03/04/05 | `activity`, `pack_slug`, `user_id`, `duration_ms` (client-reported) |
 | `strokes_served` | WF-06 | `hanzi`, `cache_hit` (if server-side cache added), `found` |
 | `strokes_missing` | WF-06 | `hanzi` — **leading indicator of corpus/seed drift; alertable at rate > 0** |

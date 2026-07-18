@@ -31,6 +31,35 @@ invalid sessions return the standard error envelope with HTTP 401:
 | POST | `/auth/logout` | Clear the local session cookie |
 | GET | `/api/v1/auth/session` | Probe the current session; always returns 200 with `authenticated`, `provider`, and optional `user` |
 
+### Packs
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/v1/packs` | List packs visible to the current user, in curriculum order |
+| GET | `/api/v1/packs/{pack_id}` | Fetch one visible pack with its characters and sentences |
+| DELETE | `/api/v1/packs/{pack_id}` | Delete one of the current user's own packs |
+
+A pack is **visible** to a user when it is global (a curated, seeded pack shown
+to everyone) or privately owned by that user; a pack owned by someone else is
+invisible (see [ADR 0009](adrs/0009-pack-ownership.md)).
+
+Both `PackSummaryDTO` (list rows) and `PackDetailDTO` (detail) carry an `owned`
+boolean: `true` when the current user owns the pack (a private pack they may
+delete), `false` for global curated packs.
+
+`GET /api/v1/packs/{pack_id}` returns 404 when the pack is not visible — an
+unknown id and another user's private pack are indistinguishable, so pack
+existence never leaks.
+
+`DELETE /api/v1/packs/{pack_id}` -> 204 No Content on success; it hard-deletes
+the pack and, by database cascade, its characters, sentences, and every user's
+completions, path items, and review state for it.
+
+- 204 — the pack was owned by the caller and has been deleted.
+- 403 — the pack is visible but global/curated; curated packs are seed-managed
+  and cannot be deleted through the API.
+- 404 — the pack is not visible (unknown id, or another user's private pack).
+
 ### Progress
 
 | Method | Path | Description |

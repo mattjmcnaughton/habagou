@@ -26,6 +26,9 @@ class PackSummaryDTO(BaseModel):
     color: str
     char_count: int
     sentence_count: int
+    # True when the current user owns this pack (a private pack they can
+    # delete); False for global, curated packs visible to everyone.
+    owned: bool
     progress: PackProgressDTO
 
 

@@ -110,6 +110,12 @@ export function getPack(packId: string): Promise<PackDetail> {
   return apiFetch<PackDetail>(apiV1Path(`/packs/${encodeURIComponent(packId)}`));
 }
 
+export async function deletePack(packId: string): Promise<void> {
+  await apiFetch<void>(apiV1Path(`/packs/${encodeURIComponent(packId)}`), {
+    method: "DELETE",
+  });
+}
+
 export function getCharacterStrokes(hanzi: string): Promise<StrokeData> {
   return apiFetch<StrokeData>(apiV1Path(`/characters/${encodeURIComponent(hanzi)}/strokes`));
 }

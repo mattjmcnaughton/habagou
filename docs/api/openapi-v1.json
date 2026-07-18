@@ -288,6 +288,10 @@
             "title": "Id",
             "type": "string"
           },
+          "owned": {
+            "title": "Owned",
+            "type": "boolean"
+          },
           "progress": {
             "$ref": "#/components/schemas/PackProgressDTO"
           },
@@ -314,6 +318,7 @@
           "color",
           "char_count",
           "sentence_count",
+          "owned",
           "progress",
           "characters",
           "sentences"
@@ -502,6 +507,10 @@
             "title": "Id",
             "type": "string"
           },
+          "owned": {
+            "title": "Owned",
+            "type": "boolean"
+          },
           "progress": {
             "$ref": "#/components/schemas/PackProgressDTO"
           },
@@ -521,6 +530,7 @@
           "color",
           "char_count",
           "sentence_count",
+          "owned",
           "progress"
         ],
         "title": "PackSummaryDTO",
@@ -1199,6 +1209,46 @@
       }
     },
     "/api/v1/packs/{pack_id}": {
+      "delete": {
+        "operationId": "delete_pack_api_v1_packs__pack_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Cannot delete a curated pack"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Pack",
+        "tags": [
+          "packs"
+        ]
+      },
       "get": {
         "operationId": "get_pack_api_v1_packs__pack_id__get",
         "parameters": [
