@@ -107,7 +107,7 @@ include the full generation conversation (user messages, replayed history, tool
 activity, and model responses). Treat Logfire as a store of user content and
 apply an appropriate retention and access policy.
 
-`GENERATION_MODEL` (default `deepseek/deepseek-v4-flash`) and
+`GENERATION_MODEL` (default `openai/gpt-5.6-terra`) and
 `GENERATION_RATE_LIMIT_PER_HOUR` (default 10, per-user, in-memory and
 single-process) are non-secret and only need setting to override the defaults —
 put them in `fly.toml` `[env]` if you do.

@@ -129,9 +129,9 @@ API key set, the rest of the app is unaffected.
 
 ```sh
 OPENROUTER_API_KEY=sk-or-...        # required to enable generation AND practice
-GENERATION_MODEL=deepseek/deepseek-v4-flash  # optional; default shown (via OpenRouter)
+GENERATION_MODEL=openai/gpt-5.6-terra  # optional; default shown (via OpenRouter)
 GENERATION_RATE_LIMIT_PER_HOUR=10   # optional; per user, 0 or negative disables the cap
-PRACTICE_MODEL=deepseek/deepseek-v4-flash    # optional; conversational practice model
+PRACTICE_MODEL=openai/gpt-5.6-terra    # optional; conversational practice model
 PRACTICE_RATE_LIMIT_PER_HOUR=60     # optional; per user, 0 or negative disables the cap
 LOGFIRE_TOKEN=                      # optional; enables API, database, and AI trace export
 ```

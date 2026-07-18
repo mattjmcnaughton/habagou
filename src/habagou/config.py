@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     # Agent pack generation (OpenAI-compatible models via OpenRouter). Generation is
     # configured only when both the key and model are non-empty; see
     # ``generation_configured``.
-    generation_model: str = "deepseek/deepseek-v4-flash"
+    generation_model: str = "openai/gpt-5.6-terra"
     openrouter_api_key: str = ""
 
     # Per-user cap on billed draft generations, counted in a fixed one-hour
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     # Conversational practice (WF-16) shares the OpenRouter key with generation
     # but has its own model id, so chat can run a cheaper/faster model than
     # pack drafting without a code change. See ``practice_configured``.
-    practice_model: str = "deepseek/deepseek-v4-flash"
+    practice_model: str = "openai/gpt-5.6-terra"
 
     # Per-user cap on billed practice turns, in the same fixed one-hour window.
     # Higher than the generation cap: chat turns are frequent and cheap
