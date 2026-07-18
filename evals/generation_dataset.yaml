@@ -27,3 +27,8 @@ evaluators:
 - PinyinToneMarks
 - PunctuationFreeSentences
 - PackSize
+# Soft response-time budget (pydantic-evals built-in; seconds). Latency on a
+# shared CI runner against a live provider is noisy — read this as a trend and
+# as a within-run comparison between models, not an SLA. The raw per-case
+# duration is always in the report's Duration column and the JSON artifact.
+- MaxDuration: 30

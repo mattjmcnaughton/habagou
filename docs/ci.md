@@ -77,9 +77,9 @@ The same report lands in three places:
 
 The job fails **only** on harness errors or the hard floor (a case that
 errored or drafted non-corpus glyphs after the agent's retry budget —
-`CorpusMembership`). Soft checks (pinyin format, punctuation, pack size) and
-the `model_requests` metric never fail the job; they are trends to read, not
-gates. A red Evals run therefore always means "this prompt/model combination
+`CorpusMembership`). Soft checks (pinyin format, punctuation, pack size, the
+30s response-time budget) and the `model_requests` metric never fail the job;
+they are trends to read, not gates. A red Evals run therefore always means "this prompt/model combination
 is broken", never "a score dipped".
 
 ### Environment

@@ -77,7 +77,18 @@ evaluators plus one metric:
 | `PinyinToneMarks` | Pinyin uses tone marks, never digits (`nǐ`, not `ni3`), across characters and sentences | No |
 | `PunctuationFreeSentences` | Sentence hanzi contain no punctuation (the corpus has none to trace) | No |
 | `PackSize` | 5–12 characters, or the case's `min_size`/`max_size` metadata override | No |
+| `MaxDuration` | Wall-clock response time under a 30s budget (pydantic-evals built-in) | No |
 | `model_requests` (metric) | pydantic-ai's round-trip count per run — the same signal the service logs | No (tracked) |
+
+Response time shows up twice: the raw per-case duration is always in the
+report's Duration column (and `task_duration` in the JSON artifact), and
+`MaxDuration` turns it into a pass/fail flag against the 30-second budget so
+slow prompt/model combinations stand out in the assertions column. It stays a
+soft check: latency measured from a shared CI runner against a live provider
+is noisy, so read it as a trend and as a within-run comparison between models
+— never a gate. It also correlates with `model_requests`: a run that burned
+retries is usually a run that blew the time budget too, and the pair
+distinguishes "slow model" from "model that needed three round trips".
 
 **Gating philosophy.** Only `CorpusMembership` fails a run (CLI exit 1, red
 CI job). The output validator already enforces membership per request, so a

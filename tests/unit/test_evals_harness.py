@@ -40,7 +40,9 @@ def test_generation_dataset_loads_with_all_evaluators() -> None:
     dataset = load_generation_dataset()
     assert len(dataset.cases) >= 5
     registered = {type(evaluator).__name__ for evaluator in dataset.evaluators}
-    assert registered == {cls.__name__ for cls in GENERATION_EVALUATORS}
+    assert registered >= {cls.__name__ for cls in GENERATION_EVALUATORS}
+    # The soft response-time budget (pydantic-evals built-in) rides along.
+    assert "MaxDuration" in registered
     # The CLI's exit-code logic keys on this evaluator being present.
     assert HARD_FLOOR_EVALUATOR in registered
 
