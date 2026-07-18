@@ -1,8 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import type { PackDraft } from "../lib/api";
-import { ApiError, generateDraft, saveGeneratedPack } from "../lib/api";
+import type { ChatModelOption, PackDraft } from "../lib/api";
+import { ApiError, generateDraft, getGenerationStatus, saveGeneratedPack } from "../lib/api";
 import type { ChatEntry, ChatFailureKind, GenerationChatState } from "../lib/generation-chat";
 import {
   applyDraft,
@@ -87,12 +87,28 @@ const RETRYABLE: ReadonlySet<ChatFailureKind> = new Set(["provider_failure", "ne
 function GeneratePack() {
   const [state, setState] = useState<GenerationChatState>(initialChatState);
   const [topic, setTopic] = useState("");
+  // Admin model override (ADM-04): undefined means "server default", so a
+  // non-admin (or an untouched picker) never puts a `model` on the wire. The
+  // picker is per-request UI, not conversation state — generation-chat.ts is
+  // deliberately untouched.
+  const [model, setModel] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  // Same key as packs.index.tsx's entry-point gate, so the cache is shared.
+  const status = useQuery({ queryKey: ["generation-status"], queryFn: getGenerationStatus });
+
+  // The server returns `models` (default first) only to admin callers, so the
+  // status response itself gates the picker. A single-entry list offers no
+  // choice, so it renders nothing either.
+  const modelOptions = status.data?.models ?? null;
+  const showModelPicker = modelOptions !== null && modelOptions.length >= 2;
 
   const draftMutation = useMutation({
-    mutationFn: (vars: { topic: string; history: unknown[] | undefined }) =>
-      generateDraft(vars.topic, vars.history),
+    mutationFn: (vars: {
+      topic: string;
+      history: unknown[] | undefined;
+      model: string | undefined;
+    }) => generateDraft(vars.topic, vars.history, vars.model),
     onSuccess: (response) => setState((current) => applyDraft(current, response)),
     onError: (error) =>
       setState((current) => applyFailure(current, describeFailure(error, "draft"), "draft")),
@@ -136,7 +152,13 @@ function GeneratePack() {
     }
     setState((current) => beginTurn(current, trimmed));
     setTopic("");
-    draftMutation.mutate({ topic: trimmed, history: state.history });
+    // Never send an override the picker didn't offer: if a status refetch
+    // withdraws the list mid-session, a stale selection must not reach the wire.
+    draftMutation.mutate({
+      topic: trimmed,
+      history: state.history,
+      model: showModelPicker ? model : undefined,
+    });
   }
 
   function handleSave() {
@@ -159,7 +181,11 @@ function GeneratePack() {
       return;
     }
     setState((current) => beginRetry(current));
-    draftMutation.mutate({ topic: previous, history: state.history });
+    draftMutation.mutate({
+      topic: previous,
+      history: state.history,
+      model: showModelPicker ? model : undefined,
+    });
   }
 
   function handleKeepChatting() {
@@ -215,6 +241,15 @@ function GeneratePack() {
           {generating ? <ProgressBubble /> : null}
         </div>
 
+        {showModelPicker ? (
+          <ModelPicker
+            defaultModel={status.data?.default_model ?? null}
+            disabled={busy}
+            models={modelOptions}
+            onSelect={setModel}
+            selected={model}
+          />
+        ) : null}
         <Composer
           disabled={busy}
           hasDraft={state.draftVersion > 0}
@@ -226,6 +261,50 @@ function GeneratePack() {
         />
       </div>
     </main>
+  );
+}
+
+// Admin-only model picker (ADM-04): a compact chip row above the composer,
+// rendered only when the status response carries a selectable model list — the
+// server omits it for non-admins, so their UI is untouched. A `selected` of
+// undefined means "server default"; choosing the default chip clears the
+// override rather than pinning it, so the request stays model-free.
+function ModelPicker({
+  defaultModel,
+  disabled,
+  models,
+  onSelect,
+  selected,
+}: {
+  defaultModel: string | null;
+  disabled: boolean;
+  models: ChatModelOption[];
+  onSelect: (model: string | undefined) => void;
+  selected: string | undefined;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 pt-3">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-mist">Model</span>
+      {models.map((option) => {
+        const active = selected === undefined ? option.id === defaultModel : option.id === selected;
+        return (
+          <button
+            aria-pressed={active}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-40 ${
+              active
+                ? "border-jade/40 bg-jade/10 text-jade"
+                : "border-white/10 text-mist hover:border-white/25 hover:text-porcelain"
+            }`}
+            disabled={disabled}
+            key={option.id}
+            onClick={() => onSelect(option.id === defaultModel ? undefined : option.id)}
+            type="button"
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

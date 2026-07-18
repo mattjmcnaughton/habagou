@@ -19,6 +19,7 @@ export type StrokeData = CharacterJson;
 export type AuthUser = components["schemas"]["UserDTO"];
 export type AuthSession = components["schemas"]["SessionDTO"];
 export type GenerationStatus = components["schemas"]["GenerationStatusDTO"];
+export type ChatModelOption = components["schemas"]["ChatModelOptionDTO"];
 export type PackDraft = components["schemas"]["PackDraft"];
 export type DraftCharacter = components["schemas"]["PackDraftCharacter"];
 export type DraftSentence = components["schemas"]["PackDraftSentence"];
@@ -171,10 +172,13 @@ export function getGenerationStatus(): Promise<GenerationStatus> {
 export function generateDraft(
   topic: string,
   history?: unknown[],
+  model?: string,
 ): Promise<GenerationDraftResponse> {
   // JSON.stringify drops undefined properties, so a first-turn `history` of
   // undefined is omitted from the wire body and matches GenerationDraftRequestDTO.
-  const body: components["schemas"]["GenerationDraftRequestDTO"] = { topic, history };
+  // Likewise `model` (the admin-only override): undefined means "server default"
+  // and never reaches the wire.
+  const body: components["schemas"]["GenerationDraftRequestDTO"] = { topic, history, model };
   return apiFetch<GenerationDraftResponse>(apiV1Path("/generation/draft"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -195,10 +199,16 @@ export function getPracticeStatus(): Promise<PracticeStatus> {
   return apiFetch<PracticeStatus>(apiV1Path("/practice/status"));
 }
 
-export function practiceTurn(message: string, history?: unknown[]): Promise<PracticeTurnResponse> {
+export function practiceTurn(
+  message: string,
+  history?: unknown[],
+  model?: string,
+): Promise<PracticeTurnResponse> {
   // JSON.stringify drops undefined properties, so a first-turn `history` of
   // undefined is omitted from the wire body and matches PracticeTurnRequestDTO.
-  const body: components["schemas"]["PracticeTurnRequestDTO"] = { message, history };
+  // Likewise `model` (the admin-only override): undefined means "server default"
+  // and never reaches the wire.
+  const body: components["schemas"]["PracticeTurnRequestDTO"] = { message, history, model };
   return apiFetch<PracticeTurnResponse>(apiV1Path("/practice/turn"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },

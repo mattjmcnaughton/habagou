@@ -1,6 +1,12 @@
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { generationDraftFailure, generationHistory, packDraft } from "../mocks/handlers";
+import {
+  generationDraftFailure,
+  generationHistory,
+  packDraft,
+  practiceHistory,
+  practiceOpeningTurn,
+} from "../mocks/handlers";
 import { server } from "../mocks/server";
 import {
   type ApiError,
@@ -14,6 +20,7 @@ import {
   getProgressSummary,
   listPacks,
   logout,
+  practiceTurn,
   saveGeneratedPack,
 } from "./api";
 
@@ -204,7 +211,12 @@ describe("apiFetch", () => {
 
 describe("generation API", () => {
   it("[WF-15] reads the generation status flag", async () => {
-    await expect(getGenerationStatus()).resolves.toEqual({ enabled: true });
+    // The default (non-admin) status carries no model-picker data.
+    await expect(getGenerationStatus()).resolves.toEqual({
+      enabled: true,
+      models: null,
+      default_model: null,
+    });
   });
 
   it("[WF-15] drafts a pack and returns the draft with opaque history", async () => {
@@ -259,5 +271,73 @@ describe("generation API", () => {
       name: "ApiError",
       status: 429,
     } satisfies Partial<ApiError>);
+  });
+
+  it("[WF-15] includes the admin model override in the draft body", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ draft: packDraft, history: [] });
+      }),
+    );
+
+    await generateDraft("restaurant", generationHistory, "anthropic/claude-sonnet-5");
+
+    expect(received).toEqual({
+      topic: "restaurant",
+      history: generationHistory,
+      model: "anthropic/claude-sonnet-5",
+    });
+  });
+
+  it("[WF-15] omits the model key entirely when no override is given", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ draft: packDraft, history: [] });
+      }),
+    );
+
+    await generateDraft("restaurant", generationHistory);
+
+    // toEqual is key-exact here: no `model` (or `model: undefined`) survives
+    // serialization, matching the DTO's "absent means server default".
+    expect(received).toEqual({ topic: "restaurant", history: generationHistory });
+  });
+});
+
+describe("practice API", () => {
+  it("[WF-16] omits history and model on a first turn", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/practice/turn`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+
+    await practiceTurn("ordering food");
+
+    expect(received).toEqual({ message: "ordering food" });
+  });
+
+  it("[WF-16] includes the admin model override in the turn body", async () => {
+    let received: unknown;
+    server.use(
+      http.post(`${API_V1_BASE}/practice/turn`, async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+
+    await practiceTurn("我要吃饭", practiceHistory, "minimax/minimax-m3");
+
+    expect(received).toEqual({
+      message: "我要吃饭",
+      history: practiceHistory,
+      model: "minimax/minimax-m3",
+    });
   });
 });

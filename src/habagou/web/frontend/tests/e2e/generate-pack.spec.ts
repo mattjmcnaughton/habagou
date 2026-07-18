@@ -30,6 +30,10 @@ test("[WF-15] drafts a corpus-grounded preview from a topic", async ({ page }) =
   await expect(page).toHaveURL("/packs/generate");
   await expect(page.getByRole("heading", { name: /Create a pack/ })).toBeVisible();
 
+  // The dev Keycloak user is not an admin, so the model-picker chrome (ADM-04)
+  // must be absent: the status response returns no model list for non-admins.
+  await expect(page.getByText("Model", { exact: true })).toHaveCount(0);
+
   await page.getByRole("textbox").fill("Ordering at a restaurant");
   await page.getByRole("button", { name: "Send" }).click();
 
