@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/mattjmcnaughton/habagou/compare/v1.6.1...v1.7.0) (2026-07-18)
+
+
+### Features
+
+* **packs:** add user-scoped pack deletion end to end ([#110](https://github.com/mattjmcnaughton/habagou/issues/110)) ([3a91dda](https://github.com/mattjmcnaughton/habagou/commit/3a91ddacb683c748d1b295e456b1c3a1a3df0441))
+
 ## [1.6.1](https://github.com/mattjmcnaughton/habagou/compare/v1.6.0...v1.6.1) (2026-07-17)
 
 
