@@ -22,13 +22,14 @@ costs of the app package, not this module's own doing.) ::
     uv run uvicorn scripts.e2e_backend:create_stub_app --factory \
         --host 127.0.0.1 --port 8000
 
-``create_stub_app`` sets ``openrouter_api_key`` so ``generation_configured`` is
-True (the ``/status`` probe reports enabled and the "Create a pack" entry point
-shows; ``_build_model`` constructs its OpenRouter model without network), pins
-the per-user rate limit to 0 (disabled) so the two Playwright projects sharing
-one backend and one Keycloak user never trip the cap, then enters an
-``Agent.override(model=...)`` for the process lifetime — which beats the
-run-time ``model=`` argument ``generate_pack_draft`` passes.
+``create_stub_app`` sets ``openrouter_api_key`` so both agent features report
+configured (the ``/status`` probes report enabled — the "Create a pack" entry
+point shows and the Practice screen offers the topic picker; each feature's
+``_build_model`` constructs its OpenRouter model without network), pins both
+per-user rate limits to 0 (disabled) so the two Playwright projects sharing
+one backend and one Keycloak user never trip a cap, then enters an
+``Agent.override(model=...)`` per agent for the process lifetime — which beats
+the run-time ``model=`` arguments the services pass.
 """
 
 from __future__ import annotations

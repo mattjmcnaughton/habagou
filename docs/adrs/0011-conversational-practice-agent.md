@@ -108,8 +108,10 @@ conversations with no extra work.
 
 - **Model-supplied pinyin and translations are unverified** — the same
   trade-off ADR 0010 accepted for pack glosses, with the same containment:
-  the content is ephemeral and visible only to the learner who prompted it.
-  A wrong gloss misinforms one reply, not stored content.
+  the content is ephemeral and shown only to the learner who prompted it.
+  A wrong gloss misinforms one reply, not stored content. ("Ephemeral" means
+  no application storage; like generation, full conversations are exported to
+  Logfire spans for operator review when `LOGFIRE_TOKEN` is configured.)
 - **Ephemeral means lossy.** Leaving the chat screen (or refreshing) discards
   the conversation. Accepted deliberately; `sessionStorage` retention of the
   serialized history is a cheap client-only mitigation if it stings, and a

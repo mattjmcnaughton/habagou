@@ -42,8 +42,9 @@ src/habagou/
     scheduling.py      # pure Leitner-ladder scheduler (queue generation, ladder update)
   routers/
     health.py          # healthz/readyz
-    v1/                # packs, characters, progress, path, generation
-  services/            # business logic (incl. pack_generation agent, rate_limit)
+    v1/                # packs, characters, progress, path, generation, practice
+  services/            # business logic (incl. pack_generation and practice_chat
+                       # agents, shared openrouter/message_history seams, rate_limit)
   repositories/        # SQLAlchemy data access (one module per bounded context)
   models/              # SQLAlchemy models (one module per bounded context)
   dtos/                # Pydantic API DTOs
@@ -89,8 +90,8 @@ conversations are ephemeral and client-held by design. See
 FastAPI requests, SQLAlchemy queries, and Pydantic AI runs are instrumented with
 Logfire. The token is optional (`send_to_logfire="if-token-present"`), and no
 system metrics instrumentation is enabled. User prompts and model responses are
-included in Pydantic AI spans so generation conversations can be reviewed in
-Logfire. The existing optional generic OTLP exporter continues to share the same
+included in Pydantic AI spans so generation and practice conversations can be
+reviewed in Logfire. The existing optional generic OTLP exporter continues to share the same
 OpenTelemetry provider.
 
 ## Data Model

@@ -124,10 +124,16 @@ build toward.
 - FR-45: Turn requests are rate-limited per user (fixed window, counted on
   attempt, env-configured cap; default 60/hour — chat turns are more
   frequent and cheaper than pack drafts). Over the cap, the API returns 429
-  and the chat shows a friendly "take a break" message with when to retry.
-- FR-46: A failed turn (provider error, rate limit, network) appears in the
-  conversation as an error entry with a retry affordance, mirroring the
-  pack-generation chat's failure handling; the conversation is not lost.
+  and the chat shows a friendly "take a break" message. No retry countdown
+  is shown (the API does not expose the window — mirroring the
+  pack-generation chat, which refuses to fake one); the conversation is
+  kept and the composer stays usable.
+- FR-46: A failed turn appears in the conversation as an error entry,
+  mirroring the pack-generation chat's failure handling; the conversation
+  is never lost. Provider and network failures offer a "Try again"
+  affordance that resubmits the last message without duplicating its
+  bubble; rate-limit entries omit it (the re-enabled composer is the retry
+  path).
 
 ## 7. Design requirements
 

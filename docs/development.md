@@ -160,8 +160,9 @@ OIDC, `SESSION_SECRET_KEY`):
 
 ```sh
 just bootstrap
-# stub backend: real API + seeded corpus, fake key, stubbed model, cap disabled
-GENERATION_RATE_LIMIT_PER_HOUR=0 uv run uvicorn scripts.e2e_backend:create_stub_app \
+# stub backend: real API + seeded corpus, fake key, stubbed models, caps disabled
+GENERATION_RATE_LIMIT_PER_HOUR=0 PRACTICE_RATE_LIMIT_PER_HOUR=0 \
+    uv run uvicorn scripts.e2e_backend:create_stub_app \
     --factory --host 127.0.0.1 --port "${HABAGOU_PORT:-8000}"
 ```
 
@@ -171,8 +172,9 @@ account.
 
 **PR CI makes zero real LLM calls.** The e2e suite drives the stub above, and
 the backend test tiers force a `TestModel`/`FunctionModel` via `Agent.override`.
-The one real-provider contract test is marked `@pytest.mark.external` and runs
-only via `just test-external`, never in `just gate` or the PR suite.
+The real-provider contract tests (one per agent feature, in
+`tests/external/`) are marked `@pytest.mark.external` and run only via
+`just test-external`, never in `just gate` or the PR suite.
 
 ## Common Tasks
 
