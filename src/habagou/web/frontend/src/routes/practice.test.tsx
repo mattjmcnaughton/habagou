@@ -191,6 +191,51 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
     // …without appending a second learner bubble.
     expect(screen.getAllByText("Meeting someone new")).toHaveLength(1);
+    // The superseded failure bubble no longer offers Try again: clicking it
+    // now would resubmit the latest message and duplicate the exchange.
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("[WF-16] retires an old failure's Try again once a newer message lands", async () => {
+    let calls = 0;
+    server.use(
+      http.post(`${API_V1_BASE}/practice/turn`, () => {
+        calls += 1;
+        if (calls === 1) {
+          return HttpResponse.json(
+            { error: { code: "bad_gateway", message: "upstream", request_id: "mock" } },
+            { status: 502 },
+          );
+        }
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+    renderPractice();
+
+    // First message fails; instead of retrying, the learner types a new one.
+    fireEvent.click(await screen.findByRole("button", { name: "Meeting someone new" }));
+    expect(await screen.findByText(FAILURE_COPY.provider_failure.headline)).toBeTruthy();
+    const input = composerInput();
+    fireEvent.change(input, { target: { value: "你好" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
+
+    // The failure bubble stays in the transcript, but its Try again is gone —
+    // it would resubmit "你好" (the latest message), not the one that failed.
+    expect(screen.getByText(FAILURE_COPY.provider_failure.headline)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("[WF-16] withholds the topic picker until the status probe resolves", async () => {
+    // A never-resolving probe: the screen must fail closed (no picker,
+    // disabled composer) rather than collect a message a disabled server
+    // could only 503.
+    server.use(http.get(`${API_V1_BASE}/practice/status`, () => new Promise<never>(() => {})));
+    renderPractice();
+
+    expect(await screen.findByRole("heading", { name: /Practice/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Ordering food at a restaurant" })).toBeNull();
+    expect(composerInput().disabled).toBe(true);
   });
 
   it("[WF-16] New discards the conversation and returns to the topic picker", async () => {

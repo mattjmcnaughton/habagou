@@ -140,8 +140,12 @@ function PracticeScreen() {
   }, [sending]);
 
   // The tab always renders; the screen itself gates on the status probe so a
-  // learner is never routed into a flow the /turn endpoint can only 503.
-  if (status.data && !status.data.enabled) {
+  // learner is never routed into a flow the /turn endpoint can only 503. The
+  // gate applies only BEFORE the conversation starts: a mid-conversation
+  // status refetch flipping to disabled must never hide a live transcript
+  // (the error copy promises "your conversation is kept") — once started, a
+  // flip surfaces as the /turn 503's first-class "disabled" error bubble.
+  if (!started && status.data && !status.data.enabled) {
     return (
       <PracticeShell onNewConversation={undefined} started={false}>
         <UnavailableState />
@@ -149,17 +153,29 @@ function PracticeScreen() {
     );
   }
 
+  // Fail closed while the probe is in flight: no picker (and a disabled
+  // composer) until it resolves, so a disabled server never collects a doomed
+  // first message. A probe that errs fails open — /turn is the authority and
+  // its failure states handle the rest.
+  const pickerReady = (status.data?.enabled ?? false) || status.isError;
+
   return (
     <PracticeShell
       onNewConversation={started && !sending ? handleNewConversation : undefined}
       started={started}
     >
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
-        {started ? null : <TopicPicker onPick={submitMessage} />}
+        {!started && pickerReady ? <TopicPicker onPick={submitMessage} /> : null}
         {state.entries.map((entry, index) => (
           <ConversationEntry
             busy={sending}
             entry={entry}
+            // Only the transcript's LAST entry may offer "Try again": once a
+            // retry succeeds or a newer message lands, an older failure's
+            // button would resubmit the LATEST learner message — duplicating
+            // or misdirecting a turn (entries are append-only, so stale
+            // bubbles never leave the transcript).
+            isLast={index === state.entries.length - 1}
             // Entries are append-only and never reordered, so the index is a
             // stable key here.
             // biome-ignore lint/suspicious/noArrayIndexKey: append-only log
@@ -171,7 +187,7 @@ function PracticeScreen() {
       </div>
 
       <Composer
-        disabled={sending}
+        disabled={sending || (!started && !pickerReady)}
         inputRef={inputRef}
         onChange={setDraftText}
         onSubmit={() => submitMessage(draftText)}
@@ -222,10 +238,12 @@ function PracticeShell({
 function ConversationEntry({
   busy,
   entry,
+  isLast,
   onRetry,
 }: {
   busy: boolean;
   entry: PracticeEntry;
+  isLast: boolean;
   onRetry: () => void;
 }) {
   if (entry.role === "learner") {
@@ -239,7 +257,7 @@ function ConversationEntry({
   }
 
   if (entry.kind === "error") {
-    return <ErrorBubble busy={busy} failure={entry.failure} onRetry={onRetry} />;
+    return <ErrorBubble busy={busy} failure={entry.failure} isLast={isLast} onRetry={onRetry} />;
   }
 
   return <TutorBubble turn={entry.turn} />;
@@ -298,15 +316,21 @@ function EnglishAside({ text }: { text: string }) {
 function ErrorBubble({
   busy,
   failure,
+  isLast,
   onRetry,
 }: {
   busy: boolean;
   failure: PracticeFailureKind;
+  isLast: boolean;
   onRetry: () => void;
 }) {
   const copy = FAILURE_COPY[failure];
   const tone = FAILURE_TONE[failure];
-  const canRetry = RETRYABLE.has(failure);
+  // Retry is offered only while this failure is the transcript's last word:
+  // handleRetry resubmits the LATEST learner message, so a superseded
+  // bubble's button would duplicate (retry after success) or misdirect
+  // (retry attached to an older message) a turn.
+  const canRetry = RETRYABLE.has(failure) && isLast;
 
   return (
     <div className={`max-w-[85%] rounded-2xl border px-4 py-3 ${tone.border}`} role="alert">
