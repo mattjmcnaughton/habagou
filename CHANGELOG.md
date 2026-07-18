@@ -1,3 +1,16 @@
+# [1.9.0](https://github.com/mattjmcnaughton/habagou/compare/v1.8.0...v1.9.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **admin:** address model-selection review findings ([fe5f720](https://github.com/mattjmcnaughton/habagou/commit/fe5f720cd2b59ea6e9166ba14da353b9b6805b03))
+
+
+### Features
+
+* **admin:** admin user class + AI model selection API (backend) ([ef0e979](https://github.com/mattjmcnaughton/habagou/commit/ef0e979e12c53c799ee21de123d979451349f437))
+* **admin:** AI model picker in generation and practice chats (frontend) ([481d4d7](https://github.com/mattjmcnaughton/habagou/commit/481d4d720d266b91c3de32f7b1da9e12e0af69b9))
+
 # [1.8.0](https://github.com/mattjmcnaughton/habagou/compare/v1.7.0...v1.8.0) (2026-07-18)
 
 
