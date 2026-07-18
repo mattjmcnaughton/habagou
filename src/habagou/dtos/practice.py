@@ -60,9 +60,10 @@ class PracticeTurnRequestDTO(BaseModel):
     """
 
     message: Annotated[str, Field(min_length=1, max_length=2000)]
-    # Each turn appends a request/response pair, so this bounds a conversation
-    # to ~200 turns — far past any real practice session — while still capping
-    # hand-crafted payload amplification.
+    # Each turn appends ~3 messages (request, response, and the output-tool
+    # return), so this bounds a conversation to ~130 turns — far past any real
+    # practice session — while still capping hand-crafted payload
+    # amplification.
     history: Annotated[list[Any], Field(max_length=400)] | None = None
 
 
