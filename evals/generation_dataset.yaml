@@ -1,0 +1,29 @@
+# Generation-agent eval cases. Inputs are the user topic; evaluators are the
+# deterministic checks in evals/generation.py, applied to every case.
+# Optional per-case metadata: min_size/max_size override PackSize's 5-12 band.
+#
+# Curation notes (docs/evals.md): plain everyday topics a beginner would
+# actually request, plus one explicit-size case. Corpus-gap and
+# refinement-turn cases are future extensions.
+name: generation
+cases:
+- name: restaurant
+  inputs: ordering food at a restaurant
+- name: weather
+  inputs: talking about the weather
+- name: family
+  inputs: introducing my family members
+- name: shopping
+  inputs: numbers and prices for shopping at a market
+- name: travel
+  inputs: taking the train to visit a friend
+- name: small-pack
+  inputs: a small pack of just 5 characters about drinking tea
+  metadata:
+    min_size: 4
+    max_size: 6
+evaluators:
+- CorpusMembership
+- PinyinToneMarks
+- PunctuationFreeSentences
+- PackSize

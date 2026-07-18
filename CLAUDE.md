@@ -18,6 +18,7 @@ Python web application using FastAPI, uvicorn, OpenTelemetry, uv, ruff, ty, and 
 | `just test-e2e` | Run e2e tests |
 | `just test-all` | Run all tests |
 | `just test-external` | Run tests hitting external services |
+| `just evals` | Run the agent eval harness (needs `OPENROUTER_API_KEY`; `--smoke` = offline) |
 | `just gate` | Fast pre-push check (fmt + lint + typecheck + test-unit) |
 | `just gate-expensive` | Full check (gate + integration + e2e) |
 | `just gate-external` | Everything (gate-expensive + external) |
@@ -51,6 +52,8 @@ tests/
   unit/                     # Unit tests
   integration/              # Integration tests
   e2e/                      # End-to-end tests
+evals/                      # Agent eval harness (dev-only, never packaged;
+                            # opt-in runs — see docs/evals.md)
 ```
 
 ## Local Development: prefer what is already installed
@@ -84,6 +87,9 @@ Same justfile targets work in every mode; the app only reads env such as
 - **Frontend** is scaffolded separately into `src/habagou/web/frontend/` using the `frontend-react` template.
 - Tests are organized by type in `tests/unit/`, `tests/integration/`, `tests/e2e/`.
 - Use `@pytest.mark.external` for tests that hit external services.
+- **Agent evals** (`evals/`) are opt-in and cost money: `just evals` locally,
+  or dispatch the `Evals` GitHub Actions workflow. Never part of `just gate`
+  or the CI gate. See `docs/evals.md` and `docs/ci.md`.
 - All config is in `pyproject.toml` — no separate config files.
 - Backend: `just dev-be`. Frontend: `just dev-fe`. Both: `just dev`.
 
@@ -93,4 +99,5 @@ Same justfile targets work in every mode; the app only reads env such as
 - `docs/development.md` — read for environment setup, debugging, or common tasks
 - `docs/devex.md` — local modes (host tools, Compose services, optional devenv)
 - `docs/api.md` — API endpoint reference
-- `docs/evals.md` — agent evaluation strategy (WIP)
+- `docs/ci.md` — GitHub Actions workflows, including how to dispatch eval runs
+- `docs/evals.md` — agent eval harness (`evals/`) and evaluation strategy
