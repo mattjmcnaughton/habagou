@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic_ai.models.function import FunctionModel
 
+from habagou.agents.generation import GenerationDeps
 from habagou.dtos.generation import PackDraft
 from habagou.dtos.practice import PracticeTurn
 from habagou.services import pack_generation, practice_chat
-from habagou.services.pack_generation import GenerationDeps
 from scripts.e2e_backend import stub_generation_model, stub_practice_model
 
 if TYPE_CHECKING:

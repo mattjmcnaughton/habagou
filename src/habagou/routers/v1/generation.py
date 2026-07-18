@@ -18,6 +18,9 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
     AsyncSession,
 )
 
+from habagou.agents.generation import (
+    GenerationDeps,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
+)
 from habagou.config import settings
 from habagou.db import get_session
 from habagou.dependencies import get_current_user
@@ -40,7 +43,6 @@ from habagou.services.message_history import (
     load_message_history,
 )
 from habagou.services.pack_generation import (
-    GenerationDeps,  # noqa: TC001 - parameterizes a FastAPI-resolved annotation.
     GenerationNotConfiguredError,
     generate_pack_draft,
     get_generation_agent,

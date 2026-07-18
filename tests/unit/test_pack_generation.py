@@ -17,18 +17,18 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
 
-from habagou.dtos.generation import PackDraft
-from habagou.services import message_history, pack_generation
-from habagou.services.pack_generation import (
+from habagou.agents.generation import (
     _CORPUS_CLOSE,
     _CORPUS_OPEN,
     CorpusCheck,
     GenerationDeps,
-    GenerationNotConfiguredError,
     corpus_membership_prompt,
     find_characters,
     validate_corpus_membership,
 )
+from habagou.dtos.generation import PackDraft
+from habagou.services import message_history, pack_generation
+from habagou.services.pack_generation import GenerationNotConfiguredError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence

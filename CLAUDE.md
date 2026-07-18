@@ -38,6 +38,8 @@ src/habagou/
   routers/                  # HTTP endpoint definitions
     health.py               # /healthz, /readyz
   services/                 # Business logic
+  agents/                   # pydantic-ai agent definitions (no bound model,
+                            # no config/db — see docs/evals.md)
   dtos/                     # Pydantic request/response models
   web/                      # Frontend integration
     serve.py                # Static file serving for production
@@ -76,7 +78,8 @@ Same justfile targets work in every mode; the app only reads env such as
 ## Key Conventions
 
 - Source code lives in `src/habagou/` (src layout).
-- **Layering:** routers -> services -> repositories.
+- **Layering:** routers -> services -> (agents, repositories). Agent
+  definitions in `agents/` never import services, routers, or config.
 - **DTOs** are Pydantic models for API I/O, always separate from DB models.
 - **Frontend** is scaffolded separately into `src/habagou/web/frontend/` using the `frontend-react` template.
 - Tests are organized by type in `tests/unit/`, `tests/integration/`, `tests/e2e/`.
@@ -90,3 +93,4 @@ Same justfile targets work in every mode; the app only reads env such as
 - `docs/development.md` — read for environment setup, debugging, or common tasks
 - `docs/devex.md` — local modes (host tools, Compose services, optional devenv)
 - `docs/api.md` — API endpoint reference
+- `docs/evals.md` — agent evaluation strategy (WIP)

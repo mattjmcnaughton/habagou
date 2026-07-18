@@ -28,10 +28,10 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic_ai.models import override_allow_model_requests
 
+from habagou.agents.generation import GenerationDeps
 from habagou.config import settings
 from habagou.dtos.generation import PackDraft
 from habagou.services.pack_generation import (
-    GenerationDeps,
     _build_model,
     get_generation_agent,
 )
