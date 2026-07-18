@@ -212,6 +212,36 @@ Edge cases:
 - Saving a draft that references a non-corpus glyph returns 422 and emits
   `generated_pack_saved` with `outcome=error`.
 
+### WF-16 — Conversation practice
+
+Steps:
+
+1. A signed-in learner posts a message (their chosen topic on the first turn,
+   chat input after that) plus the client-held history to
+   `POST /api/v1/practice/turn`.
+2. The API meters the request against the caller's hourly practice quota, then
+   runs the practice agent, which returns a structured tutor turn: 1–8
+   per-sentence segments (hanzi/pinyin/English) and an optional English aside.
+3. The client renders the segments (English hidden behind a per-segment tap),
+   holds the updated history, and replays it on the next turn.
+
+Invariants:
+
+- Conversations are ephemeral and client-held: no server-side conversation
+  store, no rows written anywhere in a turn (ADR 0011).
+- Practice turns are capped per user in a fixed one-hour window (default 60),
+  independent of the generation cap, counted on every authenticated attempt
+  before the billed model call. In-memory and per-process, like generation.
+- Every segment carries all three renderings, so tap-for-translation never
+  needs a second model call.
+
+Edge cases:
+
+- An over-quota turn returns 429 `rate_limited`; practice with no provider
+  configured returns 503; a provider failure returns 502; a malformed
+  client-held history returns 422. Each emits `practice_turn_completed` with
+  `outcome=error`.
+
 ## 5. Production instrumentation
 
 Same vocabulary, three signal types. All flow through one tiny helper (`src/habagou/events.py`) so field names cannot drift.
@@ -236,6 +266,7 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `path_item_completed` | WF-13/14 | `activity`, `pack_slug`, `kind`, `user_id`, `duration_ms` (client-reported) |
 | `pack_draft_generated` | WF-15 | `user_id`, `character_count` (`outcome=error` on rate-limit/unconfigured/provider failures) |
 | `generated_pack_saved` | WF-15 | `user_id`, `pack_id` |
+| `practice_turn_completed` | WF-16 | `user_id`, `segment_count` (`outcome=error` on rate-limit/unconfigured/provider failures) |
 | `auth_signed_in` | WF-AUTH-SIGN-IN | `user_id`, `provider` |
 | `auth_signed_out` | WF-AUTH-SIGN-OUT | `user_id`, `provider` |
 | `auth_gate_rejected` | WF-AUTH-GATE | `path` |

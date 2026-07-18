@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 type Tab = {
-  to: "/" | "/packs" | "/progress";
+  to: "/" | "/packs" | "/practice" | "/progress";
   label: string;
   glyph: string;
   isActive: (pathname: string) => boolean;
@@ -15,6 +15,12 @@ const TABS: Tab[] = [
     glyph: "▦",
     // "Packs" stays active on the library, pack detail, and whole-pack activities.
     isActive: (pathname) => pathname === "/packs" || pathname.startsWith("/packs/"),
+  },
+  {
+    to: "/practice",
+    label: "Practice",
+    glyph: "讠",
+    isActive: (pathname) => pathname === "/practice" || pathname.startsWith("/practice/"),
   },
   {
     to: "/progress",

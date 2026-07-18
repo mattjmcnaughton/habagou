@@ -177,6 +177,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/practice/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Practice Status
+         * @description Report whether conversational practice is available, for UI gating.
+         *
+         *     The Practice tab always renders; the practice screen calls this to decide
+         *     between the topic picker and an unavailable state, so a user is never
+         *     routed into a flow the ``/turn`` endpoint can only 503. Deliberately
+         *     cheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness
+         *     probe over a config flag — no rate limiting, no workflow event.
+         */
+        get: operations["get_practice_status_api_v1_practice_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/practice/turn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Practice Turn
+         * @description Run one tutor turn for the caller's message (or opening topic).
+         */
+        post: operations["practice_turn_api_v1_practice_turn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/progress/completions": {
         parameters: {
             query?: never;
@@ -662,6 +708,81 @@ export interface components {
             /** Chars */
             chars: components["schemas"]["PathCharDTO"][];
         };
+        /**
+         * PracticeSegment
+         * @description One sentence of a tutor reply, carried three ways.
+         *
+         *     ``english`` is generated with every segment even though the UI hides it
+         *     behind a tap — a few dozen output tokens buys instant reveal with no second
+         *     model call.
+         */
+        PracticeSegment: {
+            /** English */
+            english: string;
+            /** Hanzi */
+            hanzi: string;
+            /** Pinyin */
+            pinyin: string;
+        };
+        /**
+         * PracticeStatusDTO
+         * @description Whether conversational practice is available, for entry-point gating.
+         *
+         *     ``enabled`` mirrors :attr:`habagou.config.Settings.practice_configured`.
+         *     The Practice tab renders regardless (hiding a tab on an async fetch would
+         *     shift the app shell); the practice screen itself shows an unavailable
+         *     state when this reports ``False``, so a user is never routed into a flow
+         *     the ``/turn`` endpoint can only 503.
+         */
+        PracticeStatusDTO: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /**
+         * PracticeTurn
+         * @description Structured output the practice agent returns for one tutor reply.
+         *
+         *     ``english_aside`` is the "break glass" channel: filled only when the
+         *     learner asked for help in English, and rendered as a distinct helper
+         *     bubble while ``segments`` continue the conversation in Chinese.
+         */
+        PracticeTurn: {
+            /** English Aside */
+            english_aside?: string | null;
+            /** Segments */
+            segments: components["schemas"]["PracticeSegment"][];
+        };
+        /**
+         * PracticeTurnRequestDTO
+         * @description Request for one practice turn.
+         *
+         *     On the first turn of a conversation ``message`` is the learner's chosen
+         *     topic (the system prompt tells the tutor to open the conversation from
+         *     it) and ``history`` is ``None``. On later turns ``message`` is the
+         *     learner's chat input — English, Chinese, or mixed — and ``history`` is the
+         *     opaque JSON message history a prior turn returned (see
+         *     :class:`PracticeTurnResponseDTO`); replaying it keeps the model's context
+         *     with no server-side conversation store.
+         */
+        PracticeTurnRequestDTO: {
+            /** History */
+            history?: unknown[] | null;
+            /** Message */
+            message: string;
+        };
+        /**
+         * PracticeTurnResponseDTO
+         * @description A tutor reply plus the updated conversation history to hold client-side.
+         *
+         *     The client keeps ``history`` between turns and passes it back on the next
+         *     :class:`PracticeTurnRequestDTO`. Conversations are ephemeral by design:
+         *     discarding the history is how a conversation ends.
+         */
+        PracticeTurnResponseDTO: {
+            /** History */
+            history: unknown[];
+            turn: components["schemas"]["PracticeTurn"];
+        };
         /** ProgressResetDTO */
         ProgressResetDTO: {
             /** Deleted Count */
@@ -1071,6 +1192,80 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_practice_status_api_v1_practice_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeStatusDTO"];
+                };
+            };
+        };
+    };
+    practice_turn_api_v1_practice_turn_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeTurnRequestDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PracticeTurnResponseDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Per-user practice rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Practice turn failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conversational practice is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

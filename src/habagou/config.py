@@ -69,6 +69,16 @@ class Settings(BaseSettings):
     # window (see ``services.rate_limit``). 0 or negative disables the cap.
     generation_rate_limit_per_hour: int = 10
 
+    # Conversational practice (WF-16) shares the OpenRouter key with generation
+    # but has its own model id, so chat can run a cheaper/faster model than
+    # pack drafting without a code change. See ``practice_configured``.
+    practice_model: str = "deepseek/deepseek-v4-flash"
+
+    # Per-user cap on billed practice turns, in the same fixed one-hour window.
+    # Higher than the generation cap: chat turns are frequent and cheap
+    # relative to pack drafts. 0 or negative disables the cap.
+    practice_rate_limit_per_hour: int = 60
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")
@@ -80,6 +90,11 @@ class Settings(BaseSettings):
     def generation_configured(self) -> bool:
         """Whether agent pack generation can run (API key and model set)."""
         return bool(self.openrouter_api_key) and bool(self.generation_model)
+
+    @property
+    def practice_configured(self) -> bool:
+        """Whether conversational practice can run (API key and model set)."""
+        return bool(self.openrouter_api_key) and bool(self.practice_model)
 
 
 settings = Settings()

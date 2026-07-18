@@ -23,6 +23,10 @@ export type PackDraft = components["schemas"]["PackDraft"];
 export type DraftCharacter = components["schemas"]["PackDraftCharacter"];
 export type DraftSentence = components["schemas"]["PackDraftSentence"];
 export type GenerationDraftResponse = components["schemas"]["GenerationDraftResponseDTO"];
+export type PracticeStatus = components["schemas"]["PracticeStatusDTO"];
+export type PracticeSegment = components["schemas"]["PracticeSegment"];
+export type PracticeTurn = components["schemas"]["PracticeTurn"];
+export type PracticeTurnResponse = components["schemas"]["PracticeTurnResponseDTO"];
 
 export type {
   CompletePathItemBody,
@@ -181,6 +185,21 @@ export function generateDraft(
 export function saveGeneratedPack(draft: PackDraft): Promise<PackDetail> {
   const body: components["schemas"]["GenerationSavePackRequestDTO"] = { draft };
   return apiFetch<PackDetail>(apiV1Path("/generation/packs"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function getPracticeStatus(): Promise<PracticeStatus> {
+  return apiFetch<PracticeStatus>(apiV1Path("/practice/status"));
+}
+
+export function practiceTurn(message: string, history?: unknown[]): Promise<PracticeTurnResponse> {
+  // JSON.stringify drops undefined properties, so a first-turn `history` of
+  // undefined is omitted from the wire body and matches PracticeTurnRequestDTO.
+  const body: components["schemas"]["PracticeTurnRequestDTO"] = { message, history };
+  return apiFetch<PracticeTurnResponse>(apiV1Path("/practice/turn"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

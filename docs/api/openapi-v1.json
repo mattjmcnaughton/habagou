@@ -836,6 +836,130 @@
         "title": "PathTraceContentDTO",
         "type": "object"
       },
+      "PracticeSegment": {
+        "description": "One sentence of a tutor reply, carried three ways.\n\n``english`` is generated with every segment even though the UI hides it\nbehind a tap \u2014 a few dozen output tokens buys instant reveal with no second\nmodel call.",
+        "properties": {
+          "english": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "English",
+            "type": "string"
+          },
+          "hanzi": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Hanzi",
+            "type": "string"
+          },
+          "pinyin": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Pinyin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hanzi",
+          "pinyin",
+          "english"
+        ],
+        "title": "PracticeSegment",
+        "type": "object"
+      },
+      "PracticeStatusDTO": {
+        "description": "Whether conversational practice is available, for entry-point gating.\n\n``enabled`` mirrors :attr:`habagou.config.Settings.practice_configured`.\nThe Practice tab renders regardless (hiding a tab on an async fetch would\nshift the app shell); the practice screen itself shows an unavailable\nstate when this reports ``False``, so a user is never routed into a flow\nthe ``/turn`` endpoint can only 503.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PracticeStatusDTO",
+        "type": "object"
+      },
+      "PracticeTurn": {
+        "description": "Structured output the practice agent returns for one tutor reply.\n\n``english_aside`` is the \"break glass\" channel: filled only when the\nlearner asked for help in English, and rendered as a distinct helper\nbubble while ``segments`` continue the conversation in Chinese.",
+        "properties": {
+          "english_aside": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "English Aside"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeSegment"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "segments"
+        ],
+        "title": "PracticeTurn",
+        "type": "object"
+      },
+      "PracticeTurnRequestDTO": {
+        "description": "Request for one practice turn.\n\nOn the first turn of a conversation ``message`` is the learner's chosen\ntopic (the system prompt tells the tutor to open the conversation from\nit) and ``history`` is ``None``. On later turns ``message`` is the\nlearner's chat input \u2014 English, Chinese, or mixed \u2014 and ``history`` is the\nopaque JSON message history a prior turn returned (see\n:class:`PracticeTurnResponseDTO`); replaying it keeps the model's context\nwith no server-side conversation store.",
+        "properties": {
+          "history": {
+            "anyOf": [
+              {
+                "items": {},
+                "maxItems": 400,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "PracticeTurnRequestDTO",
+        "type": "object"
+      },
+      "PracticeTurnResponseDTO": {
+        "description": "A tutor reply plus the updated conversation history to hold client-side.\n\nThe client keeps ``history`` between turns and passes it back on the next\n:class:`PracticeTurnRequestDTO`. Conversations are ephemeral by design:\ndiscarding the history is how a conversation ends.",
+        "properties": {
+          "history": {
+            "items": {},
+            "title": "History",
+            "type": "array"
+          },
+          "turn": {
+            "$ref": "#/components/schemas/PracticeTurn"
+          }
+        },
+        "required": [
+          "turn",
+          "history"
+        ],
+        "title": "PracticeTurnResponseDTO",
+        "type": "object"
+      },
       "ProgressResetDTO": {
         "properties": {
           "deleted_count": {
@@ -1412,6 +1536,79 @@
         "summary": "Complete Path Item",
         "tags": [
           "path"
+        ]
+      }
+    },
+    "/api/v1/practice/status": {
+      "get": {
+        "description": "Report whether conversational practice is available, for UI gating.\n\nThe Practice tab always renders; the practice screen calls this to decide\nbetween the topic picker and an unavailable state, so a user is never\nrouted into a flow the ``/turn`` endpoint can only 503. Deliberately\ncheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness\nprobe over a config flag \u2014 no rate limiting, no workflow event.",
+        "operationId": "get_practice_status_api_v1_practice_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeStatusDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Practice Status",
+        "tags": [
+          "practice"
+        ]
+      }
+    },
+    "/api/v1/practice/turn": {
+      "post": {
+        "description": "Run one tutor turn for the caller's message (or opening topic).",
+        "operationId": "practice_turn_api_v1_practice_turn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeTurnRequestDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeTurnResponseDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Per-user practice rate limit exceeded"
+          },
+          "502": {
+            "description": "Practice turn failed"
+          },
+          "503": {
+            "description": "Conversational practice is not configured"
+          }
+        },
+        "summary": "Practice Turn",
+        "tags": [
+          "practice"
         ]
       }
     },

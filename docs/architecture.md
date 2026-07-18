@@ -75,6 +75,17 @@ private owned packs; the draft endpoint is capped by a per-user in-memory
 `services/rate_limit.py` window. See
 [ADR 0010](adrs/0010-agent-pack-generation.md).
 
+Conversational practice (WF-16) is the second agent feature:
+`routers/v1/practice.py` -> `services/practice_chat.py` (a pydantic-ai agent
+with a structured per-sentence turn output, no corpus grounding — nothing in a
+conversation is traced), with turn shapes in `dtos/practice.py`. It reuses the
+generation seams — the shared OpenRouter model builder
+(`services/openrouter.py`, with its own `PRACTICE_MODEL`), the client-held
+message-history round trip (`services/message_history.py`), and a second
+independent `services/rate_limit.py` window — and persists nothing:
+conversations are ephemeral and client-held by design. See
+[ADR 0011](adrs/0011-conversational-practice-agent.md).
+
 FastAPI requests, SQLAlchemy queries, and Pydantic AI runs are instrumented with
 Logfire. The token is optional (`send_to_logfire="if-token-present"`), and no
 system metrics instrumentation is enabled. User prompts and model responses are

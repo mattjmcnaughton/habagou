@@ -128,9 +128,11 @@ API key set, the rest of the app is unaffected.
 `.env` (the app reads `.env` on startup):
 
 ```sh
-OPENROUTER_API_KEY=sk-or-...        # required to enable generation
+OPENROUTER_API_KEY=sk-or-...        # required to enable generation AND practice
 GENERATION_MODEL=deepseek/deepseek-v4-flash  # optional; default shown (via OpenRouter)
 GENERATION_RATE_LIMIT_PER_HOUR=10   # optional; per user, 0 or negative disables the cap
+PRACTICE_MODEL=deepseek/deepseek-v4-flash    # optional; conversational practice model
+PRACTICE_RATE_LIMIT_PER_HOUR=60     # optional; per user, 0 or negative disables the cap
 LOGFIRE_TOKEN=                      # optional; enables API, database, and AI trace export
 ```
 
@@ -144,12 +146,15 @@ model responses) for review in Logfire.
 
 **When it is disabled** (no key), `GET /api/v1/generation/status` returns
 `{"enabled": false}`, the frontend hides the "Create a pack" entry point, and
-`POST /api/v1/generation/draft` returns 503. Nothing else changes.
+`POST /api/v1/generation/draft` returns 503. Likewise
+`GET /api/v1/practice/status` reports disabled, the Practice screen shows an
+unavailable state, and `POST /api/v1/practice/turn` returns 503. Nothing else
+changes.
 
-**Develop the chat UI without a key or any provider.**
-`scripts/e2e_backend.py` serves the real API and seeded corpus with a
-deterministic, network-free generation model (zero provider calls) — the same
-stub the Playwright suite runs against. Start it in place of `just dev-be`, on
+**Develop the chat UIs without a key or any provider.**
+`scripts/e2e_backend.py` serves the real API and seeded corpus with
+deterministic, network-free generation and practice models (zero provider
+calls) — the same stubs the Playwright suite runs against. Start it in place of `just dev-be`, on
 the port `just dev-fe` proxies to, with the usual backend env (`DATABASE_URL`,
 OIDC, `SESSION_SECRET_KEY`):
 

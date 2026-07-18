@@ -27,6 +27,8 @@ workflows:
     title: Review resurfacing
   - id: WF-15
     title: Generate practice pack
+  - id: WF-16
+    title: Conversation practice
   - id: WF-AUTH-SIGN-IN
     title: Sign in
   - id: WF-AUTH-SIGN-OUT

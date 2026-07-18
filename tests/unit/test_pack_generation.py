@@ -18,7 +18,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
 
 from habagou.dtos.generation import PackDraft
-from habagou.services import pack_generation
+from habagou.services import message_history, pack_generation
 from habagou.services.pack_generation import (
     _CORPUS_CLOSE,
     _CORPUS_OPEN,
@@ -508,11 +508,11 @@ async def test_message_history_round_trips_through_helpers(
         topic="greetings",
     )
 
-    dumped = pack_generation.dump_message_history(result.messages)
+    dumped = message_history.dump_message_history(result.messages)
     # The dump is genuinely JSON-able (survives a JSON encode/decode cycle).
     assert json.loads(json.dumps(dumped)) == dumped
     # And it reconstructs the exact same messages.
-    loaded = pack_generation.load_message_history(dumped)
+    loaded = message_history.load_message_history(dumped)
     assert loaded == result.messages
 
 

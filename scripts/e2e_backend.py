@@ -42,6 +42,7 @@ from pydantic_ai.models.function import FunctionModel
 from habagou.app import create_app
 from habagou.config import settings
 from habagou.services.pack_generation import get_generation_agent
+from habagou.services.practice_chat import get_practice_agent
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -133,6 +134,57 @@ def stub_generation_model() -> FunctionModel:
     return FunctionModel(_stub_model_response)
 
 
+# --- Deterministic practice turns (WF-16) --------------------------------------
+#
+# The practice agent has no corpus grounding, so these turns only need to be
+# stable and visibly distinct across the first and follow-up turns. The
+# follow-up carries an english_aside so the e2e suite can exercise the
+# "break glass" rendering deterministically.
+
+PRACTICE_OPENER: dict[str, object] = {
+    "segments": [
+        {"hanzi": "你好", "pinyin": "nǐ hǎo", "english": "Hello!"},
+        {
+            "hanzi": "你想吃什么",
+            "pinyin": "nǐ xiǎng chī shénme",
+            "english": "What do you want to eat?",
+        },
+    ],
+}
+
+PRACTICE_FOLLOW_UP: dict[str, object] = {
+    "segments": [
+        {"hanzi": "好的", "pinyin": "hǎo de", "english": "Okay!"},
+        {
+            "hanzi": "你要喝什么",
+            "pinyin": "nǐ yào hē shénme",
+            "english": "What do you want to drink?",
+        },
+    ],
+    "english_aside": "喝 (hē) means 'to drink' — you'll hear it in drink questions.",
+}
+
+
+def _stub_practice_response(
+    messages: Sequence[ModelMessage], info: AgentInfo
+) -> ModelResponse:
+    """Deterministic ``FunctionModel`` callback: opener on turn 1, reply after.
+
+    Turn selection is driven purely by the user-prompt count (mirroring
+    :func:`_stub_model_response`), so the same conversation always renders the
+    same transcript.
+    """
+    turn = PRACTICE_FOLLOW_UP if _count_user_prompts(messages) >= 2 else PRACTICE_OPENER
+    return ModelResponse(
+        parts=[ToolCallPart(tool_name=info.output_tools[0].name, args=turn)]
+    )
+
+
+def stub_practice_model() -> FunctionModel:
+    """The deterministic, network-free model for the practice agent."""
+    return FunctionModel(_stub_practice_response)
+
+
 # Holds the process-lifetime ``Agent.override`` context open. Module-global so it
 # is never garbage-collected (and thus never exited) for the life of the server.
 _override_stack = ExitStack()
@@ -153,16 +205,21 @@ def create_stub_app() -> FastAPI:
     # Belt-and-suspenders with GENERATION_RATE_LIMIT_PER_HOUR=0 in the Playwright
     # webServer env: two projects share one backend and one Keycloak user, so the
     # cap must be off. create_app() reads this to build the limiter, so pin it
-    # BEFORE constructing the app.
+    # BEFORE constructing the app. Same for the practice cap.
     settings.generation_rate_limit_per_hour = 0
+    settings.practice_rate_limit_per_hour = 0
 
     app = create_app()
 
     agent = get_generation_agent()
-    # Enter the override for the process lifetime (never exited): the stubbed
-    # model beats the run-time model= argument generate_pack_draft passes. No
-    # dependency_overrides entry is needed — get_generation_agent already
-    # returns this same module-level agent, so the override alone stubs it.
+    # Enter the overrides for the process lifetime (never exited): the stubbed
+    # models beat the run-time model= arguments the services pass. No
+    # dependency_overrides entries are needed — the get_*_agent dependencies
+    # already return these same module-level agents, so the overrides alone
+    # stub them.
     _override_stack.enter_context(agent.override(model=stub_generation_model()))
+    _override_stack.enter_context(
+        get_practice_agent().override(model=stub_practice_model())
+    )
 
     return app

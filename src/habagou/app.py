@@ -16,7 +16,7 @@ from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
-from habagou.routers.v1 import characters, generation, packs, path, progress
+from habagou.routers.v1 import characters, generation, packs, path, practice, progress
 from habagou.services.rate_limit import FixedWindowRateLimiter
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
@@ -55,6 +55,13 @@ def create_app() -> FastAPI:
         limit=settings.generation_rate_limit_per_hour,
         window_seconds=3600,
     )
+    # A second, independent window for practice turns (WF-16): the two agent
+    # features cap spend separately, so a chat session cannot starve pack
+    # drafting or vice versa.
+    app.state.practice_rate_limiter = FixedWindowRateLimiter(
+        limit=settings.practice_rate_limit_per_hour,
+        window_seconds=3600,
+    )
 
     setup_telemetry(app)
     _install_request_logging(app)
@@ -66,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(generation.router)
     app.include_router(packs.router)
     app.include_router(path.router)
+    app.include_router(practice.router)
     app.include_router(progress.router)
 
     # Mount frontend static files (only serves if dist/ exists)

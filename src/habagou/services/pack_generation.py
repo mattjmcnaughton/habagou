@@ -25,14 +25,11 @@ from __future__ import annotations
 import hashlib
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import structlog
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.messages import ModelMessagesTypeAdapter
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from habagou.config import settings
 from habagou.dtos.generation import PackDraft
@@ -42,12 +39,14 @@ from habagou.repositories.packs import (
     PackRepository,
     PackSentenceInput,
 )
+from habagou.services.openrouter import build_openrouter_model
 
 if TYPE_CHECKING:
     import uuid
     from collections.abc import Iterable
 
     from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.models.openai import OpenAIChatModel
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from habagou.models import Pack
@@ -338,35 +337,18 @@ def get_generation_agent() -> Agent[GenerationDeps, PackDraft]:
     return _generation_agent
 
 
-# The provider owns an httpx.AsyncClient, so the built model is cached and
-# reused across runs (mirroring db.py's shared engine) instead of leaking a
-# fresh connection pool per request. Keyed on the settings that shape it so
-# tests that flip configuration get a matching model.
-_model_cache: OpenAIChatModel | None = None
-_model_cache_key: tuple[str, str] | None = None
-
-
 def _build_model() -> OpenAIChatModel:
     """Return the OpenRouter-backed model for a generation run.
 
     Lazy and gated: only built when generation is configured, then cached for
-    reuse. Constructing the model performs no network I/O; the request happens
-    when the agent runs.
+    reuse by the shared :mod:`habagou.services.openrouter` builder.
     """
-    global _model_cache, _model_cache_key
     if not settings.generation_configured:
         raise GenerationNotConfiguredError(
             "Pack generation is not configured: set OPENROUTER_API_KEY (and "
             "GENERATION_MODEL) to enable it."
         )
-    key = (settings.generation_model, settings.openrouter_api_key)
-    if _model_cache is None or _model_cache_key != key:
-        _model_cache = OpenAIChatModel(
-            settings.generation_model,
-            provider=OpenRouterProvider(api_key=settings.openrouter_api_key),
-        )
-        _model_cache_key = key
-    return _model_cache
+    return build_openrouter_model(settings.generation_model)
 
 
 async def generate_pack_draft(
@@ -416,31 +398,6 @@ async def generate_pack_draft(
         refinement=refinement,
     )
     return GenerationResult(draft=result.output, messages=result.all_messages())
-
-
-# --- HAB-082: message-history (de)serialization for client-side round-trips ----
-
-
-def dump_message_history(messages: list[ModelMessage]) -> list[Any]:
-    """Serialize a run's message history to JSON-able Python.
-
-    The endpoint holds the conversation client-side between turns, so it needs
-    the pydantic-ai messages as plain JSON-serializable data (lists/dicts). Round
-    trips with :func:`load_message_history` via pydantic-ai's message-history type
-    adapter, which owns the wire schema for the discriminated message union.
-    """
-    return ModelMessagesTypeAdapter.dump_python(messages, mode="json")
-
-
-def load_message_history(data: list[Any]) -> list[ModelMessage]:
-    """Rebuild a message history from :func:`dump_message_history` output.
-
-    The inverse of :func:`dump_message_history`: turns the JSON-able payload the
-    client sent back into ``list[ModelMessage]`` suitable for ``agent.run``'s
-    ``message_history`` (threaded through ``history`` on
-    :func:`generate_pack_draft`).
-    """
-    return ModelMessagesTypeAdapter.validate_python(data)
 
 
 # --- HAB-084: persist a finalized draft as an owned pack -----------------------

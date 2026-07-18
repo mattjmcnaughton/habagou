@@ -16,9 +16,10 @@ import pytest
 from pydantic_ai.models.function import FunctionModel
 
 from habagou.dtos.generation import PackDraft
-from habagou.services import pack_generation
+from habagou.dtos.practice import PracticeTurn
+from habagou.services import pack_generation, practice_chat
 from habagou.services.pack_generation import GenerationDeps
-from scripts.e2e_backend import stub_generation_model
+from scripts.e2e_backend import stub_generation_model, stub_practice_model
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -151,3 +152,44 @@ def test_stub_model_is_a_function_model_no_network() -> None:
     # is exempt from the suite-wide ALLOW_MODEL_REQUESTS guard and makes no
     # provider request).
     assert isinstance(stub_generation_model(), FunctionModel)
+
+
+# --- WF-16: practice stub determinism -------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_practice_first_turn_returns_the_opener() -> None:
+    agent = practice_chat.get_practice_agent()
+
+    result = await agent.run("ordering food", model=stub_practice_model())
+
+    turn = result.output
+    assert isinstance(turn, PracticeTurn)
+    assert [segment.hanzi for segment in turn.segments] == ["你好", "你想吃什么"]
+    # Every segment carries all three renderings (the tap-reveal contract).
+    assert all(segment.pinyin and segment.english for segment in turn.segments)
+    # The opener never breaks glass.
+    assert turn.english_aside is None
+
+
+@pytest.mark.anyio
+async def test_practice_follow_up_turn_carries_the_english_aside() -> None:
+    agent = practice_chat.get_practice_agent()
+
+    first = await agent.run("ordering food", model=stub_practice_model())
+    second = await agent.run(
+        "what does 喝 mean?",
+        model=stub_practice_model(),
+        message_history=first.all_messages(),
+    )
+
+    turn = second.output
+    # Visibly distinct from the opener, with the break-glass aside filled so the
+    # e2e suite can exercise its rendering deterministically.
+    assert [segment.hanzi for segment in turn.segments] == ["好的", "你要喝什么"]
+    assert turn.english_aside is not None
+    assert "to drink" in turn.english_aside
+
+
+def test_practice_stub_model_is_a_function_model_no_network() -> None:
+    assert isinstance(stub_practice_model(), FunctionModel)
