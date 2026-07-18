@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import { App } from "../app/app";
 import { API_V1_BASE } from "../lib/api";
 import {
+  chatModelOptions,
   generationDraftFailure,
   generationHistory,
   generationSaveFailure,
+  generationStatusAdmin,
   packDraft,
 } from "../mocks/handlers";
 import { server } from "../mocks/server";
@@ -297,6 +299,109 @@ describe("Create a pack — refinement, save, and failure states", () => {
     fireEvent.submit(input.closest("form") as HTMLFormElement);
     await waitFor(() => expect(screen.getByText("Ordering at a restaurant")).toBeTruthy());
     expect(draftCalls).toBe(1);
+  });
+
+  it("[WF-15] hides the model picker and sends no model for non-admins", async () => {
+    // Default status handlers model the non-admin caller (`models: null`), so
+    // this pins the "pixel-identical UI" contract: no picker chrome, and the
+    // draft body carries no `model` key at all.
+    let received: Record<string, unknown> | undefined;
+    server.use(
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        received = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ draft: packDraft, history: generationHistory });
+      }),
+    );
+    renderGenerate();
+
+    const input = await findComposerInput();
+    expect(screen.queryByText("Model")).toBeNull();
+    for (const option of chatModelOptions) {
+      expect(screen.queryByRole("button", { name: option.label })).toBeNull();
+    }
+
+    fireEvent.change(input, { target: { value: "Ordering at a restaurant" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(packDraft.title)).toBeTruthy();
+
+    expect(received).toBeDefined();
+    expect(received && "model" in received).toBe(false);
+  });
+
+  it("[WF-15] shows the model picker to admins with every label and the default preselected", async () => {
+    server.use(generationStatusAdmin());
+    renderGenerate();
+
+    // The server default (first entry) is preselected; the rest are not.
+    const defaultChip = await screen.findByRole("button", { name: chatModelOptions[0].label });
+    expect(defaultChip.getAttribute("aria-pressed")).toBe("true");
+    for (const option of chatModelOptions.slice(1)) {
+      const chip = screen.getByRole("button", { name: option.label });
+      expect(chip.getAttribute("aria-pressed")).toBe("false");
+    }
+    expect(screen.getByText("Model")).toBeTruthy();
+  });
+
+  it("[WF-15] sends the selected model on a draft turn and omits it when untouched", async () => {
+    const receivedBodies: Record<string, unknown>[] = [];
+    server.use(
+      generationStatusAdmin(),
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        receivedBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ draft: packDraft, history: generationHistory });
+      }),
+    );
+    renderGenerate();
+
+    // Untouched picker: the request stays model-free (server default).
+    const input = await findComposerInput();
+    await screen.findByRole("button", { name: chatModelOptions[0].label });
+    fireEvent.change(input, { target: { value: "Ordering at a restaurant" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(packDraft.title)).toBeTruthy();
+    expect("model" in receivedBodies[0]).toBe(false);
+
+    // Pick a non-default model, then refine: the override rides the wire.
+    fireEvent.click(screen.getByRole("button", { name: "Claude Sonnet 5" }));
+    const refine = composerInput();
+    fireEvent.change(refine, { target: { value: "Add some drinks" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(receivedBodies).toHaveLength(2));
+    expect(receivedBodies[1].model).toBe("anthropic/claude-sonnet-5");
+  });
+
+  it("[WF-15] keeps the selected model in the body on a Try again retry", async () => {
+    const receivedModels: unknown[] = [];
+    let calls = 0;
+    server.use(
+      generationStatusAdmin(),
+      http.post(`${API_V1_BASE}/generation/draft`, async ({ request }) => {
+        calls += 1;
+        const body = (await request.json()) as Record<string, unknown>;
+        receivedModels.push(body.model);
+        if (calls === 1) {
+          return HttpResponse.json(
+            { error: { code: "bad_gateway", message: "upstream", request_id: "mock" } },
+            { status: 502 },
+          );
+        }
+        return HttpResponse.json({ draft: packDraft, history: generationHistory });
+      }),
+    );
+    renderGenerate();
+
+    fireEvent.click(await screen.findByRole("button", { name: "MiniMax M3" }));
+    const input = composerInput();
+    fireEvent.change(input, { target: { value: "Ordering at a restaurant" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    // First attempt fails; the retry must replay the same override, not drop it.
+    expect(await screen.findByText(FAILURE_COPY.provider_failure.headline)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText(packDraft.title)).toBeTruthy();
+    expect(receivedModels).toEqual(["minimax/minimax-m3", "minimax/minimax-m3"]);
   });
 
   it("[WF-15] guards a double save — two rapid clicks fire exactly one POST", async () => {

@@ -133,6 +133,8 @@ GENERATION_MODEL=openai/gpt-5.6-terra  # optional; default shown (via OpenRouter
 GENERATION_RATE_LIMIT_PER_HOUR=10   # optional; per user, 0 or negative disables the cap
 PRACTICE_MODEL=openai/gpt-5.6-terra    # optional; conversational practice model
 PRACTICE_RATE_LIMIT_PER_HOUR=60     # optional; per user, 0 or negative disables the cap
+ADMIN_CHAT_MODELS=anthropic/claude-sonnet-5,minimax/minimax-m3  # optional; extra models admins may pick
+ADMIN_EMAIL_DOMAINS=mattjmcnaughton.com  # optional; admin email domains (docs/auth.md)
 LOGFIRE_TOKEN=                      # optional; enables API, database, and AI trace export
 ```
 
@@ -145,7 +147,8 @@ generation conversation (user messages, replayed history, tool activity, and
 model responses) for review in Logfire.
 
 **When it is disabled** (no key), `GET /api/v1/generation/status` returns
-`{"enabled": false}`, the frontend hides the "Create a pack" entry point, and
+`{"enabled": false, "models": null, "default_model": null}`, the frontend
+hides the "Create a pack" entry point, and
 `POST /api/v1/generation/draft` returns 503. Likewise
 `GET /api/v1/practice/status` reports disabled, the Practice screen shows an
 unavailable state, and `POST /api/v1/practice/turn` returns 503. Nothing else

@@ -15,6 +15,10 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
+# ChatModelOptionDTO annotates pydantic model fields, which pydantic resolves
+# at runtime, so it is imported eagerly (not TYPE_CHECKING).
+from habagou.dtos.chat_models import ChatModelOptionDTO  # noqa: TC001
+
 # Size bounds keep hand-crafted payloads from amplifying into oversized
 # database writes or oversized (billed) model calls, while staying generous
 # enough that a well-behaved model never trips them into a needless retry.
@@ -60,6 +64,10 @@ class GenerationDraftRequestDTO(BaseModel):
 
     topic: Annotated[str, Field(min_length=1, max_length=2000)]
     history: Annotated[list[Any], Field(max_length=200)] | None = None
+    # Admin-only OpenRouter model override; must be one of the server's
+    # selectable generation model ids (``Settings.generation_model_ids``).
+    # ``None`` runs the server default. Non-admins sending a model get a 403.
+    model: Annotated[str, Field(min_length=1, max_length=200)] | None = None
 
 
 class GenerationDraftResponseDTO(BaseModel):
@@ -88,6 +96,13 @@ class GenerationStatusDTO(BaseModel):
     ``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`
     (True only when both the OpenRouter key and the model are set); it is not a
     per-user capability, just a server-wide readiness flag.
+
+    ``models`` and ``default_model`` are the admin model picker's data: the
+    selectable OpenRouter models (default first) and the id that runs when the
+    request carries no override. Both are ``None`` for non-admin callers — the
+    response itself gates the picker UI — and when generation is unconfigured.
     """
 
     enabled: bool
+    models: list[ChatModelOptionDTO] | None = None
+    default_model: str | None = None

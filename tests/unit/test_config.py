@@ -85,3 +85,65 @@ def test_create_app_boots_with_generation_key_unset() -> None:
     from habagou.app import create_app
 
     assert isinstance(create_app(), FastAPI)
+
+
+def test_admin_email_domains_default_and_parsing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    settings = Settings()
+    assert settings.admin_email_domains == "mattjmcnaughton.com"
+    assert settings.admin_email_domain_set == frozenset({"mattjmcnaughton.com"})
+
+
+def test_admin_email_domain_set_splits_strips_and_lowercases(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ADMIN_EMAIL_DOMAINS", " MattJMcNaughton.com ,example.org,, ")
+    settings = Settings()
+    assert settings.admin_email_domain_set == frozenset(
+        {"mattjmcnaughton.com", "example.org"}
+    )
+
+
+def test_generation_model_ids_prepend_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    settings = Settings()
+    # Default model first (it is the implicit selection), then the admin list
+    # in configured order.
+    assert settings.generation_model_ids == (
+        "openai/gpt-5.6-terra",
+        "anthropic/claude-sonnet-5",
+        "minimax/minimax-m3",
+    )
+    assert settings.practice_model_ids == settings.generation_model_ids
+
+
+def test_model_ids_dedupe_when_default_is_also_listed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(
+        "ADMIN_CHAT_MODELS", " anthropic/claude-sonnet-5 ,openai/gpt-5.6-terra,"
+    )
+    settings = Settings()
+    assert settings.generation_model_ids == (
+        "openai/gpt-5.6-terra",
+        "anthropic/claude-sonnet-5",
+    )
+
+
+def test_practice_model_ids_use_the_practice_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PRACTICE_MODEL", "openai/gpt-5.6-mini")
+    settings = Settings()
+    assert settings.practice_model_ids == (
+        "openai/gpt-5.6-mini",
+        "anthropic/claude-sonnet-5",
+        "minimax/minimax-m3",
+    )

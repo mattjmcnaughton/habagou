@@ -98,6 +98,10 @@ export interface paths {
          *     flag, not a step in any tracked workflow (WF-15 covers the draft/save
          *     actions). Auth matches the other pack read endpoints (e.g.
          *     ``GET /api/v1/packs``); the flag is server-wide, not per-user.
+         *
+         *     For admin callers (and only when generation is configured) the response
+         *     also carries the selectable models and the server default, which is what
+         *     renders the model picker — ``models`` stays ``None`` for everyone else.
          */
         get: operations["get_generation_status_api_v1_generation_status_get"];
         put?: never;
@@ -193,6 +197,10 @@ export interface paths {
          *     routed into a flow the ``/turn`` endpoint can only 503. Deliberately
          *     cheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness
          *     probe over a config flag — no rate limiting, no workflow event.
+         *
+         *     For admin callers (and only when practice is configured) the response also
+         *     carries the selectable models and the server default, which is what
+         *     renders the model picker — ``models`` stays ``None`` for everyone else.
          */
         get: operations["get_practice_status_api_v1_practice_status_get"];
         put?: never;
@@ -385,6 +393,16 @@ export interface components {
          * @enum {string}
          */
         ActivityType: "trace" | "match" | "sentence";
+        /**
+         * ChatModelOptionDTO
+         * @description One selectable model: the OpenRouter id plus a display label.
+         */
+        ChatModelOptionDTO: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
         /** CompletionCreateDTO */
         CompletionCreateDTO: {
             activity: components["schemas"]["ActivityType"];
@@ -433,6 +451,8 @@ export interface components {
         GenerationDraftRequestDTO: {
             /** History */
             history?: unknown[] | null;
+            /** Model */
+            model?: string | null;
             /** Topic */
             topic: string;
         };
@@ -465,10 +485,19 @@ export interface components {
          *     ``enabled`` mirrors :attr:`habagou.config.Settings.generation_configured`
          *     (True only when both the OpenRouter key and the model are set); it is not a
          *     per-user capability, just a server-wide readiness flag.
+         *
+         *     ``models`` and ``default_model`` are the admin model picker's data: the
+         *     selectable OpenRouter models (default first) and the id that runs when the
+         *     request carries no override. Both are ``None`` for non-admin callers — the
+         *     response itself gates the picker UI — and when generation is unconfigured.
          */
         GenerationStatusDTO: {
+            /** Default Model */
+            default_model?: string | null;
             /** Enabled */
             enabled: boolean;
+            /** Models */
+            models?: components["schemas"]["ChatModelOptionDTO"][] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -733,10 +762,19 @@ export interface components {
          *     shift the app shell); the practice screen itself shows an unavailable
          *     state when this reports ``False``, so a user is never routed into a flow
          *     the ``/turn`` endpoint can only 503.
+         *
+         *     ``models`` and ``default_model`` are the admin model picker's data,
+         *     mirroring :class:`habagou.dtos.generation.GenerationStatusDTO`: ``None``
+         *     for non-admin callers (the response gates the picker UI) and when practice
+         *     is unconfigured.
          */
         PracticeStatusDTO: {
+            /** Default Model */
+            default_model?: string | null;
             /** Enabled */
             enabled: boolean;
+            /** Models */
+            models?: components["schemas"]["ChatModelOptionDTO"][] | null;
         };
         /**
          * PracticeTurn
@@ -769,6 +807,8 @@ export interface components {
             history?: unknown[] | null;
             /** Message */
             message: string;
+            /** Model */
+            model?: string | null;
         };
         /**
          * PracticeTurnResponseDTO
@@ -825,6 +865,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
             /** Username */
             username: string;
         };
@@ -930,14 +975,19 @@ export interface operations {
                     "application/json": components["schemas"]["GenerationDraftResponseDTO"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Model selection requires an admin account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Replayed history is invalid, or the requested model is not selectable */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
             /** @description Per-user generation rate limit exceeded */
             429: {
@@ -1237,14 +1287,19 @@ export interface operations {
                     "application/json": components["schemas"]["PracticeTurnResponseDTO"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Model selection requires an admin account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Replayed history is invalid, or the requested model is not selectable */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
             /** @description Per-user practice rate limit exceeded */
             429: {

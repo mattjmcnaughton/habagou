@@ -193,6 +193,13 @@ only ever references hanzi that exist in the stroke corpus (see
 "Create a pack" entry point while generation is unconfigured, so a user is
 never routed into a flow the `/draft` endpoint can only 503.
 
+For admin callers (see [Admin users](auth.md#admin-users)) the status response
+additionally carries the admin model picker's data — `models` (the selectable
+OpenRouter models as `{id, label}`, server default first, from
+`ADMIN_CHAT_MODELS` plus the default) and `default_model`. Both are `null` for
+non-admin callers and when generation is unconfigured; the response itself
+gates the picker UI.
+
 `POST /api/v1/generation/draft` body:
 
 ```json
@@ -231,11 +238,17 @@ never routed into a flow the `/draft` endpoint can only 503.
   corpus-validated.
 - `coverage_note` — a non-null honest note when some requested characters are
   absent from the corpus, rather than silently shrinking the pack.
+- `model` — optional, admin-only OpenRouter model override for this turn; must
+  be one of the ids the status response listed. `null`/omitted runs the server
+  default. Switching models mid-conversation is allowed (the history replay is
+  model-agnostic).
+- 403 — `model` was sent by a non-admin caller.
 - 429 — the caller exceeded `GENERATION_RATE_LIMIT_PER_HOUR` (default 10, counted
   per attempt).
 - 502 — the generation run failed (provider/model error).
 - 503 — generation is not configured (`OPENROUTER_API_KEY` unset).
-- 422 — `history` is present but is not a valid generation message history.
+- 422 — `history` is present but is not a valid generation message history, or
+  `model` is not one of the selectable ids (the error names them).
 
 `POST /api/v1/generation/packs` body:
 
@@ -265,6 +278,11 @@ no server-side conversation store and nothing is persisted. The frontend calls
 the `GET /api/v1/practice/status` probe (`{"enabled": bool}`) to show an
 unavailable state (the Practice tab itself always renders) while practice is
 unconfigured.
+
+For admin callers the status response also carries `models`/`default_model`
+(the admin model picker's data, mirroring the generation status probe), and
+`POST /api/v1/practice/turn` accepts the same optional admin-only `model`
+override with the same 403/422 behavior as `/generation/draft`.
 
 `POST /api/v1/practice/turn` body:
 

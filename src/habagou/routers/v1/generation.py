@@ -34,6 +34,7 @@ from habagou.dtos.generation import (
 from habagou.dtos.packs import PackDetailDTO
 from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
+from habagou.routers.v1.chat_models import admin_model_options, resolve_model_override
 from habagou.services.message_history import (
     dump_message_history,
     load_message_history,
@@ -78,14 +79,32 @@ async def get_generation_status(
     flag, not a step in any tracked workflow (WF-15 covers the draft/save
     actions). Auth matches the other pack read endpoints (e.g.
     ``GET /api/v1/packs``); the flag is server-wide, not per-user.
+
+    For admin callers (and only when generation is configured) the response
+    also carries the selectable models and the server default, which is what
+    renders the model picker — ``models`` stays ``None`` for everyone else.
     """
-    return GenerationStatusDTO(enabled=settings.generation_configured)
+    models = admin_model_options(
+        current_user,
+        configured=settings.generation_configured,
+        model_ids=settings.generation_model_ids,
+    )
+    return GenerationStatusDTO(
+        enabled=settings.generation_configured,
+        models=models,
+        default_model=settings.generation_model if models is not None else None,
+    )
 
 
 @router.post(
     "/draft",
     response_model=GenerationDraftResponseDTO,
     responses={
+        403: {"description": "Model selection requires an admin account"},
+        422: {
+            "description": "Replayed history is invalid, or the requested "
+            "model is not selectable"
+        },
         429: {"description": "Per-user generation rate limit exceeded"},
         502: {"description": "Pack generation failed"},
         503: {"description": "Pack generation is not configured"},
@@ -128,11 +147,22 @@ async def generate_draft(
                 detail="history is not a valid generation message history",
             ) from exc
         try:
+            # Admin-only model override (403 for non-admins, 422 off-allowlist).
+            model_id = resolve_model_override(
+                payload.model,
+                user=current_user,
+                allowed=settings.generation_model_ids,
+            )
+        except HTTPException:
+            event.outcome = "error"
+            raise
+        try:
             result = await generate_pack_draft(
                 agent,
                 session=session,
                 topic=payload.topic,
                 history=history,
+                model_id=model_id,
             )
         except GenerationNotConfiguredError as exc:
             event.outcome = "error"
@@ -149,7 +179,10 @@ async def generate_draft(
                 detail="pack generation failed",
             ) from exc
 
-        event.fields.update(character_count=len(result.draft.characters))
+        event.fields.update(
+            character_count=len(result.draft.characters),
+            model=model_id or settings.generation_model,
+        )
         return GenerationDraftResponseDTO(
             draft=result.draft,
             history=dump_message_history(result.messages),

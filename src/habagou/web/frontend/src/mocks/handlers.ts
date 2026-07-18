@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 import type {
   AuthSession,
+  ChatModelOption,
   CompletePathItemResponse,
   CompletionResponse,
   GenerationDraftResponse,
@@ -27,6 +28,9 @@ export const authenticatedSession: AuthSession = {
     username: "dev",
     display_name: "Dev User",
     email: "dev@example.com",
+    // The default mock session is a non-admin, matching the null model-picker
+    // fields the default status handlers return.
+    is_admin: false,
   },
 };
 
@@ -370,6 +374,38 @@ export const practiceHistory: unknown[] = [
   { role: "assistant", content: "opened the conversation" },
 ];
 
+// The admin model picker's allowlist (ADM-04): server default first, matching
+// the order the status endpoints return. The default handlers below return
+// `models: null` — the server's shape for non-admin callers — so tests opt into
+// the admin view via `server.use(generationStatusAdmin())` / `practiceStatusAdmin()`.
+export const chatModelOptions: ChatModelOption[] = [
+  { id: "openai/gpt-5.6-terra", label: "GPT-5.6 Terra" },
+  { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5" },
+  { id: "minimax/minimax-m3", label: "MiniMax M3" },
+];
+
+// Admin-variant status handlers for tests to install via `server.use(...)`:
+// only admin callers receive the selectable model list (default first).
+export function generationStatusAdmin() {
+  return http.get(`${API_V1}/generation/status`, () =>
+    HttpResponse.json<GenerationStatus>({
+      enabled: true,
+      models: chatModelOptions,
+      default_model: chatModelOptions[0].id,
+    }),
+  );
+}
+
+export function practiceStatusAdmin() {
+  return http.get(`${API_V1}/practice/status`, () =>
+    HttpResponse.json<PracticeStatus>({
+      enabled: true,
+      models: chatModelOptions,
+      default_model: chatModelOptions[0].id,
+    }),
+  );
+}
+
 // Mirror app.py's `_http_error_code`: the real server derives the envelope
 // `code` from the HTTP status, so mock failures must do the same to stay honest.
 function httpErrorCode(status: number): string {
@@ -451,11 +487,22 @@ export const handlers = [
   http.get(`${API_V1}/packs`, () => {
     return HttpResponse.json<PackSummary[]>(packSummaries);
   }),
+  // Both status defaults model the non-admin caller: `models`/`default_model`
+  // are explicitly null (the server's shape), so the model picker stays hidden
+  // unless a test installs the admin variants above.
   http.get(`${API_V1}/generation/status`, () => {
-    return HttpResponse.json<GenerationStatus>({ enabled: true });
+    return HttpResponse.json<GenerationStatus>({
+      enabled: true,
+      models: null,
+      default_model: null,
+    });
   }),
   http.get(`${API_V1}/practice/status`, () => {
-    return HttpResponse.json<PracticeStatus>({ enabled: true });
+    return HttpResponse.json<PracticeStatus>({
+      enabled: true,
+      models: null,
+      default_model: null,
+    });
   }),
   http.post(`${API_V1}/practice/turn`, () => {
     return HttpResponse.json<PracticeTurnResponse>({

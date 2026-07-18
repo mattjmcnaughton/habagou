@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PracticeSegment, PracticeTurn } from "../lib/api";
+import { ModelPicker } from "../components/model-picker";
 import { getPracticeStatus, practiceTurn } from "../lib/api";
 import type { PracticeChatState, PracticeEntry, PracticeFailureKind } from "../lib/practice-chat";
 import {
@@ -78,12 +79,34 @@ const RETRYABLE: ReadonlySet<PracticeFailureKind> = new Set(["provider_failure",
 function PracticeScreen() {
   const [state, setState] = useState<PracticeChatState>(initialPracticeState);
   const [draftText, setDraftText] = useState("");
+  // Admin model override (ADM-04): undefined means "server default", so a
+  // non-admin (or an untouched picker) never puts a `model` on the wire. The
+  // picker is per-request UI, not conversation state — practice-chat.ts is
+  // deliberately untouched.
+  const [model, setModel] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const status = useQuery({ queryKey: ["practice-status"], queryFn: getPracticeStatus });
 
+  // The server returns `models` (default first) only to admin callers, so the
+  // status response itself gates the picker. A single-entry list offers no
+  // choice, so it renders nothing either.
+  const modelOptions = status.data?.models ?? null;
+  const showModelPicker = modelOptions !== null && modelOptions.length >= 2;
+  // Never send an override the picker isn't currently offering: a status
+  // refetch can withdraw the whole list (admin flag lost) or delist just the
+  // selected id (allowlist change on redeploy), and a stale selection must
+  // not reach the wire either way — undefined falls back to the server default.
+  const effectiveModel =
+    showModelPicker && model !== undefined && modelOptions.some((option) => option.id === model)
+      ? model
+      : undefined;
+
   const turnMutation = useMutation({
-    mutationFn: (vars: { message: string; history: unknown[] | undefined }) =>
-      practiceTurn(vars.message, vars.history),
+    mutationFn: (vars: {
+      message: string;
+      history: unknown[] | undefined;
+      model: string | undefined;
+    }) => practiceTurn(vars.message, vars.history, vars.model),
     onSuccess: (response) => setState((current) => applyTurn(current, response)),
     onError: (error) => setState((current) => applyFailure(current, describeFailure(error))),
   });
@@ -103,7 +126,11 @@ function PracticeScreen() {
     }
     setState((current) => beginTurn(current, trimmed));
     setDraftText("");
-    turnMutation.mutate({ message: trimmed, history: state.history });
+    turnMutation.mutate({
+      message: trimmed,
+      history: state.history,
+      model: effectiveModel,
+    });
   }
 
   function handleRetry() {
@@ -115,7 +142,11 @@ function PracticeScreen() {
       return;
     }
     setState((current) => beginRetry(current));
-    turnMutation.mutate({ message: previous, history: state.history });
+    turnMutation.mutate({
+      message: previous,
+      history: state.history,
+      model: effectiveModel,
+    });
   }
 
   function handleNewConversation() {
@@ -186,6 +217,15 @@ function PracticeScreen() {
         {sending ? <ThinkingBubble /> : null}
       </div>
 
+      {showModelPicker ? (
+        <ModelPicker
+          defaultModel={status.data?.default_model ?? null}
+          disabled={sending}
+          models={modelOptions}
+          onSelect={setModel}
+          selected={model}
+        />
+      ) : null}
       <Composer
         disabled={sending || (!started && !pickerReady)}
         inputRef={inputRef}

@@ -27,6 +27,7 @@ from habagou.dtos.practice import (
 )
 from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
+from habagou.routers.v1.chat_models import admin_model_options, resolve_model_override
 from habagou.services.message_history import (
     dump_message_history,
     load_message_history,
@@ -66,14 +67,32 @@ async def get_practice_status(
     routed into a flow the ``/turn`` endpoint can only 503. Deliberately
     cheap, mirroring ``GET /api/v1/generation/status``: a stateless readiness
     probe over a config flag — no rate limiting, no workflow event.
+
+    For admin callers (and only when practice is configured) the response also
+    carries the selectable models and the server default, which is what
+    renders the model picker — ``models`` stays ``None`` for everyone else.
     """
-    return PracticeStatusDTO(enabled=settings.practice_configured)
+    models = admin_model_options(
+        current_user,
+        configured=settings.practice_configured,
+        model_ids=settings.practice_model_ids,
+    )
+    return PracticeStatusDTO(
+        enabled=settings.practice_configured,
+        models=models,
+        default_model=settings.practice_model if models is not None else None,
+    )
 
 
 @router.post(
     "/turn",
     response_model=PracticeTurnResponseDTO,
     responses={
+        403: {"description": "Model selection requires an admin account"},
+        422: {
+            "description": "Replayed history is invalid, or the requested "
+            "model is not selectable"
+        },
         429: {"description": "Per-user practice rate limit exceeded"},
         502: {"description": "Practice turn failed"},
         503: {"description": "Conversational practice is not configured"},
@@ -115,10 +134,21 @@ async def practice_turn(
                 detail="history is not a valid practice message history",
             ) from exc
         try:
+            # Admin-only model override (403 for non-admins, 422 off-allowlist).
+            model_id = resolve_model_override(
+                payload.model,
+                user=current_user,
+                allowed=settings.practice_model_ids,
+            )
+        except HTTPException:
+            event.outcome = "error"
+            raise
+        try:
             result = await run_practice_turn(
                 agent,
                 message=payload.message,
                 history=history,
+                model_id=model_id,
             )
         except PracticeNotConfiguredError as exc:
             event.outcome = "error"
@@ -135,7 +165,10 @@ async def practice_turn(
                 detail="practice turn failed",
             ) from exc
 
-        event.fields.update(segment_count=len(result.turn.segments))
+        event.fields.update(
+            segment_count=len(result.turn.segments),
+            model=model_id or settings.practice_model,
+        )
         return PracticeTurnResponseDTO(
             turn=result.turn,
             history=dump_message_history(result.messages),

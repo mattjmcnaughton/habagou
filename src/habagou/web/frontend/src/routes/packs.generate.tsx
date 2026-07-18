@@ -1,8 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PackDraft } from "../lib/api";
-import { ApiError, generateDraft, saveGeneratedPack } from "../lib/api";
+import { ModelPicker } from "../components/model-picker";
+import { ApiError, generateDraft, getGenerationStatus, saveGeneratedPack } from "../lib/api";
 import type { ChatEntry, ChatFailureKind, GenerationChatState } from "../lib/generation-chat";
 import {
   applyDraft,
@@ -87,12 +88,36 @@ const RETRYABLE: ReadonlySet<ChatFailureKind> = new Set(["provider_failure", "ne
 function GeneratePack() {
   const [state, setState] = useState<GenerationChatState>(initialChatState);
   const [topic, setTopic] = useState("");
+  // Admin model override (ADM-04): undefined means "server default", so a
+  // non-admin (or an untouched picker) never puts a `model` on the wire. The
+  // picker is per-request UI, not conversation state — generation-chat.ts is
+  // deliberately untouched.
+  const [model, setModel] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  // Same key as packs.index.tsx's entry-point gate, so the cache is shared.
+  const status = useQuery({ queryKey: ["generation-status"], queryFn: getGenerationStatus });
+
+  // The server returns `models` (default first) only to admin callers, so the
+  // status response itself gates the picker. A single-entry list offers no
+  // choice, so it renders nothing either.
+  const modelOptions = status.data?.models ?? null;
+  const showModelPicker = modelOptions !== null && modelOptions.length >= 2;
+  // Never send an override the picker isn't currently offering: a status
+  // refetch can withdraw the whole list (admin flag lost) or delist just the
+  // selected id (allowlist change on redeploy), and a stale selection must
+  // not reach the wire either way — undefined falls back to the server default.
+  const effectiveModel =
+    showModelPicker && model !== undefined && modelOptions.some((option) => option.id === model)
+      ? model
+      : undefined;
 
   const draftMutation = useMutation({
-    mutationFn: (vars: { topic: string; history: unknown[] | undefined }) =>
-      generateDraft(vars.topic, vars.history),
+    mutationFn: (vars: {
+      topic: string;
+      history: unknown[] | undefined;
+      model: string | undefined;
+    }) => generateDraft(vars.topic, vars.history, vars.model),
     onSuccess: (response) => setState((current) => applyDraft(current, response)),
     onError: (error) =>
       setState((current) => applyFailure(current, describeFailure(error, "draft"), "draft")),
@@ -136,7 +161,11 @@ function GeneratePack() {
     }
     setState((current) => beginTurn(current, trimmed));
     setTopic("");
-    draftMutation.mutate({ topic: trimmed, history: state.history });
+    draftMutation.mutate({
+      topic: trimmed,
+      history: state.history,
+      model: effectiveModel,
+    });
   }
 
   function handleSave() {
@@ -159,7 +188,11 @@ function GeneratePack() {
       return;
     }
     setState((current) => beginRetry(current));
-    draftMutation.mutate({ topic: previous, history: state.history });
+    draftMutation.mutate({
+      topic: previous,
+      history: state.history,
+      model: effectiveModel,
+    });
   }
 
   function handleKeepChatting() {
@@ -215,6 +248,15 @@ function GeneratePack() {
           {generating ? <ProgressBubble /> : null}
         </div>
 
+        {showModelPicker ? (
+          <ModelPicker
+            defaultModel={status.data?.default_model ?? null}
+            disabled={busy}
+            models={modelOptions}
+            onSelect={setModel}
+            selected={model}
+          />
+        ) : null}
         <Composer
           disabled={busy}
           hasDraft={state.draftVersion > 0}

@@ -98,7 +98,9 @@ async def test_run_practice_turn_returns_turn_and_messages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     respond = Responder([_turn("你好", "你想聊什么")])
-    monkeypatch.setattr(practice_chat, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        practice_chat, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
 
     result = await run_practice_turn(
         practice_chat.get_practice_agent(), message="ordering food"
@@ -118,7 +120,9 @@ async def test_follow_up_turn_receives_prior_history(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     respond = Responder([_turn("你好"), _turn("我很好")])
-    monkeypatch.setattr(practice_chat, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        practice_chat, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
     agent = practice_chat.get_practice_agent()
 
     first = await run_practice_turn(agent, message="ordering food")
@@ -140,7 +144,9 @@ async def test_english_aside_round_trips_when_model_fills_it(
     respond = Responder(
         [_turn("我们继续吧", english_aside="它 means 'it' — used for things.")]
     )
-    monkeypatch.setattr(practice_chat, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        practice_chat, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
 
     result = await run_practice_turn(
         practice_chat.get_practice_agent(), message="what does 它 mean?"
@@ -193,3 +199,49 @@ def test_build_model_uses_the_practice_model_setting(
     assert model.model_name == "qwen/qwen-chat"
     assert model.system == "openrouter"
     assert "openrouter" in model.base_url
+
+
+# --- Admin model selection: per-run model override ------------------------------
+
+
+def test_build_model_uses_override_model_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(practice_chat.settings, "openrouter_api_key", "sk-test")
+
+    model = practice_chat._build_model("anthropic/claude-sonnet-5")
+
+    assert model.model_name == "anthropic/claude-sonnet-5"
+
+
+def test_build_model_defaults_to_configured_practice_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(practice_chat.settings, "openrouter_api_key", "sk-test")
+    monkeypatch.setattr(
+        practice_chat.settings, "practice_model", "openai/gpt-5.6-terra"
+    )
+
+    assert practice_chat._build_model(None).model_name == "openai/gpt-5.6-terra"
+
+
+@pytest.mark.anyio
+async def test_run_practice_turn_threads_model_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    respond = Responder([_turn("你好")])
+    seen: list[str | None] = []
+
+    def fake_build_model(model_id: str | None = None) -> FunctionModel:
+        seen.append(model_id)
+        return FunctionModel(respond)
+
+    monkeypatch.setattr(practice_chat, "_build_model", fake_build_model)
+
+    await run_practice_turn(
+        practice_chat.get_practice_agent(),
+        message="ordering food",
+        model_id="minimax/minimax-m3",
+    )
+
+    assert seen == ["minimax/minimax-m3"]

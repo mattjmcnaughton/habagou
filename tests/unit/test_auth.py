@@ -64,3 +64,38 @@ def test_oidc_identity_requires_stable_claims() -> None:
 def test_normalize_username() -> None:
     assert _normalize_username(" Dev User ") == "dev-user"
     assert _normalize_username(" ") == "user"
+
+
+def test_oidc_identity_drops_an_explicitly_unverified_email() -> None:
+    # Admin classification derives from the email domain (habagou.authz), so an
+    # email the provider itself marks unverified must never be stored — a
+    # self-signup could otherwise mint an admin address.
+    identity = fetch_identity(
+        {
+            "userinfo": {
+                "iss": "http://keycloak/realms/habagou",
+                "sub": "subject-1",
+                "preferred_username": "dev",
+                "email": "anyone@mattjmcnaughton.com",
+                "email_verified": False,
+            }
+        },
+    )
+
+    assert identity.email is None
+
+
+def test_oidc_identity_keeps_email_when_verified_or_unstated() -> None:
+    for extra in ({"email_verified": True}, {}):
+        identity = fetch_identity(
+            {
+                "userinfo": {
+                    "iss": "http://keycloak/realms/habagou",
+                    "sub": "subject-1",
+                    "preferred_username": "dev",
+                    "email": "dev@example.com",
+                    **extra,
+                }
+            },
+        )
+        assert identity.email == "dev@example.com"

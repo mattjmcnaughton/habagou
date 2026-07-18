@@ -16,6 +16,10 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
+# ChatModelOptionDTO annotates pydantic model fields, which pydantic resolves
+# at runtime, so it is imported eagerly (not TYPE_CHECKING).
+from habagou.dtos.chat_models import ChatModelOptionDTO  # noqa: TC001
+
 # Size bounds keep hand-crafted payloads from amplifying into oversized
 # (billed) model calls, while staying generous enough that a well-behaved
 # model never trips them into a needless retry.
@@ -65,6 +69,10 @@ class PracticeTurnRequestDTO(BaseModel):
     # practice session — while still capping hand-crafted payload
     # amplification.
     history: Annotated[list[Any], Field(max_length=400)] | None = None
+    # Admin-only OpenRouter model override; must be one of the server's
+    # selectable practice model ids (``Settings.practice_model_ids``).
+    # ``None`` runs the server default. Non-admins sending a model get a 403.
+    model: Annotated[str, Field(min_length=1, max_length=200)] | None = None
 
 
 class PracticeTurnResponseDTO(BaseModel):
@@ -87,6 +95,13 @@ class PracticeStatusDTO(BaseModel):
     shift the app shell); the practice screen itself shows an unavailable
     state when this reports ``False``, so a user is never routed into a flow
     the ``/turn`` endpoint can only 503.
+
+    ``models`` and ``default_model`` are the admin model picker's data,
+    mirroring :class:`habagou.dtos.generation.GenerationStatusDTO`: ``None``
+    for non-admin callers (the response gates the picker UI) and when practice
+    is unconfigured.
     """
 
     enabled: bool
+    models: list[ChatModelOptionDTO] | None = None
+    default_model: str | None = None

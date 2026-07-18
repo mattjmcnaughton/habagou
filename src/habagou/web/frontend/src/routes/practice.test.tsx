@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import { App } from "../app/app";
 import { API_V1_BASE } from "../lib/api";
 import {
+  chatModelOptions,
   practiceAsideTurn,
   practiceHistory,
   practiceOpeningTurn,
+  practiceStatusAdmin,
   practiceTurnFailure,
 } from "../mocks/handlers";
 import { server } from "../mocks/server";
@@ -236,6 +238,103 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     expect(await screen.findByRole("heading", { name: /Practice/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Ordering food at a restaurant" })).toBeNull();
     expect(composerInput().disabled).toBe(true);
+  });
+
+  it("[WF-16] hides the model picker and sends no model for non-admins", async () => {
+    // Default status handlers model the non-admin caller (`models: null`), so
+    // this pins the "pixel-identical UI" contract: no picker chrome, and the
+    // turn body carries no `model` key at all.
+    let received: Record<string, unknown> | undefined;
+    server.use(
+      http.post(`${API_V1_BASE}/practice/turn`, async ({ request }) => {
+        received = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+    renderPractice();
+
+    const chip = await screen.findByRole("button", { name: "Ordering food at a restaurant" });
+    expect(screen.queryByText("Model")).toBeNull();
+    for (const option of chatModelOptions) {
+      expect(screen.queryByRole("button", { name: option.label })).toBeNull();
+    }
+
+    fireEvent.click(chip);
+    expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
+
+    expect(received).toBeDefined();
+    expect(received && "model" in received).toBe(false);
+  });
+
+  it("[WF-16] shows the model picker to admins with every label and the default preselected", async () => {
+    server.use(practiceStatusAdmin());
+    renderPractice();
+
+    // The server default (first entry) is preselected; the rest are not.
+    const defaultChip = await screen.findByRole("button", { name: chatModelOptions[0].label });
+    expect(defaultChip.getAttribute("aria-pressed")).toBe("true");
+    for (const option of chatModelOptions.slice(1)) {
+      const modelChip = screen.getByRole("button", { name: option.label });
+      expect(modelChip.getAttribute("aria-pressed")).toBe("false");
+    }
+    expect(screen.getByText("Model")).toBeTruthy();
+  });
+
+  it("[WF-16] sends the selected model on a turn and omits it when untouched", async () => {
+    const receivedBodies: Record<string, unknown>[] = [];
+    server.use(
+      practiceStatusAdmin(),
+      http.post(`${API_V1_BASE}/practice/turn`, async ({ request }) => {
+        receivedBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+    renderPractice();
+
+    // Untouched picker: the request stays model-free (server default).
+    fireEvent.click(await screen.findByRole("button", { name: "Meeting someone new" }));
+    expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
+    expect("model" in receivedBodies[0]).toBe(false);
+
+    // Pick a non-default model, then follow up: the override rides the wire.
+    fireEvent.click(screen.getByRole("button", { name: "Claude Sonnet 5" }));
+    const input = composerInput();
+    fireEvent.change(input, { target: { value: "我要吃饭" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(receivedBodies).toHaveLength(2));
+    expect(receivedBodies[1].model).toBe("anthropic/claude-sonnet-5");
+  });
+
+  it("[WF-16] keeps the selected model in the body on a Try again retry", async () => {
+    const receivedModels: unknown[] = [];
+    let calls = 0;
+    server.use(
+      practiceStatusAdmin(),
+      http.post(`${API_V1_BASE}/practice/turn`, async ({ request }) => {
+        calls += 1;
+        const body = (await request.json()) as Record<string, unknown>;
+        receivedModels.push(body.model);
+        if (calls === 1) {
+          return HttpResponse.json(
+            { error: { code: "bad_gateway", message: "upstream", request_id: "mock" } },
+            { status: 502 },
+          );
+        }
+        return HttpResponse.json({ turn: practiceOpeningTurn, history: practiceHistory });
+      }),
+    );
+    renderPractice();
+
+    fireEvent.click(await screen.findByRole("button", { name: "MiniMax M3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Meeting someone new" }));
+
+    // First attempt fails; the retry must replay the same override, not drop it.
+    expect(await screen.findByText(FAILURE_COPY.provider_failure.headline)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
+    expect(receivedModels).toEqual(["minimax/minimax-m3", "minimax/minimax-m3"]);
   });
 
   it("[WF-16] New discards the conversation and returns to the topic picker", async () => {

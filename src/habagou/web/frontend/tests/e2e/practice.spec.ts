@@ -21,6 +21,10 @@ test("[WF-16] opens a conversation from a starter topic and taps to reveal Engli
   await expect(page).toHaveURL("/practice");
   await expect(page.getByRole("heading", { name: /Practice/ })).toBeVisible();
 
+  // The dev Keycloak user is not an admin, so the model-picker chrome (ADM-04)
+  // must be absent: the status response returns no model list for non-admins.
+  await expect(page.getByText("Model", { exact: true })).toHaveCount(0);
+
   // Start from a starter chip; the tutor opens the conversation.
   await page.getByRole("button", { name: "Ordering food at a restaurant" }).click();
   await expect(page.getByText("你好", { exact: true })).toBeVisible();

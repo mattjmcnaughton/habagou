@@ -348,7 +348,7 @@ async def test_generate_pack_draft_returns_valid_draft_under_test_model(
     monkeypatch.setattr(
         pack_generation,
         "_build_model",
-        lambda: TestModel(custom_output_args=draft_args),
+        lambda model_id=None: TestModel(custom_output_args=draft_args),
     )
 
     result = await pack_generation.generate_pack_draft(
@@ -448,7 +448,9 @@ async def test_refinement_turn_receives_prior_history(
             {"title": "Second", "characters": [_character("你"), _character("好")]},
         ]
     )
-    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        pack_generation, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
     agent = pack_generation.get_generation_agent()
 
     first = await pack_generation.generate_pack_draft(
@@ -478,7 +480,9 @@ async def test_first_turn_without_history_works(
     respond = _CapturingResponder(
         [{"title": "Solo", "characters": [_character("你"), _character("好")]}]
     )
-    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        pack_generation, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
 
     result = await pack_generation.generate_pack_draft(
         pack_generation.get_generation_agent(),
@@ -500,7 +504,9 @@ async def test_message_history_round_trips_through_helpers(
     respond = Responder(
         [{"title": "Trip", "characters": [_character("你"), _character("好")]}]
     )
-    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        pack_generation, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
 
     result = await pack_generation.generate_pack_draft(
         pack_generation.get_generation_agent(),
@@ -610,7 +616,9 @@ async def test_corpus_block_appears_once_across_a_refinement_session(
             {"title": "Second", "characters": [_character("你"), _character("好")]},
         ]
     )
-    monkeypatch.setattr(pack_generation, "_build_model", lambda: FunctionModel(respond))
+    monkeypatch.setattr(
+        pack_generation, "_build_model", lambda model_id=None: FunctionModel(respond)
+    )
     agent = pack_generation.get_generation_agent()
 
     first = await pack_generation.generate_pack_draft(
@@ -645,3 +653,57 @@ async def test_corpus_block_appears_once_across_a_refinement_session(
     assert _system_prompt_texts(respond.messages_per_call[0]) == _system_prompt_texts(
         second_call_messages
     )
+
+
+# --- Admin model selection: per-run model override ------------------------------
+
+
+def test_build_model_uses_override_model_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pack_generation.settings, "openrouter_api_key", "sk-test")
+
+    model = pack_generation._build_model("minimax/minimax-m3")
+
+    assert isinstance(model, OpenAIChatModel)
+    assert model.model_name == "minimax/minimax-m3"
+
+
+def test_build_model_defaults_to_configured_generation_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pack_generation.settings, "openrouter_api_key", "sk-test")
+    monkeypatch.setattr(
+        pack_generation.settings, "generation_model", "openai/gpt-5.6-terra"
+    )
+
+    assert pack_generation._build_model(None).model_name == "openai/gpt-5.6-terra"
+
+
+@pytest.mark.anyio
+async def test_generate_pack_draft_threads_model_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = StubCorpus({"你": 7, "好": 6})
+    monkeypatch.setattr(pack_generation, "CharacterRepository", lambda _session: corpus)
+    draft_args = {
+        "title": "Greetings",
+        "characters": [_character("你")],
+        "sentences": [],
+    }
+    seen: list[str | None] = []
+
+    def fake_build_model(model_id: str | None = None) -> TestModel:
+        seen.append(model_id)
+        return TestModel(custom_output_args=draft_args)
+
+    monkeypatch.setattr(pack_generation, "_build_model", fake_build_model)
+
+    await pack_generation.generate_pack_draft(
+        pack_generation.get_generation_agent(),
+        session=cast("AsyncSession", object()),
+        topic="greetings",
+        model_id="anthropic/claude-sonnet-5",
+    )
+
+    assert seen == ["anthropic/claude-sonnet-5"]

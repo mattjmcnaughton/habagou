@@ -10,6 +10,9 @@ class UserDTO(BaseModel):
     username: str
     display_name: str
     email: str | None = None
+    # Derived from the email domain at request time (see habagou.authz);
+    # admin-only UI (e.g. the AI model picker) keys off this.
+    is_admin: bool = False
 
 
 class SessionDTO(BaseModel):
