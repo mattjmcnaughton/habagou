@@ -40,11 +40,17 @@ src/habagou/
   domains/             # pure, I/O-free domain logic
     streaks.py         # pure daily-goal streak and milestone calculations
     scheduling.py      # pure Leitner-ladder scheduler (queue generation, ladder update)
+  agents/              # pydantic-ai agent definitions: prompts, tools,
+                       # validators, assembly — no bound model, no FastAPI,
+                       # no config, no database (see docs/evals.md)
+    generation.py      # pack-generation agent + corpus grounding (layers 1-2)
+    practice.py        # conversational practice tutor agent
   routers/
     health.py          # healthz/readyz
     v1/                # packs, characters, progress, path, generation, practice
   services/            # business logic (incl. pack_generation and practice_chat
-                       # agents, shared openrouter/message_history seams, rate_limit)
+                       # orchestration, shared openrouter/message_history seams,
+                       # rate_limit)
   repositories/        # SQLAlchemy data access (one module per bounded context)
   models/              # SQLAlchemy models (one module per bounded context)
   dtos/                # Pydantic API DTOs
@@ -64,21 +70,35 @@ algorithm can be swapped (e.g. for SM-2/FSRS) without touching the service,
 router, or API contract. See [docs/api.md](api.md) for the endpoint contract
 and [docs/product/prd-path.md](product/prd-path.md) for the feature spec.
 
-Agent pack generation follows the same layering: `routers/v1/generation.py` ->
-`services/pack_generation.py` (a pydantic-ai agent, OpenAI-compatible models via
-OpenRouter) -> `repositories/` (`CharacterRepository`, `PackRepository`), with
-draft shapes in `dtos/generation.py`. The model is grounded so a generated pack
-only references hanzi that exist in the stroke corpus, in three layers: a
-`find_characters` agent tool (corpus membership + stroke counts, no glosses), an
-output validator that retries the model on any non-corpus glyph, and
-`PackRepository.create` re-validating every glyph at save. Drafts persist as
-private owned packs; the draft endpoint is capped by a per-user in-memory
-`services/rate_limit.py` window. See
+Agent features add one layer to that picture: **agent definitions live in
+`agents/`**, a peer of `domains/`. Each module there assembles a complete
+pydantic-ai agent — system prompt, tools, output validators — with *no bound
+model* and no dependency on `services/`, `routers/`, `config`, or the
+database; agents depend only on their declared deps protocols (e.g.
+`CorpusReader`). The purity mirrors `domains/`: just as the scheduler is pure
+logic swappable without touching its service, an agent is a self-contained
+behavioral unit that the production service wires up (model resolution, config
+gating, logging, persistence) and that offline evaluation harnesses can import
+directly with their own model and deps. See [docs/evals.md](evals.md) (WIP)
+for the evaluation strategy this enables.
+
+Agent pack generation thus layers as: `routers/v1/generation.py` ->
+`services/pack_generation.py` (config gating, OpenRouter model resolution, run
+logging, draft persistence) -> `agents/generation.py` (the pydantic-ai agent)
++ `repositories/` (`CharacterRepository`, `PackRepository`), with draft shapes
+in `dtos/generation.py`. The model is grounded so a generated pack only
+references hanzi that exist in the stroke corpus, in three layers: a
+`find_characters` agent tool (corpus membership + stroke counts, no glosses)
+and an output validator that retries the model on any non-corpus glyph — both
+in `agents/generation.py` — and `PackRepository.create` re-validating every
+glyph at save. Drafts persist as private owned packs; the draft endpoint is
+capped by a per-user in-memory `services/rate_limit.py` window. See
 [ADR 0010](adrs/0010-agent-pack-generation.md).
 
 Conversational practice (WF-16) is the second agent feature:
-`routers/v1/practice.py` -> `services/practice_chat.py` (a pydantic-ai agent
-with a structured per-sentence turn output, no corpus grounding — nothing in a
+`routers/v1/practice.py` -> `services/practice_chat.py` (config gating, model
+resolution, run logging) -> `agents/practice.py` (a pydantic-ai agent with a
+structured per-sentence turn output, no corpus grounding — nothing in a
 conversation is traced), with turn shapes in `dtos/practice.py`. It reuses the
 generation seams — the shared OpenRouter model builder
 (`services/openrouter.py`, with its own `PRACTICE_MODEL`), the client-held
