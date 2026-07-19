@@ -13,6 +13,9 @@ class UserDTO(BaseModel):
     # Derived from the email domain at request time (see habagou.authz);
     # admin-only UI (e.g. the AI model picker) keys off this.
     is_admin: bool = False
+    # The user's resolved feature-flag map (see services.feature_flags):
+    # every registered flag key with its effective on/off state.
+    feature_flags: dict[str, bool] = {}
 
 
 class SessionDTO(BaseModel):

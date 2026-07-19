@@ -8,6 +8,7 @@ keep importing ``from habagou.repositories import X``.
 from __future__ import annotations
 
 from habagou.repositories.characters import CharacterRepository
+from habagou.repositories.feature_flags import FeatureFlagRepository
 from habagou.repositories.packs import (
     LibraryPack,
     PackCharacterInput,
@@ -23,6 +24,7 @@ from habagou.repositories.users import UserRepository
 __all__ = [
     "ActivityProgress",
     "CharacterRepository",
+    "FeatureFlagRepository",
     "LibraryPack",
     "PackCharacterInput",
     "PackRepository",

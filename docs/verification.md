@@ -270,6 +270,7 @@ One canonical event per workflow outcome, always with: `workflow`, `outcome` (`o
 | `auth_signed_in` | WF-AUTH-SIGN-IN | `user_id`, `provider` |
 | `auth_signed_out` | WF-AUTH-SIGN-OUT | `user_id`, `provider` |
 | `auth_gate_rejected` | WF-AUTH-GATE | `path` |
+| `feature_flag_override_set` / `feature_flag_override_cleared` | WF-ADMIN-FLAGS | `flag_key`, `target_user_id`, `admin_user_id` (`enabled` on set, `deleted` on clear) |
 | `invariant_check` | — | `check`, `outcome`, `violations` |
 
 Note `activity_completed` is *derived from the same write* that creates the `activity_completions` row — the business table is itself instrumentation; the log event just makes it streamable. Likewise, `path_item_completed` is derived from the same write that appends the `source='path'` completion row and updates `review_states`; WF-14 (review resurfacing) has no dedicated event of its own — it is proven by a later `path_viewed`/`path_item_completed` pair on a `kind='review'` item, the same way WF-03/04/05 share `activity_completed`.

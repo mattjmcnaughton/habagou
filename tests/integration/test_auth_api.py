@@ -158,6 +158,7 @@ async def test_session_probe_reports_authenticated_user(client: AsyncClient) -> 
             "display_name": "Test User",
             "email": "test@example.com",
             "is_admin": False,
+            "feature_flags": {},
         },
     }
 
