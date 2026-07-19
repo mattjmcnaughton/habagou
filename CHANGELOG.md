@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/mattjmcnaughton/habagou/compare/v1.11.0...v1.12.0) (2026-07-19)
+
+
+### Features
+
+* **feature-flags:** add per-user feature flags with admin overrides ([2f022d8](https://github.com/mattjmcnaughton/habagou/commit/2f022d85d39f609e6ed91485ef14ff8b245d0833))
+
 # [1.11.0](https://github.com/mattjmcnaughton/habagou/compare/v1.10.0...v1.11.0) (2026-07-19)
 
 
