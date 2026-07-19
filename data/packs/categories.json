@@ -1,0 +1,12 @@
+[
+  { "slug": "basics", "title": "Basics", "sort_order": 1 },
+  { "slug": "numbers-time", "title": "Numbers & time", "sort_order": 2 },
+  { "slug": "people-family", "title": "People & family", "sort_order": 3 },
+  { "slug": "food-drink", "title": "Food & drink", "sort_order": 4 },
+  { "slug": "places-travel", "title": "Places & travel", "sort_order": 5 },
+  { "slug": "daily-life", "title": "Daily life", "sort_order": 6 },
+  { "slug": "nature-weather", "title": "Nature & weather", "sort_order": 7 },
+  { "slug": "body-health", "title": "Body & health", "sort_order": 8 },
+  { "slug": "school-work", "title": "School & work", "sort_order": 9 },
+  { "slug": "verbs-in-action", "title": "Verbs in action", "sort_order": 10 }
+]

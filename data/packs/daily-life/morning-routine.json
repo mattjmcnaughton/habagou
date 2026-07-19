@@ -1,0 +1,25 @@
+{
+  "slug": "morning-routine",
+  "title": "Morning routine",
+  "glyph": "早",
+  "color": "#b06364",
+  "category": "daily-life",
+  "description": "Get up, brush your teeth, and start the day.",
+  "starter": false,
+  "sort_order": 601,
+  "characters": [
+    { "hanzi": "早", "pinyin": "zǎo", "meaning": "early; morning" },
+    { "hanzi": "起", "pinyin": "qǐ", "meaning": "get up; rise" },
+    { "hanzi": "刷", "pinyin": "shuā", "meaning": "to brush" },
+    { "hanzi": "牙", "pinyin": "yá", "meaning": "tooth" },
+    { "hanzi": "洗", "pinyin": "xǐ", "meaning": "to wash" },
+    { "hanzi": "脸", "pinyin": "liǎn", "meaning": "face" },
+    { "hanzi": "晚", "pinyin": "wǎn", "meaning": "evening; late" }
+  ],
+  "sentences": [
+    { "hanzi": "早上好", "pinyin": "zǎoshang hǎo", "translation": "Good morning" },
+    { "hanzi": "我七点起床", "pinyin": "wǒ qī diǎn qǐchuáng", "translation": "I get up at seven" },
+    { "hanzi": "刷牙洗脸", "pinyin": "shuā yá xǐ liǎn", "translation": "Brush teeth and wash face" },
+    { "hanzi": "晚安", "pinyin": "wǎn'ān", "translation": "Good night" }
+  ]
+}

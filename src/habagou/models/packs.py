@@ -9,6 +9,7 @@ from datetime import (
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -29,6 +30,21 @@ if TYPE_CHECKING:
     from habagou.models.users import User
 
 
+class Category(Base):
+    """Library category grouping curated packs.
+
+    Seeded from ``data/packs/categories.json``; user packs carry no category.
+    """
+
+    __tablename__ = "categories"
+
+    slug: Mapped[str] = mapped_column(String, primary_key=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    packs: Mapped[list[Pack]] = relationship(back_populates="category")
+
+
 class Pack(Base):
     """Character pack.
 
@@ -40,6 +56,7 @@ class Pack(Base):
     __tablename__ = "packs"
     __table_args__ = (
         Index("ix_packs_owner", "owner_id"),
+        Index("ix_packs_category", "category_slug"),
         # Slug is a nullable seed key: curated packs carry a stable, unique
         # non-null slug; user packs persist NULL. A partial unique index keeps
         # seed slugs unique while allowing many NULLs (see migration 0006).
@@ -60,6 +77,21 @@ class Pack(Base):
         nullable=True,
     )
     slug: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Catalog metadata for the pack library. Curated packs carry a category
+    # and description; user packs persist NULL for both. ``starter`` marks
+    # packs enabled by default for every user (the lazy enablement overlay in
+    # user_pack_settings only stores explicit overrides of this default).
+    category_slug: Mapped[str | None] = mapped_column(
+        String,
+        # RESTRICT: deleting a category that still has packs is a seed-pipeline
+        # bug and must fail loudly.
+        ForeignKey("categories.slug", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    starter: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     glyph: Mapped[str] = mapped_column(String, nullable=False)
     color: Mapped[str] = mapped_column(String, nullable=False)
@@ -88,6 +120,39 @@ class Pack(Base):
     )
     completions: Mapped[list[ActivityCompletion]] = relationship(back_populates="pack")
     owner: Mapped[User | None] = relationship()
+    category: Mapped[Category | None] = relationship(back_populates="packs")
+
+
+class UserPackSetting(Base):
+    """Per-user enablement override for a global pack.
+
+    Lazy overlay: *absence of a row means "use the pack's default"*, which is
+    ``packs.starter`` — so starter packs are enabled for every user (existing,
+    new, and guest) without any per-user writes. A row only records an explicit
+    override: disabling a starter pack (``enabled=false``) or enabling a
+    non-starter library pack (``enabled=true``). Owned packs are always
+    enabled and never have rows.
+    """
+
+    __tablename__ = "user_pack_settings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    pack_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("packs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class PackCharacter(Base):

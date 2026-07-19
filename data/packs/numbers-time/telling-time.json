@@ -1,0 +1,24 @@
+{
+  "slug": "telling-time",
+  "title": "Telling time",
+  "glyph": "点",
+  "color": "#2f6f6b",
+  "category": "numbers-time",
+  "description": "Read the clock and ask what time it is.",
+  "starter": false,
+  "sort_order": 204,
+  "characters": [
+    { "hanzi": "点", "pinyin": "diǎn", "meaning": "o'clock; dot" },
+    { "hanzi": "分", "pinyin": "fēn", "meaning": "minute" },
+    { "hanzi": "半", "pinyin": "bàn", "meaning": "half" },
+    { "hanzi": "钟", "pinyin": "zhōng", "meaning": "clock" },
+    { "hanzi": "时", "pinyin": "shí", "meaning": "time; hour" },
+    { "hanzi": "候", "pinyin": "hòu", "meaning": "time; wait" }
+  ],
+  "sentences": [
+    { "hanzi": "三点半", "pinyin": "sān diǎn bàn", "translation": "Half past three" },
+    { "hanzi": "五点十分", "pinyin": "wǔ diǎn shí fēn", "translation": "Ten past five" },
+    { "hanzi": "什么时候", "pinyin": "shénme shíhou", "translation": "When" },
+    { "hanzi": "现在几点", "pinyin": "xiànzài jǐ diǎn", "translation": "What time is it now" }
+  ]
+}

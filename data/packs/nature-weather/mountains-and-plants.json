@@ -1,0 +1,24 @@
+{
+  "slug": "mountains-and-plants",
+  "title": "Mountains and plants",
+  "glyph": "山",
+  "color": "#497338",
+  "category": "nature-weather",
+  "description": "Climb mountains and name the trees, flowers, and grass.",
+  "starter": false,
+  "sort_order": 704,
+  "characters": [
+    { "hanzi": "山", "pinyin": "shān", "meaning": "mountain" },
+    { "hanzi": "树", "pinyin": "shù", "meaning": "tree" },
+    { "hanzi": "花", "pinyin": "huā", "meaning": "flower" },
+    { "hanzi": "草", "pinyin": "cǎo", "meaning": "grass" },
+    { "hanzi": "林", "pinyin": "lín", "meaning": "forest" },
+    { "hanzi": "石", "pinyin": "shí", "meaning": "stone" }
+  ],
+  "sentences": [
+    { "hanzi": "山上有树", "pinyin": "shān shàng yǒu shù", "translation": "There are trees on the mountain" },
+    { "hanzi": "花很漂亮", "pinyin": "huā hěn piàoliang", "translation": "The flowers are pretty" },
+    { "hanzi": "森林很大", "pinyin": "sēnlín hěn dà", "translation": "The forest is big" },
+    { "hanzi": "小草绿了", "pinyin": "xiǎo cǎo lǜ le", "translation": "The grass has turned green" }
+  ]
+}

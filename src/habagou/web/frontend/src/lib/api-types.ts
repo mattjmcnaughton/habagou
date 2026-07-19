@@ -112,6 +112,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Library */
+        get: operations["get_library_api_v1_library_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/packs": {
         parameters: {
             query?: never;
@@ -142,6 +159,23 @@ export interface paths {
         post?: never;
         /** Delete Pack */
         delete: operations["delete_pack_api_v1_packs__pack_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/packs/{pack_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Pack Enabled */
+        put: operations["set_pack_enabled_api_v1_packs__pack_id__enabled_put"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -504,6 +538,48 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** LibraryCategoryDTO */
+        LibraryCategoryDTO: {
+            /** Packs */
+            packs: components["schemas"]["LibraryPackDTO"][];
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+        };
+        /** LibraryDTO */
+        LibraryDTO: {
+            /** Categories */
+            categories: components["schemas"]["LibraryCategoryDTO"][];
+        };
+        /**
+         * LibraryPackDTO
+         * @description Slim library card: no progress aggregates (the library lists hundreds
+         *     of packs; per-pack progress stays a bench concern).
+         */
+        LibraryPackDTO: {
+            /** Char Count */
+            char_count: number;
+            /** Color */
+            color: string;
+            /** Description */
+            description: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Glyph */
+            glyph: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sentence Count */
+            sentence_count: number;
+            /** Starter */
+            starter: boolean;
+            /** Title */
+            title: string;
+        };
         /** NextMilestoneDTO */
         NextMilestoneDTO: {
             /** Days Remaining */
@@ -530,6 +606,8 @@ export interface components {
             characters: components["schemas"]["PackCharacterDTO"][];
             /** Color */
             color: string;
+            /** Enabled */
+            enabled: boolean;
             /** Glyph */
             glyph: string;
             /**
@@ -544,6 +622,8 @@ export interface components {
             sentence_count: number;
             /** Sentences */
             sentences: components["schemas"]["PackSentenceDTO"][];
+            /** Starter */
+            starter: boolean;
             /** Title */
             title: string;
         };
@@ -585,6 +665,11 @@ export interface components {
             /** Translation */
             translation: string;
         };
+        /** PackEnablementUpdateDTO */
+        PackEnablementUpdateDTO: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** PackProgressDTO */
         PackProgressDTO: {
             match: components["schemas"]["ActivityProgressDTO"];
@@ -610,6 +695,8 @@ export interface components {
             char_count: number;
             /** Color */
             color: string;
+            /** Enabled */
+            enabled: boolean;
             /** Glyph */
             glyph: string;
             /**
@@ -622,6 +709,8 @@ export interface components {
             progress: components["schemas"]["PackProgressDTO"];
             /** Sentence Count */
             sentence_count: number;
+            /** Starter */
+            starter: boolean;
             /** Title */
             title: string;
         };
@@ -1063,6 +1152,26 @@ export interface operations {
             };
         };
     };
+    get_library_api_v1_library_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryDTO"];
+                };
+            };
+        };
+    };
     list_packs_api_v1_packs_get: {
         parameters: {
             query?: never;
@@ -1148,6 +1257,53 @@ export interface operations {
             };
             /** @description Pack not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_pack_enabled_api_v1_packs__pack_id__enabled_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackEnablementUpdateDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned packs are always enabled */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

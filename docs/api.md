@@ -35,17 +35,32 @@ invalid sessions return the standard error envelope with HTTP 401:
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
-| GET | `/api/v1/packs` | List packs visible to the current user, in curriculum order |
+| GET | `/api/v1/packs` | List the user's bench: owned packs plus enabled global packs, in curriculum order |
 | GET | `/api/v1/packs/{pack_id}` | Fetch one visible pack with its characters and sentences |
+| PUT | `/api/v1/packs/{pack_id}/enabled` | Enable or disable a global (library) pack for the current user |
 | DELETE | `/api/v1/packs/{pack_id}` | Delete one of the current user's own packs |
 
-A pack is **visible** to a user when it is global (a curated, seeded pack shown
-to everyone) or privately owned by that user; a pack owned by someone else is
-invisible (see [ADR 0009](adrs/0009-pack-ownership.md)).
+A pack is **visible** to a user when it is global (a curated, seeded pack) or
+privately owned by that user; a pack owned by someone else is invisible (see
+[ADR 0009](adrs/0009-pack-ownership.md)). Visible global packs are further
+split by **enablement** (see
+[ADR 0012](adrs/0012-pack-library-enablement.md)): `GET /api/v1/packs` lists
+only enabled ones, while a disabled global pack stays fetchable by id so the
+library can preview it.
 
 Both `PackSummaryDTO` (list rows) and `PackDetailDTO` (detail) carry an `owned`
-boolean: `true` when the current user owns the pack (a private pack they may
-delete), `false` for global curated packs.
+boolean (`true` when the current user owns the pack), a `starter` boolean (the
+pack is enabled by default for every user), and an `enabled` boolean (the
+current user's effective enablement; always `true` for owned packs).
+
+`PUT /api/v1/packs/{pack_id}/enabled` takes `{"enabled": true|false}` and is
+idempotent. Disabling prunes the user's never-completed path items for the
+pack; progress, review state, and completed lessons are kept, so re-enabling
+resumes where the learner left off.
+
+- 204 — the choice was recorded.
+- 404 — the pack is not visible (unknown id, or another user's private pack).
+- 409 — the pack is owned by the caller; owned packs are always enabled.
 
 `GET /api/v1/packs/{pack_id}` returns 404 when the pack is not visible — an
 unknown id and another user's private pack are indistinguishable, so pack
@@ -57,8 +72,21 @@ completions, path items, and review state for it.
 
 - 204 — the pack was owned by the caller and has been deleted.
 - 403 — the pack is visible but global/curated; curated packs are seed-managed
-  and cannot be deleted through the API.
+  and cannot be deleted through the API (disable it instead).
 - 404 — the pack is not visible (unknown id, or another user's private pack).
+
+### Library
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/v1/library` | The full curated pack library, grouped by category |
+
+Returns `{"categories": [...]}` in display order; each category carries its
+`slug`, `title`, and `packs` (id, title, glyph, color, description, counts,
+`starter`, and the caller's `enabled` flag). Library rows are intentionally
+slim — no per-pack progress aggregates — because the library lists the whole
+catalog; progress belongs to the bench (`GET /api/v1/packs`). Owned packs
+never appear in the library.
 
 ### Progress
 

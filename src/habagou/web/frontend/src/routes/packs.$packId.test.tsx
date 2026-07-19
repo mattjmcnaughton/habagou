@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../app/app";
 import type { PackDetail, PackSummary } from "../lib/api";
 import { API_V1_BASE } from "../lib/api";
-import { packDeleteFailure } from "../mocks/handlers";
+import { packDeleteFailure, setMockPackEnabled } from "../mocks/handlers";
 import { server } from "../mocks/server";
 
 // The curated Greetings fixture (owned: false) mirrors ../mocks/handlers.ts.
@@ -21,6 +21,9 @@ const ownedSummary: PackSummary = {
   char_count: 1,
   sentence_count: 0,
   owned: true,
+  // Owned packs are never starters and are always enabled.
+  starter: false,
+  enabled: true,
   progress: {
     trace: { completed: false, completion_count: 0, best_duration_ms: null },
     match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -38,6 +41,103 @@ function serveOwnedPack() {
     HttpResponse.json<PackDetail>(ownedDetail),
   );
 }
+
+// A curated global pack the user has not enabled (not in the default bench
+// fixtures). Served per-test via `server.use` with a mutable enabled flag so
+// the invalidation-driven refetch observes the flip.
+const GLOBAL_DISABLED_ID = "55555555-5555-4555-8555-555555555555";
+function serveGlobalPack(state: { enabled: boolean }) {
+  return http.get(`${API_V1_BASE}/packs/${GLOBAL_DISABLED_ID}`, () =>
+    HttpResponse.json<PackDetail>({
+      id: GLOBAL_DISABLED_ID,
+      title: "Fruit",
+      glyph: "果",
+      color: "#7a8a3f",
+      char_count: 1,
+      sentence_count: 0,
+      owned: false,
+      starter: false,
+      enabled: state.enabled,
+      progress: {
+        trace: { completed: false, completion_count: 0, best_duration_ms: null },
+        match: { completed: false, completion_count: 0, best_duration_ms: null },
+        sentence: { completed: false, completion_count: 0, best_duration_ms: null },
+      },
+      characters: [{ hanzi: "果", pinyin: "guǒ", meaning: "fruit" }],
+      sentences: [],
+    }),
+  );
+}
+
+describe("Pack detail — library enablement", () => {
+  afterEach(() => {
+    // Restore the shared Greetings fixture even when an assertion failed
+    // mid-test, so a disabled Greetings never leaks into other tests.
+    setMockPackEnabled(GREETINGS_ID, true);
+  });
+
+  it("[WF-LIB] shows Add to my packs for a disabled global pack and fires the PUT", async () => {
+    window.history.pushState({}, "", `/packs/${GLOBAL_DISABLED_ID}`);
+    const state = { enabled: false };
+    const putRequests: { packId: string; enabled: boolean }[] = [];
+    server.use(
+      serveGlobalPack(state),
+      http.put(`${API_V1_BASE}/packs/:packId/enabled`, async ({ params, request }) => {
+        const body = (await request.json()) as { enabled: boolean };
+        putRequests.push({ packId: String(params.packId), enabled: body.enabled });
+        state.enabled = body.enabled;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    render(<App />);
+
+    const enable = await screen.findByRole("button", { name: "Enable Fruit" });
+    expect(enable.textContent).toContain("Add to my packs");
+    fireEvent.click(enable);
+
+    await waitFor(() =>
+      expect(putRequests).toEqual([{ packId: GLOBAL_DISABLED_ID, enabled: true }]),
+    );
+    // The detail query is invalidated; the refetched (now enabled) pack swaps
+    // the prominent enable button for the low-emphasis remove action.
+    const disable = await screen.findByRole("button", { name: "Disable Fruit" });
+    expect(disable.textContent).toContain("Remove from my packs");
+    expect(screen.getByText("Your progress is kept.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Enable Fruit" })).toBeNull();
+  });
+
+  it("[WF-LIB] removes an enabled global pack and returns to the bench", async () => {
+    window.history.pushState({}, "", `/packs/${GREETINGS_ID}`);
+
+    render(<App />);
+
+    // The default Greetings fixture is an enabled global pack.
+    const disable = await screen.findByRole("button", { name: "Disable Greetings" });
+    expect(disable.textContent).toContain("Remove from my packs");
+    expect(screen.getByText("Your progress is kept.")).toBeTruthy();
+    fireEvent.click(disable);
+
+    // Disabling navigates back to the bench, where the pack is gone (the mock
+    // /packs handler filters out disabled global packs).
+    expect(await screen.findByRole("heading", { name: "Choose a pack" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("link", { name: /Greetings pack/ })).toBeNull());
+    expect(screen.getByRole("link", { name: /Numbers pack/ })).toBeTruthy();
+  });
+
+  it("[WF-LIB] shows no enablement toggle for an owned pack", async () => {
+    window.history.pushState({}, "", `/packs/${OWNED_ID}`);
+    server.use(serveOwnedPack());
+
+    render(<App />);
+
+    expect(await screen.findByRole("button", { name: "Delete this pack" })).toBeTruthy();
+    expect(screen.queryByText("Add to my packs")).toBeNull();
+    expect(screen.queryByText("Remove from my packs")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Enable My Custom Pack" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Disable My Custom Pack" })).toBeNull();
+  });
+});
 
 describe("Pack detail — delete pack", () => {
   afterEach(() => {

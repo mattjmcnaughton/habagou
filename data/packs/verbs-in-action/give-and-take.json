@@ -1,0 +1,24 @@
+{
+  "slug": "give-and-take",
+  "title": "Give and take",
+  "glyph": "给",
+  "color": "#8c3a4a",
+  "category": "verbs-in-action",
+  "description": "Give, take, borrow, and bring things to people.",
+  "starter": false,
+  "sort_order": 1004,
+  "characters": [
+    { "hanzi": "给", "pinyin": "gěi", "meaning": "give" },
+    { "hanzi": "拿", "pinyin": "ná", "meaning": "take; hold" },
+    { "hanzi": "带", "pinyin": "dài", "meaning": "bring; carry" },
+    { "hanzi": "送", "pinyin": "sòng", "meaning": "give (a gift); send" },
+    { "hanzi": "还", "pinyin": "huán", "meaning": "give back" },
+    { "hanzi": "借", "pinyin": "jiè", "meaning": "borrow; lend" }
+  ],
+  "sentences": [
+    { "hanzi": "给你", "pinyin": "gěi nǐ", "translation": "Here you go" },
+    { "hanzi": "送给他", "pinyin": "sòng gěi tā", "translation": "Give it to him" },
+    { "hanzi": "还给我", "pinyin": "huán gěi wǒ", "translation": "Give it back to me" },
+    { "hanzi": "借我一本书", "pinyin": "jiè wǒ yì běn shū", "translation": "Lend me a book" }
+  ]
+}

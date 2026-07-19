@@ -31,6 +31,8 @@ def _summary_kwargs() -> dict:
         "char_count": 5,
         "sentence_count": 3,
         "owned": True,
+        "starter": False,
+        "enabled": True,
         "progress": _progress(),
     }
 

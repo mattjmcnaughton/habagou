@@ -1,0 +1,25 @@
+{
+  "slug": "home-and-rooms",
+  "title": "Home and rooms",
+  "glyph": "房",
+  "color": "#4f7fa7",
+  "category": "places-travel",
+  "description": "Walk through the rooms and furniture of a home.",
+  "starter": false,
+  "sort_order": 501,
+  "characters": [
+    { "hanzi": "房", "pinyin": "fáng", "meaning": "house; room" },
+    { "hanzi": "间", "pinyin": "jiān", "meaning": "room; between" },
+    { "hanzi": "门", "pinyin": "mén", "meaning": "door" },
+    { "hanzi": "窗", "pinyin": "chuāng", "meaning": "window" },
+    { "hanzi": "床", "pinyin": "chuáng", "meaning": "bed" },
+    { "hanzi": "桌", "pinyin": "zhuō", "meaning": "table" },
+    { "hanzi": "椅", "pinyin": "yǐ", "meaning": "chair" }
+  ],
+  "sentences": [
+    { "hanzi": "我的房间", "pinyin": "wǒ de fángjiān", "translation": "My room" },
+    { "hanzi": "请开门", "pinyin": "qǐng kāi mén", "translation": "Please open the door" },
+    { "hanzi": "一张床", "pinyin": "yì zhāng chuáng", "translation": "One bed" },
+    { "hanzi": "桌子上", "pinyin": "zhuōzi shàng", "translation": "On the table" }
+  ]
+}

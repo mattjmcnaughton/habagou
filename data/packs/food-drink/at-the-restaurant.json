@@ -1,0 +1,24 @@
+{
+  "slug": "at-the-restaurant",
+  "title": "At the restaurant",
+  "glyph": "餐",
+  "color": "#9e731f",
+  "category": "food-drink",
+  "description": "Read the menu and ask for a bowl and chopsticks.",
+  "starter": false,
+  "sort_order": 404,
+  "characters": [
+    { "hanzi": "餐", "pinyin": "cān", "meaning": "meal" },
+    { "hanzi": "厅", "pinyin": "tīng", "meaning": "hall" },
+    { "hanzi": "单", "pinyin": "dān", "meaning": "list; single" },
+    { "hanzi": "碗", "pinyin": "wǎn", "meaning": "bowl" },
+    { "hanzi": "筷", "pinyin": "kuài", "meaning": "chopsticks" },
+    { "hanzi": "盘", "pinyin": "pán", "meaning": "plate" }
+  ],
+  "sentences": [
+    { "hanzi": "去餐厅", "pinyin": "qù cāntīng", "translation": "Go to the restaurant" },
+    { "hanzi": "看菜单", "pinyin": "kàn càidān", "translation": "Look at the menu" },
+    { "hanzi": "一碗米饭", "pinyin": "yì wǎn mǐfàn", "translation": "A bowl of rice" },
+    { "hanzi": "一双筷子", "pinyin": "yì shuāng kuàizi", "translation": "A pair of chopsticks" }
+  ]
+}

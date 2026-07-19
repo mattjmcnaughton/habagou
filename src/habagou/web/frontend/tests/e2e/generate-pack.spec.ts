@@ -24,8 +24,11 @@ test.beforeEach(async ({ page }) => {
 test("[WF-15] drafts a corpus-grounded preview from a topic", async ({ page }) => {
   await page.goto("/packs");
 
-  // The "Create a pack" entry point only appears when generation is enabled,
-  // which the stub backend reports true.
+  // AI creation is a fallback entry point inside the pack library now: the
+  // bench card leads to the library, whose "Create a pack" card only appears
+  // when generation is enabled, which the stub backend reports true.
+  await page.getByRole("link", { name: /Browse the library/ }).click();
+  await expect(page).toHaveURL("/packs/library");
   await page.getByRole("link", { name: /Create a pack/ }).click();
   await expect(page).toHaveURL("/packs/generate");
   await expect(page.getByRole("heading", { name: /Create a pack/ })).toBeVisible();

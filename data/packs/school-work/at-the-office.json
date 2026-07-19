@@ -1,0 +1,25 @@
+{
+  "slug": "at-the-office",
+  "title": "At the office",
+  "glyph": "司",
+  "color": "#6f5537",
+  "category": "school-work",
+  "description": "Run meetings and get things done at the company.",
+  "starter": false,
+  "sort_order": 904,
+  "characters": [
+    { "hanzi": "公", "pinyin": "gōng", "meaning": "public" },
+    { "hanzi": "司", "pinyin": "sī", "meaning": "company (gōngsī)" },
+    { "hanzi": "会", "pinyin": "huì", "meaning": "meeting; can" },
+    { "hanzi": "议", "pinyin": "yì", "meaning": "discuss" },
+    { "hanzi": "事", "pinyin": "shì", "meaning": "matter; affair" },
+    { "hanzi": "经", "pinyin": "jīng", "meaning": "manage; pass through" },
+    { "hanzi": "理", "pinyin": "lǐ", "meaning": "reason; manage" }
+  ],
+  "sentences": [
+    { "hanzi": "我去公司", "pinyin": "wǒ qù gōngsī", "translation": "I go to the office" },
+    { "hanzi": "开会", "pinyin": "kāi huì", "translation": "Have a meeting" },
+    { "hanzi": "他是经理", "pinyin": "tā shì jīnglǐ", "translation": "He is the manager" },
+    { "hanzi": "我有事", "pinyin": "wǒ yǒu shì", "translation": "I have something to do" }
+  ]
+}

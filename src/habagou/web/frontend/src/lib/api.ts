@@ -19,6 +19,9 @@ export type StrokeData = CharacterJson;
 export type AuthUser = components["schemas"]["UserDTO"];
 export type AuthSession = components["schemas"]["SessionDTO"];
 export type GenerationStatus = components["schemas"]["GenerationStatusDTO"];
+export type Library = components["schemas"]["LibraryDTO"];
+export type LibraryCategory = components["schemas"]["LibraryCategoryDTO"];
+export type LibraryPack = components["schemas"]["LibraryPackDTO"];
 export type ChatModelOption = components["schemas"]["ChatModelOptionDTO"];
 export type PackDraft = components["schemas"]["PackDraft"];
 export type DraftCharacter = components["schemas"]["PackDraftCharacter"];
@@ -118,6 +121,19 @@ export function getPack(packId: string): Promise<PackDetail> {
 export async function deletePack(packId: string): Promise<void> {
   await apiFetch<void>(apiV1Path(`/packs/${encodeURIComponent(packId)}`), {
     method: "DELETE",
+  });
+}
+
+export function getLibrary(): Promise<Library> {
+  return apiFetch<Library>(apiV1Path("/library"));
+}
+
+export async function setPackEnabled(packId: string, enabled: boolean): Promise<void> {
+  const body: components["schemas"]["PackEnablementUpdateDTO"] = { enabled };
+  await apiFetch<void>(apiV1Path(`/packs/${encodeURIComponent(packId)}/enabled`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
 

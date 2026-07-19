@@ -1,0 +1,24 @@
+{
+  "slug": "she-it-and-you",
+  "title": "She, it, and you",
+  "glyph": "她",
+  "color": "#4a4e8e",
+  "category": "people-family",
+  "description": "Go beyond he and she with polite and inclusive pronouns.",
+  "starter": false,
+  "sort_order": 304,
+  "characters": [
+    { "hanzi": "她", "pinyin": "tā", "meaning": "she, her" },
+    { "hanzi": "它", "pinyin": "tā", "meaning": "it" },
+    { "hanzi": "您", "pinyin": "nín", "meaning": "you (polite)" },
+    { "hanzi": "咱", "pinyin": "zán", "meaning": "we (inclusive)" },
+    { "hanzi": "自", "pinyin": "zì", "meaning": "self" },
+    { "hanzi": "己", "pinyin": "jǐ", "meaning": "self; oneself" }
+  ],
+  "sentences": [
+    { "hanzi": "您好", "pinyin": "nín hǎo", "translation": "Hello (polite)" },
+    { "hanzi": "它是小猫", "pinyin": "tā shì xiǎo māo", "translation": "It is a kitten" },
+    { "hanzi": "咱们走", "pinyin": "zánmen zǒu", "translation": "Let's go" },
+    { "hanzi": "我自己来", "pinyin": "wǒ zìjǐ lái", "translation": "I'll do it myself" }
+  ]
+}

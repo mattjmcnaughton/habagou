@@ -12,6 +12,7 @@ from habagou.models import ActivityCompletion, ActivityType, CompletionSource
 if TYPE_CHECKING:
     import datetime
     import uuid
+    from collections.abc import Sequence
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +53,55 @@ class ProgressRepository:
         self.session.add(completion)
         await self.session.flush()
         return completion
+
+    async def per_pack_aggregates(
+        self,
+        *,
+        user_id: uuid.UUID,
+        pack_ids: Sequence[uuid.UUID],
+    ) -> dict[uuid.UUID, dict[ActivityType, ActivityProgress]]:
+        """Whole-pack (``source='pack'``) aggregates for many packs at once.
+
+        One grouped query instead of a per-pack round trip; every requested
+        pack id is present in the result (zeroed when it has no completions).
+        """
+        aggregates: dict[uuid.UUID, dict[ActivityType, ActivityProgress]] = {
+            pack_id: {
+                activity: ActivityProgress(
+                    activity=activity,
+                    completed=False,
+                    completion_count=0,
+                    best_duration_ms=None,
+                )
+                for activity in ActivityType
+            }
+            for pack_id in pack_ids
+        }
+        if not aggregates:
+            return aggregates
+
+        result = await self.session.execute(
+            select(
+                ActivityCompletion.pack_id,
+                ActivityCompletion.activity,
+                func.count(ActivityCompletion.id),
+                func.min(ActivityCompletion.duration_ms),
+            )
+            .where(
+                ActivityCompletion.user_id == user_id,
+                ActivityCompletion.pack_id.in_(list(aggregates)),
+                ActivityCompletion.source == CompletionSource.PACK,
+            )
+            .group_by(ActivityCompletion.pack_id, ActivityCompletion.activity)
+        )
+        for pack_id, activity, count, best in result.all():
+            aggregates[pack_id][activity] = ActivityProgress(
+                activity=activity,
+                completed=True,
+                completion_count=count,
+                best_duration_ms=best,
+            )
+        return aggregates
 
     async def per_pack_aggregate(
         self,

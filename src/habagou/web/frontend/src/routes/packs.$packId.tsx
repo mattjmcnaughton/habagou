@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PackDetail } from "../lib/api";
-import { deletePack, getPack, resetPackProgress } from "../lib/api";
+import { deletePack, getPack, resetPackProgress, setPackEnabled } from "../lib/api";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
 export const Route = createFileRoute("/packs/$packId")({
@@ -51,6 +51,21 @@ function PackScreen() {
         current ? { ...current, progress: result.progress } : current,
       );
       queryClient.invalidateQueries({ queryKey: ["packs"] });
+    },
+  });
+
+  // Library enablement for global (unowned) packs: enabling puts the pack on
+  // the bench; disabling takes it off but keeps the user's progress. Owned
+  // packs are always enabled and keep the Delete flow instead.
+  const setEnabled = useMutation({
+    mutationFn: (enabled: boolean) => setPackEnabled(packId, enabled),
+    onSuccess: (_result, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["packs"] });
+      queryClient.invalidateQueries({ queryKey: ["library"] });
+      queryClient.invalidateQueries({ queryKey: ["pack", packId] });
+      if (!enabled) {
+        void navigate({ to: "/packs" });
+      }
     },
   });
 
@@ -115,6 +130,25 @@ function PackScreen() {
                   </p>
                 </div>
               </div>
+
+              {!pack.data.owned && !pack.data.enabled ? (
+                <div className="border-b border-white/10 p-4">
+                  <button
+                    aria-label={`Enable ${pack.data.title}`}
+                    className="w-full rounded-md bg-jade px-4 py-3 text-sm font-bold text-ink transition-colors hover:bg-jade-bright disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={setEnabled.isPending}
+                    onClick={() => setEnabled.mutate(true)}
+                    type="button"
+                  >
+                    {setEnabled.isPending ? "Adding..." : "Add to my packs"}
+                  </button>
+                  {setEnabled.isError ? (
+                    <p className="mt-3 text-sm text-clay" role="alert">
+                      The pack could not be added.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="flex flex-wrap gap-2 border-b border-white/10 p-4">
                 {pack.data.characters.map((character) => (
@@ -200,6 +234,26 @@ function PackScreen() {
                     {reset.isPending ? "Retrying..." : "Retry reset"}
                   </button>
                 </div>
+              ) : null}
+
+              {!pack.data.owned && pack.data.enabled ? (
+                <>
+                  <button
+                    aria-label={`Disable ${pack.data.title}`}
+                    className="mt-3 w-full rounded-md border border-white/10 px-4 py-3 text-sm font-semibold text-mist transition-colors hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={setEnabled.isPending}
+                    onClick={() => setEnabled.mutate(false)}
+                    type="button"
+                  >
+                    {setEnabled.isPending ? "Removing..." : "Remove from my packs"}
+                  </button>
+                  <p className="mt-2 text-sm text-mist">Your progress is kept.</p>
+                  {setEnabled.isError ? (
+                    <p className="mt-3 text-sm text-clay" role="alert">
+                      The pack could not be removed.
+                    </p>
+                  ) : null}
+                </>
               ) : null}
 
               {pack.data.owned ? (

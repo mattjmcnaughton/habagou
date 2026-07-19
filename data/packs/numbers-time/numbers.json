@@ -1,0 +1,21 @@
+{
+  "slug": "numbers",
+  "title": "Numbers",
+  "glyph": "三",
+  "color": "#3f8a86",
+  "category": "numbers-time",
+  "description": "Count from one to five, stroke by stroke.",
+  "starter": true,
+  "sort_order": 2,
+  "characters": [
+    { "hanzi": "一", "pinyin": "yī", "meaning": "one" },
+    { "hanzi": "二", "pinyin": "èr", "meaning": "two" },
+    { "hanzi": "三", "pinyin": "sān", "meaning": "three" },
+    { "hanzi": "四", "pinyin": "sì", "meaning": "four" },
+    { "hanzi": "五", "pinyin": "wǔ", "meaning": "five" }
+  ],
+  "sentences": [
+    { "hanzi": "一二三", "pinyin": "yī èr sān", "translation": "One two three" },
+    { "hanzi": "三个人", "pinyin": "sān ge rén", "translation": "Three people" }
+  ]
+}

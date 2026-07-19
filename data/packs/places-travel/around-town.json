@@ -1,0 +1,24 @@
+{
+  "slug": "around-town",
+  "title": "Around town",
+  "glyph": "街",
+  "color": "#47759c",
+  "category": "places-travel",
+  "description": "Find the shops, parks, and streets of your neighborhood.",
+  "starter": false,
+  "sort_order": 502,
+  "characters": [
+    { "hanzi": "店", "pinyin": "diàn", "meaning": "shop" },
+    { "hanzi": "街", "pinyin": "jiē", "meaning": "street" },
+    { "hanzi": "路", "pinyin": "lù", "meaning": "road" },
+    { "hanzi": "园", "pinyin": "yuán", "meaning": "garden; park" },
+    { "hanzi": "银", "pinyin": "yín", "meaning": "silver" },
+    { "hanzi": "行", "pinyin": "háng", "meaning": "row; bank (yínháng)" }
+  ],
+  "sentences": [
+    { "hanzi": "去公园", "pinyin": "qù gōngyuán", "translation": "Go to the park" },
+    { "hanzi": "书店在哪里", "pinyin": "shūdiàn zài nǎlǐ", "translation": "Where is the bookstore" },
+    { "hanzi": "过马路", "pinyin": "guò mǎlù", "translation": "Cross the road" },
+    { "hanzi": "去银行", "pinyin": "qù yínháng", "translation": "Go to the bank" }
+  ]
+}

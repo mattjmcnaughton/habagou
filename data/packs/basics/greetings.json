@@ -1,0 +1,22 @@
+{
+  "slug": "greetings",
+  "title": "Greetings",
+  "glyph": "你",
+  "color": "#c4633f",
+  "category": "basics",
+  "description": "Say hello, introduce yourself, and thank people.",
+  "starter": true,
+  "sort_order": 1,
+  "characters": [
+    { "hanzi": "你", "pinyin": "nǐ", "meaning": "you" },
+    { "hanzi": "好", "pinyin": "hǎo", "meaning": "good" },
+    { "hanzi": "我", "pinyin": "wǒ", "meaning": "I, me" },
+    { "hanzi": "他", "pinyin": "tā", "meaning": "he, him" },
+    { "hanzi": "谢", "pinyin": "xiè", "meaning": "thanks" }
+  ],
+  "sentences": [
+    { "hanzi": "你好", "pinyin": "nǐ hǎo", "translation": "Hello" },
+    { "hanzi": "我很好", "pinyin": "wǒ hěn hǎo", "translation": "I am well" },
+    { "hanzi": "谢谢你", "pinyin": "xièxie nǐ", "translation": "Thank you" }
+  ]
+}

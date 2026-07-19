@@ -1,0 +1,25 @@
+{
+  "slug": "shopping-and-money",
+  "title": "Shopping and money",
+  "glyph": "买",
+  "color": "#994c4d",
+  "category": "daily-life",
+  "description": "Ask the price, bargain a little, and pay in yuan.",
+  "starter": false,
+  "sort_order": 604,
+  "characters": [
+    { "hanzi": "买", "pinyin": "mǎi", "meaning": "buy" },
+    { "hanzi": "卖", "pinyin": "mài", "meaning": "sell" },
+    { "hanzi": "钱", "pinyin": "qián", "meaning": "money" },
+    { "hanzi": "块", "pinyin": "kuài", "meaning": "yuan; piece" },
+    { "hanzi": "贵", "pinyin": "guì", "meaning": "expensive" },
+    { "hanzi": "便", "pinyin": "pián", "meaning": "cheap (piányi)" },
+    { "hanzi": "宜", "pinyin": "yí", "meaning": "suitable (piányi)" }
+  ],
+  "sentences": [
+    { "hanzi": "多少钱", "pinyin": "duōshao qián", "translation": "How much is it" },
+    { "hanzi": "太贵了", "pinyin": "tài guì le", "translation": "Too expensive" },
+    { "hanzi": "很便宜", "pinyin": "hěn piányi", "translation": "Very cheap" },
+    { "hanzi": "我买两个", "pinyin": "wǒ mǎi liǎng ge", "translation": "I'll buy two" }
+  ]
+}

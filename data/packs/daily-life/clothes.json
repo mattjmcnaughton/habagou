@@ -1,0 +1,24 @@
+{
+  "slug": "clothes",
+  "title": "Clothes",
+  "glyph": "衣",
+  "color": "#a55758",
+  "category": "daily-life",
+  "description": "Get dressed with shirts, pants, shoes, and hats.",
+  "starter": false,
+  "sort_order": 602,
+  "characters": [
+    { "hanzi": "衣", "pinyin": "yī", "meaning": "clothes" },
+    { "hanzi": "服", "pinyin": "fú", "meaning": "clothes (yīfu)" },
+    { "hanzi": "裤", "pinyin": "kù", "meaning": "pants" },
+    { "hanzi": "鞋", "pinyin": "xié", "meaning": "shoe" },
+    { "hanzi": "帽", "pinyin": "mào", "meaning": "hat" },
+    { "hanzi": "穿", "pinyin": "chuān", "meaning": "to wear" }
+  ],
+  "sentences": [
+    { "hanzi": "穿衣服", "pinyin": "chuān yīfu", "translation": "Put on clothes" },
+    { "hanzi": "一双鞋", "pinyin": "yì shuāng xié", "translation": "A pair of shoes" },
+    { "hanzi": "我的帽子", "pinyin": "wǒ de màozi", "translation": "My hat" },
+    { "hanzi": "穿裤子", "pinyin": "chuān kùzi", "translation": "Put on pants" }
+  ]
+}

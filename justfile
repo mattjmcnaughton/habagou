@@ -160,8 +160,12 @@ openapi-check:
 # Fast pre-push check (backend + frontend)
 gate: gate-be gate-fe
 
+# Validate curated pack data files against schema and corpus index
+validate-packs:
+    uv run python scripts/validate_pack_data.py
+
 # Backend gate
-gate-be: fmt-be lint-be typecheck-be test-unit-be
+gate-be: fmt-be lint-be typecheck-be test-unit-be validate-packs
 
 # Frontend gate
 gate-fe: fmt-fe lint-fe typecheck-fe test-unit-fe

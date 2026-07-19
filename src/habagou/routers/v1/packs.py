@@ -10,10 +10,14 @@ from sqlalchemy.ext.asyncio import (  # noqa: TC002 - FastAPI resolves annotatio
 
 from habagou.db import get_session
 from habagou.dependencies import get_current_user
-from habagou.dtos.packs import PackDetailDTO, PackSummaryDTO
+from habagou.dtos.packs import (
+    PackDetailDTO,
+    PackEnablementUpdateDTO,
+    PackSummaryDTO,
+)
 from habagou.events import workflow_event
 from habagou.models import User  # noqa: TC001 - FastAPI resolves annotations.
-from habagou.services.packs import PackDeletion, PackService
+from habagou.services.packs import PackDeletion, PackEnablement, PackService
 
 router = APIRouter(prefix="/api/v1/packs", tags=["packs"])
 
@@ -54,6 +58,46 @@ async def get_pack(
             )
 
         return pack
+
+
+@router.put(
+    "/{pack_id}/enabled",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {"description": "Pack not found"},
+        409: {"description": "Owned packs are always enabled"},
+    },
+)
+async def set_pack_enabled(
+    pack_id: uuid.UUID,
+    body: PackEnablementUpdateDTO,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> None:
+    async with workflow_event(
+        "pack_enablement_changed",
+        workflow="WF-02",
+        pack_id=str(pack_id),
+        enabled=body.enabled,
+        user_id=str(current_user.id),
+    ) as event:
+        outcome = await PackService(session).set_enabled(
+            pack_id, current_user, enabled=body.enabled
+        )
+        if outcome is PackEnablement.NOT_FOUND:
+            event.outcome = "error"
+            event.fields["reason"] = "pack_not_found"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="pack not found",
+            )
+        if outcome is PackEnablement.OWNED:
+            event.outcome = "error"
+            event.fields["reason"] = "owned_pack"
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="owned packs are always enabled",
+            )
 
 
 @router.delete(

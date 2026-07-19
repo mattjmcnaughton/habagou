@@ -1,9 +1,11 @@
-"""Seed prototype learning packs."""
+"""Seed curated library categories and packs from ``data/packs/``."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
@@ -11,6 +13,7 @@ from sqlalchemy import delete, select
 from habagou import db
 from habagou.events import emit_workflow_event
 from habagou.models import (
+    Category,
     Character,
     Pack,
     PackCharacter,
@@ -21,6 +24,15 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from sqlalchemy.ext.asyncio import AsyncSession
+
+PACK_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "packs"
+
+
+@dataclass(frozen=True)
+class SeedCategory:
+    slug: str
+    title: str
+    sort_order: int
 
 
 @dataclass(frozen=True)
@@ -43,6 +55,9 @@ class SeedPack:
     title: str
     glyph: str
     color: str
+    category: str
+    description: str
+    starter: bool
     sort_order: int
     characters: tuple[SeedCharacter, ...]
     sentences: tuple[SeedSentence, ...]
@@ -52,6 +67,7 @@ class SeedPack:
 class SeedResult:
     chars: int
     packs: int
+    categories: int
 
 
 class MissingCharactersError(RuntimeError):
@@ -65,84 +81,60 @@ class MissingCharactersError(RuntimeError):
         )
 
 
-SEED_PACKS: tuple[SeedPack, ...] = (
-    SeedPack(
-        slug="greetings",
-        title="Greetings",
-        glyph="你",
-        color="#c4633f",
-        sort_order=1,
-        characters=(
-            SeedCharacter("你", "nǐ", "you"),
-            SeedCharacter("好", "hǎo", "good"),
-            SeedCharacter("我", "wǒ", "I, me"),
-            SeedCharacter("他", "tā", "he, him"),
-            SeedCharacter("谢", "xiè", "thanks"),
-        ),
-        sentences=(
-            SeedSentence("你好", "nǐ hǎo", "Hello"),
-            SeedSentence("我很好", "wǒ hěn hǎo", "I am well"),
-            SeedSentence("谢谢你", "xièxie nǐ", "Thank you"),
-        ),
-    ),
-    SeedPack(
-        slug="numbers",
-        title="Numbers",
-        glyph="三",
-        color="#3f8a86",
-        sort_order=2,
-        characters=(
-            SeedCharacter("一", "yī", "one"),
-            SeedCharacter("二", "èr", "two"),
-            SeedCharacter("三", "sān", "three"),
-            SeedCharacter("四", "sì", "four"),
-            SeedCharacter("五", "wǔ", "five"),
-        ),
-        sentences=(
-            SeedSentence("一二三", "yī èr sān", "One two three"),
-            SeedSentence("三个人", "sān ge rén", "Three people"),
-        ),
-    ),
-    SeedPack(
-        slug="family",
-        title="Family",
-        glyph="妈",
-        color="#5b5fa8",
-        sort_order=3,
-        characters=(
-            SeedCharacter("妈", "mā", "mom"),
-            SeedCharacter("爸", "bà", "dad"),
-            SeedCharacter("哥", "gē", "older brother"),
-            SeedCharacter("姐", "jiě", "older sister"),
-            SeedCharacter("弟", "dì", "younger brother"),
-        ),
-        sentences=(
-            SeedSentence("爸爸", "bàba", "Dad"),
-            SeedSentence("我哥哥", "wǒ gēge", "My older brother"),
-        ),
-    ),
-    SeedPack(
-        slug="food-drink",
-        title="Food & drink",
-        glyph="茶",
-        color="#b5852e",
-        sort_order=4,
-        characters=(
-            SeedCharacter("米", "mǐ", "rice"),
-            SeedCharacter("饭", "fàn", "meal"),
-            SeedCharacter("茶", "chá", "tea"),
-            SeedCharacter("水", "shuǐ", "water"),
-            SeedCharacter("鱼", "yú", "fish"),
-        ),
-        sentences=(
-            SeedSentence("米饭", "mǐfàn", "Cooked rice"),
-            SeedSentence("喝茶", "hē chá", "Drink tea"),
-        ),
-    ),
-)
+def load_seed_categories(data_dir: Path = PACK_DATA_DIR) -> tuple[SeedCategory, ...]:
+    raw = json.loads((data_dir / "categories.json").read_text(encoding="utf-8"))
+    return tuple(
+        SeedCategory(
+            slug=entry["slug"],
+            title=entry["title"],
+            sort_order=entry["sort_order"],
+        )
+        for entry in raw
+    )
 
 
-def required_hanzi(packs: Sequence[SeedPack] = SEED_PACKS) -> set[str]:
+def load_seed_packs(data_dir: Path = PACK_DATA_DIR) -> tuple[SeedPack, ...]:
+    """Load every pack file under ``data/packs/<category>/<slug>.json``.
+
+    Returned in ``sort_order`` order so downstream iteration (and the seeded
+    curriculum) is deterministic. Schema and cross-file invariants are enforced
+    by ``scripts/validate_pack_data.py`` in the gate; this loader only parses.
+    """
+    packs = []
+    for path in sorted(data_dir.glob("*/*.json")):
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        packs.append(
+            SeedPack(
+                slug=raw["slug"],
+                title=raw["title"],
+                glyph=raw["glyph"],
+                color=raw["color"],
+                category=raw["category"],
+                description=raw["description"],
+                starter=raw["starter"],
+                sort_order=raw["sort_order"],
+                characters=tuple(
+                    SeedCharacter(
+                        hanzi=character["hanzi"],
+                        pinyin=character["pinyin"],
+                        meaning=character["meaning"],
+                    )
+                    for character in raw["characters"]
+                ),
+                sentences=tuple(
+                    SeedSentence(
+                        hanzi=sentence["hanzi"],
+                        pinyin=sentence["pinyin"],
+                        translation=sentence["translation"],
+                    )
+                    for sentence in raw["sentences"]
+                ),
+            )
+        )
+    return tuple(sorted(packs, key=lambda pack: pack.sort_order))
+
+
+def required_hanzi(packs: Sequence[SeedPack]) -> set[str]:
     chars: set[str] = set()
     for pack in packs:
         chars.update(character.hanzi for character in pack.characters)
@@ -160,14 +152,27 @@ async def load_characters(
 
 async def validate_required_characters(
     session: AsyncSession,
-    chars: Iterable[str] | None = None,
+    chars: Iterable[str],
 ) -> dict[str, Character]:
-    required = set(chars or required_hanzi())
+    required = set(chars)
     characters = await load_characters(session, required)
     missing = required - characters.keys()
     if missing:
         raise MissingCharactersError(missing)
     return characters
+
+
+async def upsert_category(session: AsyncSession, seed_category: SeedCategory) -> None:
+    result = await session.execute(
+        select(Category).where(Category.slug == seed_category.slug)
+    )
+    category = result.scalar_one_or_none()
+    if category is None:
+        category = Category(slug=seed_category.slug)
+        session.add(category)
+
+    category.title = seed_category.title
+    category.sort_order = seed_category.sort_order
 
 
 async def upsert_pack(
@@ -184,47 +189,116 @@ async def upsert_pack(
     pack.title = seed_pack.title
     pack.glyph = seed_pack.glyph
     pack.color = seed_pack.color
+    pack.category_slug = seed_pack.category
+    pack.description = seed_pack.description
+    pack.starter = seed_pack.starter
     pack.sort_order = seed_pack.sort_order
     await session.flush()
 
-    await session.execute(delete(PackCharacter).where(PackCharacter.pack_id == pack.id))
-    await session.execute(delete(PackSentence).where(PackSentence.pack_id == pack.id))
-    await session.flush()
-
-    session.add_all(
-        PackCharacter(
-            pack_id=pack.id,
-            character_id=characters[seed_character.hanzi].id,
-            position=index,
-            pinyin=seed_character.pinyin,
-            meaning=seed_character.meaning,
+    # Rewrite member/sentence rows only when their content actually changed.
+    # This is not just an optimization: sentence review states key their
+    # ``unit_ref`` on the sentence PK, and seeding runs on every bootstrap —
+    # an unconditional delete/reinsert would mint new sentence ids each
+    # deploy and orphan every learner's sentence review progress.
+    desired_characters = [
+        (
+            index,
+            characters[seed_character.hanzi].id,
+            seed_character.pinyin,
+            seed_character.meaning,
         )
         for index, seed_character in enumerate(seed_pack.characters, start=1)
-    )
-    session.add_all(
-        PackSentence(
-            pack_id=pack.id,
-            position=index,
-            hanzi=seed_sentence.hanzi,
-            pinyin=seed_sentence.pinyin,
-            translation=seed_sentence.translation,
+    ]
+    existing_characters = [
+        (row.position, row.character_id, row.pinyin, row.meaning)
+        for row in (
+            await session.execute(
+                select(PackCharacter)
+                .where(PackCharacter.pack_id == pack.id)
+                .order_by(PackCharacter.position)
+            )
+        ).scalars()
+    ]
+    if existing_characters != desired_characters:
+        await session.execute(
+            delete(PackCharacter).where(PackCharacter.pack_id == pack.id)
         )
+        await session.flush()
+        session.add_all(
+            PackCharacter(
+                pack_id=pack.id,
+                character_id=character_id,
+                position=position,
+                pinyin=pinyin,
+                meaning=meaning,
+            )
+            for position, character_id, pinyin, meaning in desired_characters
+        )
+
+    desired_sentences = [
+        (index, seed_sentence.hanzi, seed_sentence.pinyin, seed_sentence.translation)
         for index, seed_sentence in enumerate(seed_pack.sentences, start=1)
-    )
+    ]
+    existing_sentences = [
+        (row.position, row.hanzi, row.pinyin, row.translation)
+        for row in (
+            await session.execute(
+                select(PackSentence)
+                .where(PackSentence.pack_id == pack.id)
+                .order_by(PackSentence.position)
+            )
+        ).scalars()
+    ]
+    if existing_sentences != desired_sentences:
+        await session.execute(
+            delete(PackSentence).where(PackSentence.pack_id == pack.id)
+        )
+        await session.flush()
+        session.add_all(
+            PackSentence(
+                pack_id=pack.id,
+                position=position,
+                hanzi=hanzi,
+                pinyin=pinyin,
+                translation=translation,
+            )
+            for position, hanzi, pinyin, translation in desired_sentences
+        )
 
 
-async def seed_database(packs: Sequence[SeedPack] = SEED_PACKS) -> SeedResult:
+async def seed_database(
+    packs: Sequence[SeedPack] | None = None,
+    categories: Sequence[SeedCategory] | None = None,
+) -> SeedResult:
+    """Upsert categories and curated packs (from ``data/packs`` by default).
+
+    Idempotent by slug; never deletes packs or categories absent from the
+    inputs — retiring library content users may have progress on is a
+    deliberate manual operation, not a seed side effect.
+    """
+    if packs is None:
+        packs = load_seed_packs()
+    if categories is None:
+        categories = load_seed_categories()
+
     async with db.async_session() as session:
+        for seed_category in categories:
+            await upsert_category(session, seed_category)
+        await session.flush()
+
         required = required_hanzi(packs)
         characters = await validate_required_characters(session, required)
         for seed_pack in packs:
             await upsert_pack(session, seed_pack, characters)
         await session.commit()
-    return SeedResult(chars=len(required), packs=len(packs))
+    return SeedResult(chars=len(required), packs=len(packs), categories=len(categories))
 
 
 def format_bootstrap_completed(result: SeedResult) -> str:
-    return f"bootstrap_completed chars={result.chars} packs={result.packs}"
+    return (
+        f"bootstrap_completed chars={result.chars} packs={result.packs} "
+        f"categories={result.categories}"
+    )
 
 
 def emit_bootstrap_completed(
@@ -236,6 +310,7 @@ def emit_bootstrap_completed(
         workflow="WF-01",
         chars_imported=result.chars,
         packs_seeded=result.packs,
+        categories_seeded=result.categories,
         migrations_applied=migrations_applied,
     )
 

@@ -1,0 +1,25 @@
+{
+  "slug": "colors",
+  "title": "Colors",
+  "glyph": "红",
+  "color": "#ba6f70",
+  "category": "daily-life",
+  "description": "Paint your world in red, yellow, blue, and green.",
+  "starter": false,
+  "sort_order": 603,
+  "characters": [
+    { "hanzi": "红", "pinyin": "hóng", "meaning": "red" },
+    { "hanzi": "黄", "pinyin": "huáng", "meaning": "yellow" },
+    { "hanzi": "蓝", "pinyin": "lán", "meaning": "blue" },
+    { "hanzi": "绿", "pinyin": "lǜ", "meaning": "green" },
+    { "hanzi": "白", "pinyin": "bái", "meaning": "white" },
+    { "hanzi": "黑", "pinyin": "hēi", "meaning": "black" },
+    { "hanzi": "色", "pinyin": "sè", "meaning": "color" }
+  ],
+  "sentences": [
+    { "hanzi": "红色的花", "pinyin": "hóngsè de huā", "translation": "A red flower" },
+    { "hanzi": "天是蓝色的", "pinyin": "tiān shì lánsè de", "translation": "The sky is blue" },
+    { "hanzi": "我喜欢绿色", "pinyin": "wǒ xǐhuan lǜsè", "translation": "I like green" },
+    { "hanzi": "黑猫白猫", "pinyin": "hēi māo bái māo", "translation": "Black cat white cat" }
+  ]
+}

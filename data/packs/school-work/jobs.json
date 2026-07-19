@@ -1,0 +1,24 @@
+{
+  "slug": "jobs",
+  "title": "Jobs",
+  "glyph": "工",
+  "color": "#977a57",
+  "category": "school-work",
+  "description": "Talk about work, busy days, and what people do.",
+  "starter": false,
+  "sort_order": 903,
+  "characters": [
+    { "hanzi": "工", "pinyin": "gōng", "meaning": "work" },
+    { "hanzi": "作", "pinyin": "zuò", "meaning": "do; work" },
+    { "hanzi": "忙", "pinyin": "máng", "meaning": "busy" },
+    { "hanzi": "教", "pinyin": "jiāo", "meaning": "teach" },
+    { "hanzi": "商", "pinyin": "shāng", "meaning": "business" },
+    { "hanzi": "农", "pinyin": "nóng", "meaning": "farming" }
+  ],
+  "sentences": [
+    { "hanzi": "我在工作", "pinyin": "wǒ zài gōngzuò", "translation": "I am working" },
+    { "hanzi": "他很忙", "pinyin": "tā hěn máng", "translation": "He is busy" },
+    { "hanzi": "她教中文", "pinyin": "tā jiāo zhōngwén", "translation": "She teaches Chinese" },
+    { "hanzi": "他是商人", "pinyin": "tā shì shāngrén", "translation": "He is a businessman" }
+  ]
+}

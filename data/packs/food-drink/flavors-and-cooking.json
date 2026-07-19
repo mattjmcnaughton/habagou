@@ -1,0 +1,25 @@
+{
+  "slug": "flavors-and-cooking",
+  "title": "Flavors and cooking",
+  "glyph": "辣",
+  "color": "#cf9f4b",
+  "category": "food-drink",
+  "description": "Taste sweet, sour, and spicy, then cook it yourself.",
+  "starter": false,
+  "sort_order": 405,
+  "characters": [
+    { "hanzi": "甜", "pinyin": "tián", "meaning": "sweet" },
+    { "hanzi": "酸", "pinyin": "suān", "meaning": "sour" },
+    { "hanzi": "辣", "pinyin": "là", "meaning": "spicy" },
+    { "hanzi": "咸", "pinyin": "xián", "meaning": "salty" },
+    { "hanzi": "苦", "pinyin": "kǔ", "meaning": "bitter" },
+    { "hanzi": "炒", "pinyin": "chǎo", "meaning": "stir-fry" },
+    { "hanzi": "汤", "pinyin": "tāng", "meaning": "soup" }
+  ],
+  "sentences": [
+    { "hanzi": "有点辣", "pinyin": "yǒudiǎn là", "translation": "A little spicy" },
+    { "hanzi": "汤很好喝", "pinyin": "tāng hěn hǎohē", "translation": "The soup is delicious" },
+    { "hanzi": "酸甜苦辣", "pinyin": "suān tián kǔ là", "translation": "Sour sweet bitter spicy" },
+    { "hanzi": "炒鸡蛋", "pinyin": "chǎo jīdàn", "translation": "Scrambled eggs" }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "slug": "phones-and-screens",
+  "title": "Phones and screens",
+  "glyph": "电",
+  "color": "#c47b7c",
+  "category": "daily-life",
+  "description": "Make calls, go online, and talk about your screens.",
+  "starter": false,
+  "sort_order": 605,
+  "characters": [
+    { "hanzi": "电", "pinyin": "diàn", "meaning": "electricity" },
+    { "hanzi": "话", "pinyin": "huà", "meaning": "speech; words" },
+    { "hanzi": "脑", "pinyin": "nǎo", "meaning": "brain" },
+    { "hanzi": "网", "pinyin": "wǎng", "meaning": "net; internet" },
+    { "hanzi": "视", "pinyin": "shì", "meaning": "to view" },
+    { "hanzi": "打", "pinyin": "dǎ", "meaning": "hit; make (a call)" }
+  ],
+  "sentences": [
+    { "hanzi": "打电话", "pinyin": "dǎ diànhuà", "translation": "Make a phone call" },
+    { "hanzi": "上网", "pinyin": "shàng wǎng", "translation": "Go online" },
+    { "hanzi": "看电视", "pinyin": "kàn diànshì", "translation": "Watch TV" },
+    { "hanzi": "我的电脑", "pinyin": "wǒ de diànnǎo", "translation": "My computer" }
+  ]
+}

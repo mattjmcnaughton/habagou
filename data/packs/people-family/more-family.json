@@ -1,0 +1,24 @@
+{
+  "slug": "more-family",
+  "title": "More family",
+  "glyph": "家",
+  "color": "#6165b1",
+  "category": "people-family",
+  "description": "Meet the grandparents, little sister, and the whole family.",
+  "starter": false,
+  "sort_order": 301,
+  "characters": [
+    { "hanzi": "妹", "pinyin": "mèi", "meaning": "younger sister" },
+    { "hanzi": "家", "pinyin": "jiā", "meaning": "family; home" },
+    { "hanzi": "爷", "pinyin": "yé", "meaning": "grandpa" },
+    { "hanzi": "奶", "pinyin": "nǎi", "meaning": "grandma; milk" },
+    { "hanzi": "孩", "pinyin": "hái", "meaning": "child" },
+    { "hanzi": "子", "pinyin": "zǐ", "meaning": "child; suffix" }
+  ],
+  "sentences": [
+    { "hanzi": "我妹妹", "pinyin": "wǒ mèimei", "translation": "My younger sister" },
+    { "hanzi": "爷爷奶奶", "pinyin": "yéye nǎinai", "translation": "Grandpa and grandma" },
+    { "hanzi": "一家人", "pinyin": "yì jiā rén", "translation": "One family" },
+    { "hanzi": "三个孩子", "pinyin": "sān ge háizi", "translation": "Three children" }
+  ]
+}

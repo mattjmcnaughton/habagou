@@ -1,0 +1,24 @@
+{
+  "slug": "yes-and-no",
+  "title": "Yes and no",
+  "glyph": "不",
+  "color": "#b36445",
+  "category": "basics",
+  "description": "Agree, refuse, and say what you don't have.",
+  "starter": false,
+  "sort_order": 104,
+  "characters": [
+    { "hanzi": "是", "pinyin": "shì", "meaning": "to be" },
+    { "hanzi": "不", "pinyin": "bù", "meaning": "not" },
+    { "hanzi": "没", "pinyin": "méi", "meaning": "not have" },
+    { "hanzi": "有", "pinyin": "yǒu", "meaning": "to have" },
+    { "hanzi": "吗", "pinyin": "ma", "meaning": "question particle" },
+    { "hanzi": "别", "pinyin": "bié", "meaning": "don't" }
+  ],
+  "sentences": [
+    { "hanzi": "我不是", "pinyin": "wǒ bú shì", "translation": "I am not" },
+    { "hanzi": "我没有", "pinyin": "wǒ méiyǒu", "translation": "I don't have any" },
+    { "hanzi": "你有吗", "pinyin": "nǐ yǒu ma", "translation": "Do you have it" },
+    { "hanzi": "别走", "pinyin": "bié zǒu", "translation": "Don't go" }
+  ]
+}

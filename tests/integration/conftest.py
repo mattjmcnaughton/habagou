@@ -21,8 +21,8 @@ from habagou import db
 from habagou.config import settings
 from habagou.models import Pack, PackCharacter, User
 from habagou.repositories.characters import reset_all_hanzi_cache
-from scripts.import_stroke_data import archive_path, import_corpus
-from scripts.seed import seed_database
+from scripts.import_stroke_data import cached_archive, import_corpus
+from scripts.seed import load_seed_packs, required_hanzi, seed_database
 
 TEMPLATE_PREFIX = "habagou_test_base"
 RUN_ID = uuid.uuid4().hex[:12]
@@ -110,9 +110,13 @@ def _create_template_database(template_url: URL) -> None:
 
 async def _import_and_seed_template_database(template_url: URL) -> None:
     await db.configure_database_url(_render_url(template_url))
+    # The fixture file carries characters tests reference directly; the seed
+    # requirement set tracks data/packs automatically so the template always
+    # covers every curated pack without hand-maintaining the fixture.
     await import_corpus(
-        archive=archive_path(),
+        archive=cached_archive(),
         subset_path=Path("tests/fixtures/stroke_subset.txt"),
+        subset=required_hanzi(load_seed_packs()),
     )
     await seed_database()
 

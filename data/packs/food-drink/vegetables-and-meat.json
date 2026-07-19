@@ -1,0 +1,25 @@
+{
+  "slug": "vegetables-and-meat",
+  "title": "Vegetables and meat",
+  "glyph": "肉",
+  "color": "#aa7c27",
+  "category": "food-drink",
+  "description": "Shop for vegetables, meat, and eggs like a local.",
+  "starter": false,
+  "sort_order": 402,
+  "characters": [
+    { "hanzi": "菜", "pinyin": "cài", "meaning": "vegetable; dish" },
+    { "hanzi": "肉", "pinyin": "ròu", "meaning": "meat" },
+    { "hanzi": "牛", "pinyin": "niú", "meaning": "cow" },
+    { "hanzi": "羊", "pinyin": "yáng", "meaning": "sheep" },
+    { "hanzi": "鸡", "pinyin": "jī", "meaning": "chicken" },
+    { "hanzi": "蛋", "pinyin": "dàn", "meaning": "egg" },
+    { "hanzi": "豆", "pinyin": "dòu", "meaning": "bean" }
+  ],
+  "sentences": [
+    { "hanzi": "我吃牛肉", "pinyin": "wǒ chī niúròu", "translation": "I eat beef" },
+    { "hanzi": "鸡蛋很好吃", "pinyin": "jīdàn hěn hǎochī", "translation": "Eggs are delicious" },
+    { "hanzi": "买青菜", "pinyin": "mǎi qīngcài", "translation": "Buy greens" },
+    { "hanzi": "羊肉很香", "pinyin": "yángròu hěn xiāng", "translation": "The lamb smells wonderful" }
+  ]
+}

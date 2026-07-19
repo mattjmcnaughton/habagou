@@ -1,0 +1,25 @@
+{
+  "slug": "describing-people",
+  "title": "Describing people",
+  "glyph": "高",
+  "color": "#7478c2",
+  "category": "people-family",
+  "description": "Describe how people look, from tall to handsome.",
+  "starter": false,
+  "sort_order": 305,
+  "characters": [
+    { "hanzi": "高", "pinyin": "gāo", "meaning": "tall; high" },
+    { "hanzi": "矮", "pinyin": "ǎi", "meaning": "short (height)" },
+    { "hanzi": "胖", "pinyin": "pàng", "meaning": "fat" },
+    { "hanzi": "瘦", "pinyin": "shòu", "meaning": "thin" },
+    { "hanzi": "漂", "pinyin": "piào", "meaning": "pretty (piàoliang)" },
+    { "hanzi": "亮", "pinyin": "liàng", "meaning": "bright" },
+    { "hanzi": "帅", "pinyin": "shuài", "meaning": "handsome" }
+  ],
+  "sentences": [
+    { "hanzi": "他很高", "pinyin": "tā hěn gāo", "translation": "He is tall" },
+    { "hanzi": "她很漂亮", "pinyin": "tā hěn piàoliang", "translation": "She is pretty" },
+    { "hanzi": "我弟弟很帅", "pinyin": "wǒ dìdi hěn shuài", "translation": "My little brother is handsome" },
+    { "hanzi": "他不胖", "pinyin": "tā bú pàng", "translation": "He is not fat" }
+  ]
+}

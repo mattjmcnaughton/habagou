@@ -17,18 +17,17 @@ from habagou.models import (
     User,
 )
 from scripts.import_stroke_data import (
-    archive_path,
-    ensure_archive,
+    cached_archive,
     import_corpus,
     iter_records,
     read_subset,
 )
 from scripts.seed import (
-    SEED_PACKS,
     MissingCharactersError,
     SeedCharacter,
     SeedPack,
     SeedSentence,
+    load_seed_packs,
     seed_database,
 )
 
@@ -96,16 +95,17 @@ async def test_database_round_trips_pack_and_completion() -> None:
 @pytest.mark.anyio
 async def test_stroke_import_matches_fixture_subset() -> None:
     subset_path = Path("tests/fixtures/stroke_subset.txt")
-    cached_archive = archive_path()
-    if not cached_archive.exists():
+    try:
+        archive = cached_archive()
+    except RuntimeError:
         pytest.skip("stroke corpus archive is not cached; run `just bootstrap` first")
 
     total, _changed, _elapsed = await import_corpus(
-        archive=cached_archive,
+        archive=archive,
         subset_path=subset_path,
     )
     _rerun_total, rerun_changed, _rerun_elapsed = await import_corpus(
-        archive=cached_archive, subset_path=subset_path
+        archive=archive, subset_path=subset_path
     )
 
     subset = read_subset(subset_path)
@@ -113,10 +113,7 @@ async def test_stroke_import_matches_fixture_subset() -> None:
     assert total == len(subset)
     assert rerun_changed == 0
 
-    source_records = {
-        record.hanzi: record
-        for record in iter_records(ensure_archive(cached_archive), subset)
-    }
+    source_records = {record.hanzi: record for record in iter_records(archive, subset)}
 
     async with db.async_session() as session:
         result = await session.execute(
@@ -136,7 +133,8 @@ async def test_seed_database_is_idempotent() -> None:
     await seed_database()
     await seed_database()
 
-    seed_slugs = [pack.slug for pack in SEED_PACKS]
+    seed_packs = load_seed_packs()
+    seed_slugs = [pack.slug for pack in seed_packs]
     async with db.async_session() as session:
         result = await session.execute(
             select(Pack)
@@ -161,20 +159,18 @@ async def test_seed_database_is_idempotent() -> None:
         )
 
     assert [pack.slug for pack in packs] == seed_slugs
-    assert [pack.title for pack in packs] == [
-        "Greetings",
-        "Numbers",
-        "Family",
-        "Food & drink",
-    ]
+    assert "Greetings" in [pack.title for pack in packs]
     assert all(pack.owner_id is None for pack in packs)
-    assert character_count == sum(len(pack.characters) for pack in SEED_PACKS)
-    assert sentence_count == sum(len(pack.sentences) for pack in SEED_PACKS)
+    assert character_count == sum(len(pack.characters) for pack in seed_packs)
+    assert sentence_count == sum(len(pack.sentences) for pack in seed_packs)
 
-    for saved, expected in zip(packs, SEED_PACKS, strict=True):
+    for saved, expected in zip(packs, seed_packs, strict=True):
         assert saved.title == expected.title
         assert saved.glyph == expected.glyph
         assert saved.color == expected.color
+        assert saved.category_slug == expected.category
+        assert saved.description == expected.description
+        assert saved.starter == expected.starter
         assert [link.character.hanzi for link in saved.characters] == [
             character.hanzi for character in expected.characters
         ]
@@ -194,6 +190,9 @@ async def test_seed_validation_aborts_when_referenced_character_is_missing() -> 
         title="Broken pack",
         glyph="☂",
         color="#000000",
+        category="basics",
+        description="Broken on purpose",
+        starter=False,
         sort_order=99,
         characters=(SeedCharacter("☂", "fake", "fake"),),
         sentences=(SeedSentence("☂", "fake", "fake"),),

@@ -1,0 +1,24 @@
+{
+  "slug": "reading-and-writing",
+  "title": "Reading and writing",
+  "glyph": "书",
+  "color": "#7d6142",
+  "category": "school-work",
+  "description": "Pick up a pen and read and write characters.",
+  "starter": false,
+  "sort_order": 902,
+  "characters": [
+    { "hanzi": "书", "pinyin": "shū", "meaning": "book" },
+    { "hanzi": "读", "pinyin": "dú", "meaning": "read" },
+    { "hanzi": "写", "pinyin": "xiě", "meaning": "write" },
+    { "hanzi": "文", "pinyin": "wén", "meaning": "writing; language" },
+    { "hanzi": "纸", "pinyin": "zhǐ", "meaning": "paper" },
+    { "hanzi": "笔", "pinyin": "bǐ", "meaning": "pen" }
+  ],
+  "sentences": [
+    { "hanzi": "我看书", "pinyin": "wǒ kàn shū", "translation": "I read books" },
+    { "hanzi": "写汉字", "pinyin": "xiě hànzì", "translation": "Write Chinese characters" },
+    { "hanzi": "一支笔", "pinyin": "yì zhī bǐ", "translation": "One pen" },
+    { "hanzi": "读中文", "pinyin": "dú zhōngwén", "translation": "Read Chinese" }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "slug": "eat-drink-sleep",
+  "title": "Eat, drink, sleep",
+  "glyph": "吃",
+  "color": "#b05669",
+  "category": "verbs-in-action",
+  "description": "Handle hunger, thirst, and bedtime with everyday verbs.",
+  "starter": false,
+  "sort_order": 1003,
+  "characters": [
+    { "hanzi": "吃", "pinyin": "chī", "meaning": "eat" },
+    { "hanzi": "喝", "pinyin": "hē", "meaning": "drink" },
+    { "hanzi": "睡", "pinyin": "shuì", "meaning": "sleep" },
+    { "hanzi": "觉", "pinyin": "jiào", "meaning": "sleep (shuìjiào)" },
+    { "hanzi": "饿", "pinyin": "è", "meaning": "hungry" },
+    { "hanzi": "渴", "pinyin": "kě", "meaning": "thirsty" }
+  ],
+  "sentences": [
+    { "hanzi": "我饿了", "pinyin": "wǒ è le", "translation": "I am hungry" },
+    { "hanzi": "去睡觉", "pinyin": "qù shuìjiào", "translation": "Go to sleep" },
+    { "hanzi": "吃饭了", "pinyin": "chī fàn le", "translation": "Time to eat" },
+    { "hanzi": "我想喝水", "pinyin": "wǒ xiǎng hē shuǐ", "translation": "I want some water" }
+  ]
+}

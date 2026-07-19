@@ -1,0 +1,24 @@
+{
+  "slug": "look-listen-speak",
+  "title": "Look, listen, speak",
+  "glyph": "看",
+  "color": "#984254",
+  "category": "verbs-in-action",
+  "description": "Watch, listen, ask, and answer in conversation.",
+  "starter": false,
+  "sort_order": 1002,
+  "characters": [
+    { "hanzi": "看", "pinyin": "kàn", "meaning": "look; watch" },
+    { "hanzi": "听", "pinyin": "tīng", "meaning": "listen" },
+    { "hanzi": "说", "pinyin": "shuō", "meaning": "speak" },
+    { "hanzi": "讲", "pinyin": "jiǎng", "meaning": "talk; explain" },
+    { "hanzi": "问", "pinyin": "wèn", "meaning": "ask" },
+    { "hanzi": "答", "pinyin": "dá", "meaning": "answer" }
+  ],
+  "sentences": [
+    { "hanzi": "听我说", "pinyin": "tīng wǒ shuō", "translation": "Listen to me" },
+    { "hanzi": "看这里", "pinyin": "kàn zhèlǐ", "translation": "Look here" },
+    { "hanzi": "我问你", "pinyin": "wǒ wèn nǐ", "translation": "Let me ask you" },
+    { "hanzi": "请再说一次", "pinyin": "qǐng zài shuō yí cì", "translation": "Please say it again" }
+  ]
+}

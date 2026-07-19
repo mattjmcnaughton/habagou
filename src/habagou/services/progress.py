@@ -151,14 +151,18 @@ class ProgressService:
         per-pack aggregate (``source='pack'``) that drives the pack progress
         badges: all three activities must be complete.
         """
-        packs = await self.pack_repository.list_global_with_content()
+        # Enabled packs only: the summary describes the user's active
+        # curriculum, and iterating the whole several-hundred-pack library
+        # here would be an N+1 per request.
+        packs = await self.pack_repository.list_enabled_with_content(user_id=user.id)
+        aggregates = await self.progress_repository.per_pack_aggregates(
+            user_id=user.id,
+            pack_ids=[pack.id for pack in packs],
+        )
         traced_hanzi: set[str] = set()
         packs_completed = 0
         for pack in packs:
-            aggregate = await self.progress_repository.per_pack_aggregate(
-                user_id=user.id,
-                pack_id=pack.id,
-            )
+            aggregate = aggregates[pack.id]
             if aggregate[ActivityType.TRACE].completed:
                 traced_hanzi.update(link.character.hanzi for link in pack.characters)
             if all(aggregate[activity].completed for activity in ActivityType):

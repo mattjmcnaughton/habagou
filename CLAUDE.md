@@ -47,6 +47,11 @@ src/habagou/
   db.py                     # Async engine/session setup
   models/                   # SQLAlchemy models (one module per bounded context)
   repositories/             # Data access layer (one module per bounded context)
+data/
+  corpus_index.txt          # Committed hanzi index of the pinned stroke corpus
+  packs/                    # Curated pack library content (JSON, one file per
+                            # pack + categories.json), validated by
+                            # scripts/validate_pack_data.py in the gate
 tests/
   unit/                     # Unit tests
   integration/              # Integration tests

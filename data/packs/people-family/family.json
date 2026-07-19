@@ -1,0 +1,21 @@
+{
+  "slug": "family",
+  "title": "Family",
+  "glyph": "妈",
+  "color": "#5b5fa8",
+  "category": "people-family",
+  "description": "Name the people closest to home.",
+  "starter": true,
+  "sort_order": 3,
+  "characters": [
+    { "hanzi": "妈", "pinyin": "mā", "meaning": "mom" },
+    { "hanzi": "爸", "pinyin": "bà", "meaning": "dad" },
+    { "hanzi": "哥", "pinyin": "gē", "meaning": "older brother" },
+    { "hanzi": "姐", "pinyin": "jiě", "meaning": "older sister" },
+    { "hanzi": "弟", "pinyin": "dì", "meaning": "younger brother" }
+  ],
+  "sentences": [
+    { "hanzi": "爸爸", "pinyin": "bàba", "translation": "Dad" },
+    { "hanzi": "我哥哥", "pinyin": "wǒ gēge", "translation": "My older brother" }
+  ]
+}

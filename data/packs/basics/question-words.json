@@ -1,0 +1,24 @@
+{
+  "slug": "question-words",
+  "title": "Question words",
+  "glyph": "谁",
+  "color": "#bc5c3a",
+  "category": "basics",
+  "description": "Ask who, what, and where in everyday conversation.",
+  "starter": false,
+  "sort_order": 101,
+  "characters": [
+    { "hanzi": "谁", "pinyin": "shéi", "meaning": "who" },
+    { "hanzi": "什", "pinyin": "shén", "meaning": "what (shénme)" },
+    { "hanzi": "么", "pinyin": "me", "meaning": "particle (shénme)" },
+    { "hanzi": "哪", "pinyin": "nǎ", "meaning": "which" },
+    { "hanzi": "里", "pinyin": "lǐ", "meaning": "inside; where" },
+    { "hanzi": "呢", "pinyin": "ne", "meaning": "question particle" }
+  ],
+  "sentences": [
+    { "hanzi": "你是谁", "pinyin": "nǐ shì shéi", "translation": "Who are you" },
+    { "hanzi": "这是什么", "pinyin": "zhè shì shénme", "translation": "What is this" },
+    { "hanzi": "你在哪里", "pinyin": "nǐ zài nǎlǐ", "translation": "Where are you" },
+    { "hanzi": "你呢", "pinyin": "nǐ ne", "translation": "And you" }
+  ]
+}

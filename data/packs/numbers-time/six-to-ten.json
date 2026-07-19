@@ -1,0 +1,26 @@
+{
+  "slug": "six-to-ten",
+  "title": "Six to ten and beyond",
+  "glyph": "十",
+  "color": "#45938e",
+  "category": "numbers-time",
+  "description": "Count from six to ten and into the thousands.",
+  "starter": false,
+  "sort_order": 201,
+  "characters": [
+    { "hanzi": "六", "pinyin": "liù", "meaning": "six" },
+    { "hanzi": "七", "pinyin": "qī", "meaning": "seven" },
+    { "hanzi": "八", "pinyin": "bā", "meaning": "eight" },
+    { "hanzi": "九", "pinyin": "jiǔ", "meaning": "nine" },
+    { "hanzi": "十", "pinyin": "shí", "meaning": "ten" },
+    { "hanzi": "百", "pinyin": "bǎi", "meaning": "hundred" },
+    { "hanzi": "千", "pinyin": "qiān", "meaning": "thousand" },
+    { "hanzi": "万", "pinyin": "wàn", "meaning": "ten thousand" }
+  ],
+  "sentences": [
+    { "hanzi": "六七八九", "pinyin": "liù qī bā jiǔ", "translation": "Six seven eight nine" },
+    { "hanzi": "十块钱", "pinyin": "shí kuài qián", "translation": "Ten yuan" },
+    { "hanzi": "一百万", "pinyin": "yì bǎi wàn", "translation": "One million" },
+    { "hanzi": "两千人", "pinyin": "liǎng qiān rén", "translation": "Two thousand people" }
+  ]
+}

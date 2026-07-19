@@ -208,7 +208,7 @@ async def test_progress_summary_returns_zero_state_for_fresh_user(
     assert all(day["count"] == 0 and day["level"] == 0 for day in body["activity"])
     assert body["characters_traced"] == 0
     assert body["packs_completed"] == 0
-    assert body["packs_total"] == await _global_pack_count()
+    assert body["packs_total"] == await _enabled_pack_count(current_user.id)
 
 
 @pytest.mark.workflow("WF-11")
@@ -429,7 +429,7 @@ async def test_progress_stats_ignore_owned_packs(
         other = await create_user(session, username="other-owner", email=None)
         await session.commit()
         other_id = other.id
-    global_total = await _global_pack_count()
+    global_total = await _enabled_pack_count(current_user.id)
     await _create_owned_pack("mine-stats", owner_id=current_user.id)
     await _create_owned_pack("foreign-stats", owner_id=other_id)
 
@@ -569,9 +569,11 @@ async def _pack_hanzi(title: str) -> set[str]:
         return {link.character.hanzi for link in pack.characters}
 
 
-async def _global_pack_count() -> int:
+async def _enabled_pack_count(user_id: uuid.UUID) -> int:
     async with db.async_session() as session:
-        return len(await PackRepository(session).list_global_with_content())
+        return len(
+            await PackRepository(session).list_enabled_with_content(user_id=user_id)
+        )
 
 
 async def _create_owned_pack(slug: str, *, owner_id: uuid.UUID) -> uuid.UUID:

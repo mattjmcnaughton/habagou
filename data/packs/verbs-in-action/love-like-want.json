@@ -1,0 +1,25 @@
+{
+  "slug": "love-like-want",
+  "title": "Love, like, want",
+  "glyph": "爱",
+  "color": "#7f3341",
+  "category": "verbs-in-action",
+  "description": "Say what you love, like, and want.",
+  "starter": false,
+  "sort_order": 1006,
+  "characters": [
+    { "hanzi": "爱", "pinyin": "ài", "meaning": "love" },
+    { "hanzi": "喜", "pinyin": "xǐ", "meaning": "like; joy" },
+    { "hanzi": "欢", "pinyin": "huān", "meaning": "joyful" },
+    { "hanzi": "想", "pinyin": "xiǎng", "meaning": "want; think" },
+    { "hanzi": "要", "pinyin": "yào", "meaning": "want" },
+    { "hanzi": "希", "pinyin": "xī", "meaning": "hope (xīwàng)" },
+    { "hanzi": "望", "pinyin": "wàng", "meaning": "hope; gaze" }
+  ],
+  "sentences": [
+    { "hanzi": "我爱你", "pinyin": "wǒ ài nǐ", "translation": "I love you" },
+    { "hanzi": "我喜欢猫", "pinyin": "wǒ xǐhuan māo", "translation": "I like cats" },
+    { "hanzi": "我想回家", "pinyin": "wǒ xiǎng huí jiā", "translation": "I want to go home" },
+    { "hanzi": "我要这个", "pinyin": "wǒ yào zhè ge", "translation": "I want this one" }
+  ]
+}

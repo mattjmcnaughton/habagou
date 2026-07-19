@@ -1,0 +1,26 @@
+{
+  "slug": "fruit",
+  "title": "Fruit",
+  "glyph": "果",
+  "color": "#bd8d36",
+  "category": "food-drink",
+  "description": "Name apples, bananas, and the fruit on the market stall.",
+  "starter": false,
+  "sort_order": 401,
+  "characters": [
+    { "hanzi": "果", "pinyin": "guǒ", "meaning": "fruit" },
+    { "hanzi": "苹", "pinyin": "píng", "meaning": "apple (píngguǒ)" },
+    { "hanzi": "香", "pinyin": "xiāng", "meaning": "fragrant" },
+    { "hanzi": "蕉", "pinyin": "jiāo", "meaning": "banana (xiāngjiāo)" },
+    { "hanzi": "西", "pinyin": "xī", "meaning": "west" },
+    { "hanzi": "瓜", "pinyin": "guā", "meaning": "melon" },
+    { "hanzi": "梨", "pinyin": "lí", "meaning": "pear" },
+    { "hanzi": "桃", "pinyin": "táo", "meaning": "peach" }
+  ],
+  "sentences": [
+    { "hanzi": "我吃苹果", "pinyin": "wǒ chī píngguǒ", "translation": "I eat apples" },
+    { "hanzi": "香蕉很甜", "pinyin": "xiāngjiāo hěn tián", "translation": "Bananas are sweet" },
+    { "hanzi": "买西瓜", "pinyin": "mǎi xīguā", "translation": "Buy a watermelon" },
+    { "hanzi": "吃个梨", "pinyin": "chī ge lí", "translation": "Have a pear" }
+  ]
+}
