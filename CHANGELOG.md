@@ -1,3 +1,16 @@
+# [1.11.0](https://github.com/mattjmcnaughton/habagou/compare/v1.10.0...v1.11.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **evals:** keep pydantic-evals floor inside the exclude-newer window ([1820c3e](https://github.com/mattjmcnaughton/habagou/commit/1820c3eaef056a294f5b7ee87c6f2acd07016853))
+
+
+### Features
+
+* **evals:** add a soft response-time budget via MaxDuration ([9b50595](https://github.com/mattjmcnaughton/habagou/commit/9b505952a0fd3893cef676ebdd0adfe1597885bf))
+* **evals:** first eval slice — generation harness + dispatch-only CI workflow ([9d8110f](https://github.com/mattjmcnaughton/habagou/commit/9d8110f9a404f31bb06f9d8e0992df7304d7e47a))
+
 # [1.10.0](https://github.com/mattjmcnaughton/habagou/compare/v1.9.0...v1.10.0) (2026-07-19)
 
 
