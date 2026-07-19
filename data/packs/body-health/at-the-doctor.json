@@ -1,0 +1,25 @@
+{
+  "slug": "at-the-doctor",
+  "title": "At the doctor",
+  "glyph": "医",
+  "color": "#a6779d",
+  "category": "body-health",
+  "description": "Visit the hospital, see the doctor, and take your medicine.",
+  "starter": false,
+  "sort_order": 803,
+  "characters": [
+    { "hanzi": "医", "pinyin": "yī", "meaning": "doctor; medicine" },
+    { "hanzi": "院", "pinyin": "yuàn", "meaning": "courtyard; institute" },
+    { "hanzi": "药", "pinyin": "yào", "meaning": "medicine" },
+    { "hanzi": "检", "pinyin": "jiǎn", "meaning": "examine" },
+    { "hanzi": "查", "pinyin": "chá", "meaning": "check" },
+    { "hanzi": "休", "pinyin": "xiū", "meaning": "rest" },
+    { "hanzi": "息", "pinyin": "xī", "meaning": "rest; breath" }
+  ],
+  "sentences": [
+    { "hanzi": "去医院", "pinyin": "qù yīyuàn", "translation": "Go to the hospital" },
+    { "hanzi": "看医生", "pinyin": "kàn yīshēng", "translation": "See the doctor" },
+    { "hanzi": "吃药", "pinyin": "chī yào", "translation": "Take medicine" },
+    { "hanzi": "多休息", "pinyin": "duō xiūxi", "translation": "Get more rest" }
+  ]
+}

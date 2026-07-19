@@ -1,0 +1,24 @@
+{
+  "slug": "feeling-sick",
+  "title": "Feeling sick",
+  "glyph": "病",
+  "color": "#8c5e83",
+  "category": "body-health",
+  "description": "Say where it hurts when you're feeling under the weather.",
+  "starter": false,
+  "sort_order": 802,
+  "characters": [
+    { "hanzi": "病", "pinyin": "bìng", "meaning": "illness" },
+    { "hanzi": "疼", "pinyin": "téng", "meaning": "to hurt" },
+    { "hanzi": "累", "pinyin": "lèi", "meaning": "tired" },
+    { "hanzi": "烧", "pinyin": "shāo", "meaning": "fever; to burn" },
+    { "hanzi": "感", "pinyin": "gǎn", "meaning": "feel" },
+    { "hanzi": "冒", "pinyin": "mào", "meaning": "cold (gǎnmào)" }
+  ],
+  "sentences": [
+    { "hanzi": "我病了", "pinyin": "wǒ bìng le", "translation": "I am sick" },
+    { "hanzi": "头很疼", "pinyin": "tóu hěn téng", "translation": "My head hurts" },
+    { "hanzi": "他感冒了", "pinyin": "tā gǎnmào le", "translation": "He has a cold" },
+    { "hanzi": "我发烧了", "pinyin": "wǒ fāshāo le", "translation": "I have a fever" }
+  ]
+}

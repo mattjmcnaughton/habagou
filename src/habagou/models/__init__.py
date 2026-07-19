@@ -15,7 +15,13 @@ from habagou.models.enums import (
     PathItemKind,
     ReviewUnitType,
 )
-from habagou.models.packs import Pack, PackCharacter, PackSentence
+from habagou.models.packs import (
+    Category,
+    Pack,
+    PackCharacter,
+    PackSentence,
+    UserPackSetting,
+)
 from habagou.models.path import PathItem
 from habagou.models.progress import ActivityCompletion
 from habagou.models.review import ReviewState
@@ -24,6 +30,7 @@ from habagou.models.users import User
 __all__ = [
     "ActivityCompletion",
     "ActivityType",
+    "Category",
     "Character",
     "CompletionSource",
     "Pack",
@@ -34,4 +41,5 @@ __all__ = [
     "ReviewState",
     "ReviewUnitType",
     "User",
+    "UserPackSetting",
 ]

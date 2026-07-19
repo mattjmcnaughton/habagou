@@ -16,7 +16,15 @@ from habagou.errors import error_response
 from habagou.logging import configure_logging
 from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
-from habagou.routers.v1 import characters, generation, packs, path, practice, progress
+from habagou.routers.v1 import (
+    characters,
+    generation,
+    library,
+    packs,
+    path,
+    practice,
+    progress,
+)
 from habagou.services.rate_limit import FixedWindowRateLimiter
 from habagou.telemetry import setup_telemetry
 from habagou.web.serve import mount_frontend
@@ -71,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(characters.router)
     app.include_router(generation.router)
+    app.include_router(library.router)
     app.include_router(packs.router)
     app.include_router(path.router)
     app.include_router(practice.router)

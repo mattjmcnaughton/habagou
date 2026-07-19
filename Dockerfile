@@ -23,6 +23,9 @@ RUN uv sync --no-dev --frozen --no-install-project
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY scripts ./scripts
+# Curated pack library content; the release bootstrap (entrypoint seed step)
+# reads data/packs at runtime.
+COPY data ./data
 COPY src ./src
 COPY --from=frontend-build /app/src/habagou/web/frontend/dist ./src/habagou/web/frontend/dist
 RUN uv sync --no-dev --frozen

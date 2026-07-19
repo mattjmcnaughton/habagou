@@ -1,0 +1,24 @@
+{
+  "slug": "drinks",
+  "title": "Drinks",
+  "glyph": "杯",
+  "color": "#c69640",
+  "category": "food-drink",
+  "description": "Order coffee, juice, and a cold bottle of something.",
+  "starter": false,
+  "sort_order": 403,
+  "characters": [
+    { "hanzi": "咖", "pinyin": "kā", "meaning": "coffee (kāfēi)" },
+    { "hanzi": "啡", "pinyin": "fēi", "meaning": "coffee (kāfēi)" },
+    { "hanzi": "杯", "pinyin": "bēi", "meaning": "cup" },
+    { "hanzi": "酒", "pinyin": "jiǔ", "meaning": "alcohol; wine" },
+    { "hanzi": "汁", "pinyin": "zhī", "meaning": "juice" },
+    { "hanzi": "瓶", "pinyin": "píng", "meaning": "bottle" }
+  ],
+  "sentences": [
+    { "hanzi": "喝咖啡", "pinyin": "hē kāfēi", "translation": "Drink coffee" },
+    { "hanzi": "一杯水", "pinyin": "yì bēi shuǐ", "translation": "A glass of water" },
+    { "hanzi": "我不喝酒", "pinyin": "wǒ bù hē jiǔ", "translation": "I don't drink alcohol" },
+    { "hanzi": "一瓶果汁", "pinyin": "yì píng guǒzhī", "translation": "A bottle of juice" }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "slug": "today-and-tomorrow",
+  "title": "Today and tomorrow",
+  "glyph": "明",
+  "color": "#57a49e",
+  "category": "numbers-time",
+  "description": "Place things in time with today, yesterday, and tomorrow.",
+  "starter": false,
+  "sort_order": 205,
+  "characters": [
+    { "hanzi": "今", "pinyin": "jīn", "meaning": "now; today" },
+    { "hanzi": "昨", "pinyin": "zuó", "meaning": "yesterday" },
+    { "hanzi": "明", "pinyin": "míng", "meaning": "tomorrow; bright" },
+    { "hanzi": "现", "pinyin": "xiàn", "meaning": "now; present" },
+    { "hanzi": "在", "pinyin": "zài", "meaning": "at; now" }
+  ],
+  "sentences": [
+    { "hanzi": "明天见", "pinyin": "míngtiān jiàn", "translation": "See you tomorrow" },
+    { "hanzi": "昨天很冷", "pinyin": "zuótiān hěn lěng", "translation": "Yesterday was cold" },
+    { "hanzi": "我现在去", "pinyin": "wǒ xiànzài qù", "translation": "I am going now" },
+    { "hanzi": "今天很忙", "pinyin": "jīntiān hěn máng", "translation": "Today is busy" }
+  ]
+}

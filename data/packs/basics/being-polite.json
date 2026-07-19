@@ -1,0 +1,23 @@
+{
+  "slug": "being-polite",
+  "title": "Being polite",
+  "glyph": "请",
+  "color": "#c76f4b",
+  "category": "basics",
+  "description": "Say please, sorry, and you're welcome with grace.",
+  "starter": false,
+  "sort_order": 102,
+  "characters": [
+    { "hanzi": "请", "pinyin": "qǐng", "meaning": "please" },
+    { "hanzi": "对", "pinyin": "duì", "meaning": "correct; toward" },
+    { "hanzi": "客", "pinyin": "kè", "meaning": "guest" },
+    { "hanzi": "气", "pinyin": "qì", "meaning": "air; manner" },
+    { "hanzi": "迎", "pinyin": "yíng", "meaning": "welcome" }
+  ],
+  "sentences": [
+    { "hanzi": "请坐", "pinyin": "qǐng zuò", "translation": "Please sit" },
+    { "hanzi": "对不起", "pinyin": "duìbuqǐ", "translation": "Sorry" },
+    { "hanzi": "不客气", "pinyin": "bú kèqi", "translation": "You're welcome" },
+    { "hanzi": "欢迎你", "pinyin": "huānyíng nǐ", "translation": "Welcome" }
+  ]
+}

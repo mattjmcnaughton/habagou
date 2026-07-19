@@ -1,0 +1,23 @@
+{
+  "slug": "months-and-dates",
+  "title": "Months and dates",
+  "glyph": "月",
+  "color": "#4f9c97",
+  "category": "numbers-time",
+  "description": "Talk about months, dates, and birthdays.",
+  "starter": false,
+  "sort_order": 203,
+  "characters": [
+    { "hanzi": "月", "pinyin": "yuè", "meaning": "month; moon" },
+    { "hanzi": "年", "pinyin": "nián", "meaning": "year" },
+    { "hanzi": "号", "pinyin": "hào", "meaning": "date; number" },
+    { "hanzi": "生", "pinyin": "shēng", "meaning": "be born; life" },
+    { "hanzi": "乐", "pinyin": "lè", "meaning": "happy" }
+  ],
+  "sentences": [
+    { "hanzi": "一月一号", "pinyin": "yī yuè yī hào", "translation": "January first" },
+    { "hanzi": "生日快乐", "pinyin": "shēngrì kuàilè", "translation": "Happy birthday" },
+    { "hanzi": "今年五月", "pinyin": "jīnnián wǔ yuè", "translation": "May this year" },
+    { "hanzi": "新年快乐", "pinyin": "xīnnián kuàilè", "translation": "Happy New Year" }
+  ]
+}

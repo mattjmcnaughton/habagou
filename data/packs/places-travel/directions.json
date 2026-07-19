@@ -1,0 +1,26 @@
+{
+  "slug": "directions",
+  "title": "Directions",
+  "glyph": "北",
+  "color": "#3f6a8f",
+  "category": "places-travel",
+  "description": "Find your way with north, south, left, and right.",
+  "starter": false,
+  "sort_order": 504,
+  "characters": [
+    { "hanzi": "东", "pinyin": "dōng", "meaning": "east" },
+    { "hanzi": "南", "pinyin": "nán", "meaning": "south" },
+    { "hanzi": "北", "pinyin": "běi", "meaning": "north" },
+    { "hanzi": "左", "pinyin": "zuǒ", "meaning": "left" },
+    { "hanzi": "右", "pinyin": "yòu", "meaning": "right" },
+    { "hanzi": "前", "pinyin": "qián", "meaning": "front" },
+    { "hanzi": "后", "pinyin": "hòu", "meaning": "back; after" },
+    { "hanzi": "边", "pinyin": "biān", "meaning": "side" }
+  ],
+  "sentences": [
+    { "hanzi": "往前走", "pinyin": "wǎng qián zǒu", "translation": "Go straight ahead" },
+    { "hanzi": "在左边", "pinyin": "zài zuǒbian", "translation": "On the left" },
+    { "hanzi": "往右转", "pinyin": "wǎng yòu zhuǎn", "translation": "Turn right" },
+    { "hanzi": "东南西北", "pinyin": "dōng nán xī běi", "translation": "East south west north" }
+  ]
+}

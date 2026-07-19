@@ -6,6 +6,7 @@ import type {
   CompletionResponse,
   GenerationDraftResponse,
   GenerationStatus,
+  Library,
   PackDetail,
   PackDraft,
   PackSummary,
@@ -44,6 +45,9 @@ export const packSummaries: PackSummary[] = [
     sentence_count: 3,
     // Curated global pack: not owned by the signed-in user, so undeletable.
     owned: false,
+    // Starter packs are enabled for a fresh user by default.
+    starter: true,
+    enabled: true,
     progress: {
       trace: { completed: false, completion_count: 0, best_duration_ms: null },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -59,8 +63,29 @@ export const packSummaries: PackSummary[] = [
     sentence_count: 2,
     // Curated global pack: not owned by the signed-in user, so undeletable.
     owned: false,
+    // Starter packs are enabled for a fresh user by default.
+    starter: true,
+    enabled: true,
     progress: {
       trace: { completed: true, completion_count: 1, best_duration_ms: 1500 },
+      match: { completed: false, completion_count: 0, best_duration_ms: null },
+      sentence: { completed: false, completion_count: 0, best_duration_ms: null },
+    },
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    title: "Fruit",
+    glyph: "果",
+    color: "#7a8a3f",
+    char_count: 6,
+    sentence_count: 2,
+    owned: false,
+    // Library pack a fresh user has not enabled: hidden from the bench until
+    // the enablement PUT flips it, mirroring the real API.
+    starter: false,
+    enabled: false,
+    progress: {
+      trace: { completed: false, completion_count: 0, best_duration_ms: null },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
       sentence: { completed: false, completion_count: 0, best_duration_ms: null },
     },
@@ -97,7 +122,98 @@ const packDetails: Record<string, PackDetail> = {
       { hanzi: "三个人", pinyin: "sān ge rén", translation: "Three people" },
     ],
   },
+  [packSummaries[2].id]: {
+    ...packSummaries[2],
+    characters: [
+      { hanzi: "果", pinyin: "guǒ", meaning: "fruit" },
+      { hanzi: "苹", pinyin: "píng", meaning: "apple (píngguǒ)" },
+      { hanzi: "香", pinyin: "xiāng", meaning: "fragrant" },
+      { hanzi: "蕉", pinyin: "jiāo", meaning: "banana (xiāngjiāo)" },
+      { hanzi: "西", pinyin: "xī", meaning: "west" },
+      { hanzi: "瓜", pinyin: "guā", meaning: "melon" },
+    ],
+    sentences: [
+      { hanzi: "我吃苹果", pinyin: "wǒ chī píngguǒ", translation: "I eat apples" },
+      { hanzi: "西瓜很大", pinyin: "xīguā hěn dà", translation: "The watermelon is big" },
+    ],
+  },
 };
+
+// The curated library catalog (pack-library feature): global packs grouped by
+// category. The Essentials entries reuse the bench fixtures' ids so enabling /
+// disabling in the library is visible on the bench, and Fruit is the
+// disabled-by-default, non-starter pack tests toggle (its bench summary and
+// detail fixtures exist too, so enabling it surfaces it on the bench exactly
+// like the real API). Mutable on purpose: the PUT enablement handler below
+// flips `enabled` so tests can assert against refetched state; tests that
+// toggle should reset what they touched.
+export const libraryCategories: Library["categories"] = [
+  {
+    slug: "essentials",
+    title: "Essentials",
+    packs: [
+      {
+        id: packSummaries[0].id,
+        title: "Greetings",
+        glyph: "你",
+        color: "#c4633f",
+        description: "First words for meeting people.",
+        char_count: 5,
+        sentence_count: 3,
+        starter: true,
+        enabled: true,
+      },
+      {
+        id: packSummaries[1].id,
+        title: "Numbers",
+        glyph: "三",
+        color: "#3f8a86",
+        description: "Count from one to five.",
+        char_count: 5,
+        sentence_count: 2,
+        starter: true,
+        enabled: true,
+      },
+    ],
+  },
+  {
+    slug: "food-drink",
+    title: "Food & Drink",
+    packs: [
+      {
+        id: packSummaries[2].id,
+        title: "Fruit",
+        glyph: "果",
+        color: "#7a8a3f",
+        description: "Name the fruit on the market stall.",
+        char_count: 6,
+        sentence_count: 2,
+        starter: false,
+        enabled: false,
+      },
+    ],
+  },
+];
+
+// Keep the library, bench summary, and detail fixtures agreeing on a pack's
+// enablement. Exported so tests that flip a pack can restore the default.
+export function setMockPackEnabled(packId: string, enabled: boolean): void {
+  for (const category of libraryCategories) {
+    for (const pack of category.packs) {
+      if (pack.id === packId) {
+        pack.enabled = enabled;
+      }
+    }
+  }
+  const summary = packSummaries.find((pack) => pack.id === packId);
+  if (summary) {
+    summary.enabled = enabled;
+  }
+  const detail = packDetails[packId];
+  if (detail) {
+    detail.enabled = enabled;
+  }
+}
 
 function mockProgressSummary(): ProgressSummary {
   const today = new Date();
@@ -332,8 +448,11 @@ function savedPackFromDraft(draft: PackDraft): PackDetail {
     color: "#c4633f",
     char_count: draft.characters.length,
     sentence_count: draft.sentences?.length ?? 0,
-    // Freshly generated packs are always owned by their creator.
+    // Freshly generated packs are always owned by their creator, never part of
+    // the curated starter set, and always enabled.
     owned: true,
+    starter: false,
+    enabled: true,
     progress: {
       trace: { completed: false, completion_count: 0, best_duration_ms: null },
       match: { completed: false, completion_count: 0, best_duration_ms: null },
@@ -485,7 +604,30 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
   http.get(`${API_V1}/packs`, () => {
-    return HttpResponse.json<PackSummary[]>(packSummaries);
+    // The bench lists only owned packs plus enabled global packs.
+    return HttpResponse.json<PackSummary[]>(
+      packSummaries.filter((pack) => pack.owned || pack.enabled),
+    );
+  }),
+  http.get(`${API_V1}/library`, () => {
+    return HttpResponse.json<Library>({ categories: libraryCategories });
+  }),
+  http.put(`${API_V1}/packs/:packId/enabled`, async ({ params, request }) => {
+    const packId = String(params.packId);
+    const body = (await request.json()) as { enabled: boolean };
+    const known = libraryCategories.some((category) =>
+      category.packs.some((pack) => pack.id === packId),
+    );
+    if (!known) {
+      return HttpResponse.json(
+        { error: { code: "not_found", message: "pack not found", request_id: "mock-request" } },
+        { status: 404 },
+      );
+    }
+    // Mutate the mock library (and mirrored bench/detail fixtures) so
+    // invalidation-driven refetches observe the flip.
+    setMockPackEnabled(packId, body.enabled);
+    return new HttpResponse(null, { status: 204 });
   }),
   // Both status defaults model the non-admin caller: `models`/`default_model`
   // are explicitly null (the server's shape), so the model picker stays hidden

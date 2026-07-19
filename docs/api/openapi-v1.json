@@ -273,6 +273,110 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LibraryCategoryDTO": {
+        "properties": {
+          "packs": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryPackDTO"
+            },
+            "title": "Packs",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "packs"
+        ],
+        "title": "LibraryCategoryDTO",
+        "type": "object"
+      },
+      "LibraryDTO": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryCategoryDTO"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "title": "LibraryDTO",
+        "type": "object"
+      },
+      "LibraryPackDTO": {
+        "description": "Slim library card: no progress aggregates (the library lists hundreds\nof packs; per-pack progress stays a bench concern).",
+        "properties": {
+          "char_count": {
+            "title": "Char Count",
+            "type": "integer"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "glyph": {
+            "title": "Glyph",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sentence_count": {
+            "title": "Sentence Count",
+            "type": "integer"
+          },
+          "starter": {
+            "title": "Starter",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "glyph",
+          "color",
+          "description",
+          "char_count",
+          "sentence_count",
+          "starter",
+          "enabled"
+        ],
+        "title": "LibraryPackDTO",
+        "type": "object"
+      },
       "NextMilestoneDTO": {
         "properties": {
           "days_remaining": {
@@ -336,6 +440,10 @@
             "title": "Color",
             "type": "string"
           },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "glyph": {
             "title": "Glyph",
             "type": "string"
@@ -363,6 +471,10 @@
             "title": "Sentences",
             "type": "array"
           },
+          "starter": {
+            "title": "Starter",
+            "type": "boolean"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -376,6 +488,8 @@
           "char_count",
           "sentence_count",
           "owned",
+          "starter",
+          "enabled",
           "progress",
           "characters",
           "sentences"
@@ -490,6 +604,19 @@
         "title": "PackDraftSentence",
         "type": "object"
       },
+      "PackEnablementUpdateDTO": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PackEnablementUpdateDTO",
+        "type": "object"
+      },
       "PackProgressDTO": {
         "properties": {
           "match": {
@@ -555,6 +682,10 @@
             "title": "Color",
             "type": "string"
           },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "glyph": {
             "title": "Glyph",
             "type": "string"
@@ -575,6 +706,10 @@
             "title": "Sentence Count",
             "type": "integer"
           },
+          "starter": {
+            "title": "Starter",
+            "type": "boolean"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -588,6 +723,8 @@
           "char_count",
           "sentence_count",
           "owned",
+          "starter",
+          "enabled",
           "progress"
         ],
         "title": "PackSummaryDTO",
@@ -1403,6 +1540,27 @@
         ]
       }
     },
+    "/api/v1/library": {
+      "get": {
+        "operationId": "get_library_api_v1_library_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Library",
+        "tags": [
+          "library"
+        ]
+      }
+    },
     "/api/v1/packs": {
       "get": {
         "operationId": "list_packs_api_v1_packs_get",
@@ -1509,6 +1667,58 @@
           }
         },
         "summary": "Get Pack",
+        "tags": [
+          "packs"
+        ]
+      }
+    },
+    "/api/v1/packs/{pack_id}/enabled": {
+      "put": {
+        "operationId": "set_pack_enabled_api_v1_packs__pack_id__enabled_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackEnablementUpdateDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Pack not found"
+          },
+          "409": {
+            "description": "Owned packs are always enabled"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Pack Enabled",
         "tags": [
           "packs"
         ]

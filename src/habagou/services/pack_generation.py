@@ -152,14 +152,16 @@ async def generate_pack_draft(
 
 # --- HAB-084: persist a finalized draft as an owned pack -----------------------
 
-# The curated palette owned packs draw from (mirrors the seed packs' colors in
-# ``scripts.seed.SEED_PACKS``). A draft carries no color, so one is picked
+# The curated palette owned packs draw from (mirrors the starter packs'
+# colors in ``data/packs``). A draft carries no color, so one is picked
 # deterministically from the title (below).
 _CURATED_COLORS: tuple[str, ...] = ("#c4633f", "#3f8a86", "#5b5fa8", "#b5852e")
 
-# Owned packs sort after the curated packs (whose sort_order is 1-4), tie-broken
-# by id — matching ``PackRepository.list_visible``'s ``(sort_order, id)`` order.
-_OWNED_PACK_SORT_ORDER = 1000
+# Owned packs sort after every curated pack, tie-broken by id — matching
+# ``PackRepository.list_visible``'s ``(sort_order, id)`` order. Curated
+# sort_orders are capped at MAX_SORT_ORDER by scripts/validate_pack_data.py,
+# so this constant can never be overtaken by library content.
+_OWNED_PACK_SORT_ORDER = 1_000_000
 
 
 def _color_for_title(title: str) -> str:

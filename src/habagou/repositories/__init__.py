@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from habagou.repositories.characters import CharacterRepository
 from habagou.repositories.packs import (
+    LibraryPack,
     PackCharacterInput,
     PackRepository,
     PackSentenceInput,
@@ -22,6 +23,7 @@ from habagou.repositories.users import UserRepository
 __all__ = [
     "ActivityProgress",
     "CharacterRepository",
+    "LibraryPack",
     "PackCharacterInput",
     "PackRepository",
     "PackSentenceInput",

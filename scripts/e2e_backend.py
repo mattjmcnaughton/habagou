@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 # --- Deterministic drafts -----------------------------------------------------
 #
 # Both drafts use only characters that live in the seeded packs
-# (scripts.seed.SEED_PACKS) and are therefore guaranteed present in the full
+# (data/packs, loaded by scripts.seed) and are therefore guaranteed present in the full
 # hanzi-writer corpus imported by ``just bootstrap`` in CI, so the agent's
 # corpus output validator accepts them without a retry. Each sentence is
 # composed only of characters that are also in the draft.

@@ -1,0 +1,23 @@
+{
+  "slug": "whats-your-name",
+  "title": "What's your name",
+  "glyph": "名",
+  "color": "#6b6fba",
+  "category": "people-family",
+  "description": "Ask someone's name and introduce yourself with confidence.",
+  "starter": false,
+  "sort_order": 303,
+  "characters": [
+    { "hanzi": "叫", "pinyin": "jiào", "meaning": "to be called" },
+    { "hanzi": "名", "pinyin": "míng", "meaning": "name" },
+    { "hanzi": "字", "pinyin": "zì", "meaning": "character; name" },
+    { "hanzi": "姓", "pinyin": "xìng", "meaning": "surname" },
+    { "hanzi": "认", "pinyin": "rèn", "meaning": "recognize" },
+    { "hanzi": "识", "pinyin": "shí", "meaning": "know" }
+  ],
+  "sentences": [
+    { "hanzi": "你叫什么名字", "pinyin": "nǐ jiào shénme míngzi", "translation": "What is your name" },
+    { "hanzi": "我姓王", "pinyin": "wǒ xìng wáng", "translation": "My surname is Wang" },
+    { "hanzi": "认识你很高兴", "pinyin": "rènshi nǐ hěn gāoxìng", "translation": "Nice to meet you" }
+  ]
+}

@@ -658,8 +658,9 @@ async def test_pack_repository_create_without_slug_persists_null() -> None:
 @pytest.mark.anyio
 async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
     # Two packs sharing a sort_order must fall back to Pack.id order, in both
-    # the per-user catalog (list_visible) and the global-with-content
-    # curriculum query (list_global_with_content).
+    # the per-user bench (list_visible) and the enabled-with-content
+    # curriculum query (list_enabled_with_content). Starter packs so the
+    # enablement overlay defaults them on for the fresh user.
     async with db.async_session() as session:
         user = await create_user(session, username="tie-break-user")
         await session.flush()
@@ -671,6 +672,7 @@ async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
             glyph="甲",
             color="#aa0000",
             sort_order=shared_sort_order,
+            starter=True,
         )
         second = Pack(
             slug="tie-break-b",
@@ -678,6 +680,7 @@ async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
             glyph="乙",
             color="#00aa00",
             sort_order=shared_sort_order,
+            starter=True,
         )
         session.add_all([first, second])
         await session.flush()
@@ -685,13 +688,15 @@ async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
 
         repository = PackRepository(session)
         visible = await repository.list_visible(user_id=user.id)
-        global_with_content = await repository.list_global_with_content()
+        enabled_with_content = await repository.list_enabled_with_content(
+            user_id=user.id
+        )
 
     visible_ids = [item.pack.id for item in visible if item.pack.id in expected]
-    global_ids = [pack.id for pack in global_with_content if pack.id in expected]
+    enabled_ids = [pack.id for pack in enabled_with_content if pack.id in expected]
 
     assert visible_ids == expected
-    assert global_ids == expected
+    assert enabled_ids == expected
 
 
 def _seed_slugs() -> set[str]:

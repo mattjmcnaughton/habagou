@@ -1,0 +1,24 @@
+{
+  "slug": "sky-and-sea",
+  "title": "Sky and sea",
+  "glyph": "海",
+  "color": "#78a968",
+  "category": "nature-weather",
+  "description": "Look out at the sea, the lakes, and the sunlight.",
+  "starter": false,
+  "sort_order": 705,
+  "characters": [
+    { "hanzi": "海", "pinyin": "hǎi", "meaning": "sea" },
+    { "hanzi": "河", "pinyin": "hé", "meaning": "river" },
+    { "hanzi": "湖", "pinyin": "hú", "meaning": "lake" },
+    { "hanzi": "空", "pinyin": "kōng", "meaning": "sky; empty" },
+    { "hanzi": "阳", "pinyin": "yáng", "meaning": "sun" },
+    { "hanzi": "光", "pinyin": "guāng", "meaning": "light" }
+  ],
+  "sentences": [
+    { "hanzi": "太阳出来了", "pinyin": "tàiyáng chū lái le", "translation": "The sun has come out" },
+    { "hanzi": "大海很蓝", "pinyin": "dàhǎi hěn lán", "translation": "The sea is very blue" },
+    { "hanzi": "湖水很清", "pinyin": "hú shuǐ hěn qīng", "translation": "The lake water is clear" },
+    { "hanzi": "看星星", "pinyin": "kàn xīngxing", "translation": "Look at the stars" }
+  ]
+}

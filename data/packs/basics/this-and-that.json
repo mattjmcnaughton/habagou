@@ -1,0 +1,25 @@
+{
+  "slug": "this-and-that",
+  "title": "This and that",
+  "glyph": "这",
+  "color": "#ad5433",
+  "category": "basics",
+  "description": "Point at things with this, that, and the right measure word.",
+  "starter": false,
+  "sort_order": 103,
+  "characters": [
+    { "hanzi": "这", "pinyin": "zhè", "meaning": "this" },
+    { "hanzi": "那", "pinyin": "nà", "meaning": "that" },
+    { "hanzi": "个", "pinyin": "gè", "meaning": "measure word (general)" },
+    { "hanzi": "些", "pinyin": "xiē", "meaning": "some" },
+    { "hanzi": "只", "pinyin": "zhī", "meaning": "measure word (animals)" },
+    { "hanzi": "本", "pinyin": "běn", "meaning": "measure word (books)" },
+    { "hanzi": "张", "pinyin": "zhāng", "meaning": "measure word (flat things)" }
+  ],
+  "sentences": [
+    { "hanzi": "这个人", "pinyin": "zhè ge rén", "translation": "This person" },
+    { "hanzi": "那本书", "pinyin": "nà běn shū", "translation": "That book" },
+    { "hanzi": "一只猫", "pinyin": "yì zhī māo", "translation": "One cat" },
+    { "hanzi": "三张纸", "pinyin": "sān zhāng zhǐ", "translation": "Three sheets of paper" }
+  ]
+}

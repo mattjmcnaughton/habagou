@@ -1,0 +1,25 @@
+{
+  "slug": "getting-around",
+  "title": "Getting around",
+  "glyph": "车",
+  "color": "#6093bb",
+  "category": "places-travel",
+  "description": "Take the train, board the plane, and find the station.",
+  "starter": false,
+  "sort_order": 505,
+  "characters": [
+    { "hanzi": "车", "pinyin": "chē", "meaning": "car; vehicle" },
+    { "hanzi": "火", "pinyin": "huǒ", "meaning": "fire" },
+    { "hanzi": "汽", "pinyin": "qì", "meaning": "steam" },
+    { "hanzi": "站", "pinyin": "zhàn", "meaning": "station; stand" },
+    { "hanzi": "飞", "pinyin": "fēi", "meaning": "to fly" },
+    { "hanzi": "机", "pinyin": "jī", "meaning": "machine" },
+    { "hanzi": "船", "pinyin": "chuán", "meaning": "boat" }
+  ],
+  "sentences": [
+    { "hanzi": "坐火车", "pinyin": "zuò huǒchē", "translation": "Take the train" },
+    { "hanzi": "坐飞机", "pinyin": "zuò fēijī", "translation": "Take the plane" },
+    { "hanzi": "车站在哪里", "pinyin": "chēzhàn zài nǎlǐ", "translation": "Where is the station" },
+    { "hanzi": "开汽车", "pinyin": "kāi qìchē", "translation": "Drive a car" }
+  ]
+}

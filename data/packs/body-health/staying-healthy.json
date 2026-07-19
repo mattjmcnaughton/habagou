@@ -1,0 +1,26 @@
+{
+  "slug": "staying-healthy",
+  "title": "Staying healthy",
+  "glyph": "康",
+  "color": "#7f5276",
+  "category": "body-health",
+  "description": "Exercise, rest well, and keep your body strong.",
+  "starter": false,
+  "sort_order": 804,
+  "characters": [
+    { "hanzi": "身", "pinyin": "shēn", "meaning": "body" },
+    { "hanzi": "体", "pinyin": "tǐ", "meaning": "body" },
+    { "hanzi": "健", "pinyin": "jiàn", "meaning": "healthy" },
+    { "hanzi": "康", "pinyin": "kāng", "meaning": "health" },
+    { "hanzi": "运", "pinyin": "yùn", "meaning": "movement; luck" },
+    { "hanzi": "动", "pinyin": "dòng", "meaning": "move" },
+    { "hanzi": "跑", "pinyin": "pǎo", "meaning": "run" },
+    { "hanzi": "步", "pinyin": "bù", "meaning": "step" }
+  ],
+  "sentences": [
+    { "hanzi": "身体很好", "pinyin": "shēntǐ hěn hǎo", "translation": "In good health" },
+    { "hanzi": "我去跑步", "pinyin": "wǒ qù pǎobù", "translation": "I am going for a run" },
+    { "hanzi": "多运动", "pinyin": "duō yùndòng", "translation": "Exercise more" },
+    { "hanzi": "祝你健康", "pinyin": "zhù nǐ jiànkāng", "translation": "Wishing you good health" }
+  ]
+}

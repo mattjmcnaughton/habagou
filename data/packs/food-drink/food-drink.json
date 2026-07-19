@@ -1,0 +1,21 @@
+{
+  "slug": "food-drink",
+  "title": "Food & drink",
+  "glyph": "茶",
+  "color": "#b5852e",
+  "category": "food-drink",
+  "description": "Rice, tea, and the characters you'll see on every menu.",
+  "starter": true,
+  "sort_order": 4,
+  "characters": [
+    { "hanzi": "米", "pinyin": "mǐ", "meaning": "rice" },
+    { "hanzi": "饭", "pinyin": "fàn", "meaning": "meal" },
+    { "hanzi": "茶", "pinyin": "chá", "meaning": "tea" },
+    { "hanzi": "水", "pinyin": "shuǐ", "meaning": "water" },
+    { "hanzi": "鱼", "pinyin": "yú", "meaning": "fish" }
+  ],
+  "sentences": [
+    { "hanzi": "米饭", "pinyin": "mǐfàn", "translation": "Cooked rice" },
+    { "hanzi": "喝茶", "pinyin": "hē chá", "translation": "Drink tea" }
+  ]
+}

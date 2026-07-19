@@ -1,0 +1,25 @@
+{
+  "slug": "seasons",
+  "title": "Seasons",
+  "glyph": "春",
+  "color": "#548244",
+  "category": "nature-weather",
+  "description": "Follow the year through spring, summer, autumn, and winter.",
+  "starter": false,
+  "sort_order": 702,
+  "characters": [
+    { "hanzi": "春", "pinyin": "chūn", "meaning": "spring" },
+    { "hanzi": "夏", "pinyin": "xià", "meaning": "summer" },
+    { "hanzi": "秋", "pinyin": "qiū", "meaning": "autumn" },
+    { "hanzi": "冬", "pinyin": "dōng", "meaning": "winter" },
+    { "hanzi": "季", "pinyin": "jì", "meaning": "season" },
+    { "hanzi": "暖", "pinyin": "nuǎn", "meaning": "warm" },
+    { "hanzi": "凉", "pinyin": "liáng", "meaning": "cool" }
+  ],
+  "sentences": [
+    { "hanzi": "春天来了", "pinyin": "chūntiān lái le", "translation": "Spring is here" },
+    { "hanzi": "夏天很热", "pinyin": "xiàtiān hěn rè", "translation": "Summer is hot" },
+    { "hanzi": "秋天很凉快", "pinyin": "qiūtiān hěn liángkuai", "translation": "Autumn is cool" },
+    { "hanzi": "我喜欢冬天", "pinyin": "wǒ xǐhuan dōngtiān", "translation": "I like winter" }
+  ]
+}

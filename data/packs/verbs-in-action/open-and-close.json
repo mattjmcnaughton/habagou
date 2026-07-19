@@ -1,0 +1,24 @@
+{
+  "slug": "open-and-close",
+  "title": "Open, close, start, stop",
+  "glyph": "开",
+  "color": "#ba6375",
+  "category": "verbs-in-action",
+  "description": "Open doors, switch on lights, and finish what you start.",
+  "starter": false,
+  "sort_order": 1005,
+  "characters": [
+    { "hanzi": "开", "pinyin": "kāi", "meaning": "open; start" },
+    { "hanzi": "关", "pinyin": "guān", "meaning": "close" },
+    { "hanzi": "始", "pinyin": "shǐ", "meaning": "begin" },
+    { "hanzi": "停", "pinyin": "tíng", "meaning": "stop" },
+    { "hanzi": "完", "pinyin": "wán", "meaning": "finish" },
+    { "hanzi": "灯", "pinyin": "dēng", "meaning": "lamp; light" }
+  ],
+  "sentences": [
+    { "hanzi": "开始了", "pinyin": "kāishǐ le", "translation": "It has started" },
+    { "hanzi": "开灯", "pinyin": "kāi dēng", "translation": "Turn on the light" },
+    { "hanzi": "关门了", "pinyin": "guān mén le", "translation": "It is closed" },
+    { "hanzi": "吃完了", "pinyin": "chī wán le", "translation": "All finished" }
+  ]
+}

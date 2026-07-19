@@ -60,10 +60,21 @@ _WORKFLOW_SUBJECT = "workflow-subject"
 EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-01": (
         {"bootstrap_completed"},
-        {"chars_imported", "packs_seeded", "migrations_applied"},
+        {"chars_imported", "packs_seeded", "categories_seeded", "migrations_applied"},
         "ok",
     ),
-    "WF-02": ({"pack_list_served", "pack_served"}, {"pack_count"}, "ok"),
+    # matches[0] is the first emitted WF-02 event (pack_list_served), so the
+    # required-field set stays the pack-listing one.
+    "WF-02": (
+        {
+            "pack_list_served",
+            "pack_served",
+            "library_served",
+            "pack_enablement_changed",
+        },
+        {"pack_count"},
+        "ok",
+    ),
     "WF-03": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
     "WF-04": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
     "WF-05": ({"activity_completed"}, {"activity", "pack_id", "user_id"}, "ok"),
@@ -134,7 +145,7 @@ async def test_all_workflows_emit_verification_events(
         ),
     )
 
-    emit_bootstrap_completed(SeedResult(chars=20, packs=4))
+    emit_bootstrap_completed(SeedResult(chars=20, packs=4, categories=10))
     await _ok(await client.get("/auth/callback"), status_code=303)
     await _ok(await client.get("/api/v1/packs"))
     greetings_id = await pack_id_by_slug("greetings")
@@ -210,6 +221,20 @@ async def test_all_workflows_emit_verification_events(
             )
         )
     await _ok(await client.delete(f"/api/v1/progress/packs/{greetings_id}"))
+    # WF-02 library surface: browse the library, then toggle a pack off/on.
+    await _ok(await client.get("/api/v1/library"))
+    await _ok(
+        await client.put(
+            f"/api/v1/packs/{greetings_id}/enabled", json={"enabled": False}
+        ),
+        status_code=204,
+    )
+    await _ok(
+        await client.put(
+            f"/api/v1/packs/{greetings_id}/enabled", json={"enabled": True}
+        ),
+        status_code=204,
+    )
     await _ok(await client.get("/readyz"))
     await _ok(await client.post("/auth/logout"), status_code=204)
     await _ok(await client.get("/api/v1/packs"), status_code=401)

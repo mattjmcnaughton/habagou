@@ -1,0 +1,25 @@
+{
+  "slug": "at-the-hotel",
+  "title": "At the hotel",
+  "glyph": "馆",
+  "color": "#376083",
+  "category": "places-travel",
+  "description": "Check in, find your floor, and keep track of the key.",
+  "starter": false,
+  "sort_order": 506,
+  "characters": [
+    { "hanzi": "宾", "pinyin": "bīn", "meaning": "guest" },
+    { "hanzi": "馆", "pinyin": "guǎn", "meaning": "building; hotel" },
+    { "hanzi": "住", "pinyin": "zhù", "meaning": "to stay; live" },
+    { "hanzi": "楼", "pinyin": "lóu", "meaning": "building; floor" },
+    { "hanzi": "层", "pinyin": "céng", "meaning": "floor; layer" },
+    { "hanzi": "钥", "pinyin": "yào", "meaning": "key (yàoshi)" },
+    { "hanzi": "匙", "pinyin": "shi", "meaning": "key (yàoshi)" }
+  ],
+  "sentences": [
+    { "hanzi": "住宾馆", "pinyin": "zhù bīnguǎn", "translation": "Stay at a hotel" },
+    { "hanzi": "在五楼", "pinyin": "zài wǔ lóu", "translation": "On the fifth floor" },
+    { "hanzi": "我的钥匙", "pinyin": "wǒ de yàoshi", "translation": "My key" },
+    { "hanzi": "住三天", "pinyin": "zhù sān tiān", "translation": "Stay three days" }
+  ]
+}

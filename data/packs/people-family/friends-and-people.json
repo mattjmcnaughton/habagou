@@ -1,0 +1,23 @@
+{
+  "slug": "friends-and-people",
+  "title": "Friends and people",
+  "glyph": "友",
+  "color": "#53579b",
+  "category": "people-family",
+  "description": "Talk about friends, guests, and the people around you.",
+  "starter": false,
+  "sort_order": 302,
+  "characters": [
+    { "hanzi": "朋", "pinyin": "péng", "meaning": "friend" },
+    { "hanzi": "友", "pinyin": "yǒu", "meaning": "friend" },
+    { "hanzi": "人", "pinyin": "rén", "meaning": "person" },
+    { "hanzi": "们", "pinyin": "men", "meaning": "plural suffix" },
+    { "hanzi": "位", "pinyin": "wèi", "meaning": "measure word (people)" }
+  ],
+  "sentences": [
+    { "hanzi": "好朋友", "pinyin": "hǎo péngyou", "translation": "Good friend" },
+    { "hanzi": "我们是朋友", "pinyin": "wǒmen shì péngyou", "translation": "We are friends" },
+    { "hanzi": "三位客人", "pinyin": "sān wèi kèrén", "translation": "Three guests" },
+    { "hanzi": "很多人", "pinyin": "hěn duō rén", "translation": "Many people" }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "slug": "weather",
+  "title": "Weather",
+  "glyph": "雨",
+  "color": "#5f8f4f",
+  "category": "nature-weather",
+  "description": "Talk about rain, wind, and whether the sun is out.",
+  "starter": false,
+  "sort_order": 701,
+  "characters": [
+    { "hanzi": "雨", "pinyin": "yǔ", "meaning": "rain" },
+    { "hanzi": "雪", "pinyin": "xuě", "meaning": "snow" },
+    { "hanzi": "风", "pinyin": "fēng", "meaning": "wind" },
+    { "hanzi": "云", "pinyin": "yún", "meaning": "cloud" },
+    { "hanzi": "晴", "pinyin": "qíng", "meaning": "sunny" },
+    { "hanzi": "阴", "pinyin": "yīn", "meaning": "overcast" },
+    { "hanzi": "冷", "pinyin": "lěng", "meaning": "cold" },
+    { "hanzi": "热", "pinyin": "rè", "meaning": "hot" }
+  ],
+  "sentences": [
+    { "hanzi": "今天下雨", "pinyin": "jīntiān xià yǔ", "translation": "It is raining today" },
+    { "hanzi": "明天下雪", "pinyin": "míngtiān xià xuě", "translation": "It will snow tomorrow" },
+    { "hanzi": "风很大", "pinyin": "fēng hěn dà", "translation": "The wind is strong" },
+    { "hanzi": "天晴了", "pinyin": "tiān qíng le", "translation": "It has cleared up" }
+  ]
+}

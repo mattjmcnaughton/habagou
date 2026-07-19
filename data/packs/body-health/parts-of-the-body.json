@@ -1,0 +1,25 @@
+{
+  "slug": "parts-of-the-body",
+  "title": "Parts of the body",
+  "glyph": "手",
+  "color": "#996a90",
+  "category": "body-health",
+  "description": "Name your head, hands, eyes, and ears.",
+  "starter": false,
+  "sort_order": 801,
+  "characters": [
+    { "hanzi": "头", "pinyin": "tóu", "meaning": "head" },
+    { "hanzi": "手", "pinyin": "shǒu", "meaning": "hand" },
+    { "hanzi": "脚", "pinyin": "jiǎo", "meaning": "foot" },
+    { "hanzi": "眼", "pinyin": "yǎn", "meaning": "eye" },
+    { "hanzi": "耳", "pinyin": "ěr", "meaning": "ear" },
+    { "hanzi": "口", "pinyin": "kǒu", "meaning": "mouth" },
+    { "hanzi": "鼻", "pinyin": "bí", "meaning": "nose" }
+  ],
+  "sentences": [
+    { "hanzi": "洗手", "pinyin": "xǐ shǒu", "translation": "Wash your hands" },
+    { "hanzi": "眼睛很大", "pinyin": "yǎnjing hěn dà", "translation": "Big eyes" },
+    { "hanzi": "耳朵很长", "pinyin": "ěrduo hěn cháng", "translation": "Long ears" },
+    { "hanzi": "鼻子很高", "pinyin": "bízi hěn gāo", "translation": "A tall nose" }
+  ]
+}

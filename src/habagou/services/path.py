@@ -95,12 +95,16 @@ class PathService:
         cursor: int | None = None,
         limit: int = 20,
     ) -> PathResponseDTO:
-        packs = await self._global_packs()
-        await self._extend_queue(user_id=user.id, packs=packs)
+        await self._extend_queue(user_id=user.id)
 
         items = await self.path_repository.list_for_user(user_id=user.id)
         completions = await self.path_repository.completions_by_item(user_id=user.id)
-        packs_by_id = {pack.id: pack for pack in packs}
+        # Render from *all* global packs, not just the enabled curriculum:
+        # completed items of a since-disabled pack stay in the queue as
+        # history and still need their pack's title/glyph/color.
+        packs_by_id = {
+            pack.id: pack for pack in await self.pack_repository.list_global()
+        }
         current = next((it for it in items if it.id not in completions), None)
         today = datetime.now(UTC).date()
 
@@ -142,6 +146,16 @@ class PathService:
     ) -> CompleteResult:
         item = await self.path_repository.get_by_id(item_id)
         if item is None or item.user_id != user.id:
+            return CompleteResult(status="not_found")
+
+        # Serialize against PackService.set_enabled: its disable-prune deletes
+        # never-completed items, and a completion landing mid-prune would be
+        # cascade-deleted with its item. The shared per-user lock makes
+        # complete-then-prune-keeps and prune-then-complete-404s the only
+        # possible outcomes.
+        await self.user_repository.lock_by_id(user.id)
+        item = await self.path_repository.get_by_id(item_id)
+        if item is None:
             return CompleteResult(status="not_found")
 
         if await self.path_repository.has_completion(item.id):
@@ -238,10 +252,15 @@ class PathService:
     # ------------------------------------------------------------------ #
     # Queue generation.
     # ------------------------------------------------------------------ #
-    async def _extend_queue(self, *, user_id: uuid.UUID, packs: list[Pack]) -> None:
+    async def _extend_queue(self, *, user_id: uuid.UUID) -> None:
+        # Lock before reading the enabled curriculum: PackService.set_enabled
+        # takes the same per-user lock around its prune, so a concurrent
+        # disable can never interleave between our curriculum snapshot and the
+        # append (which would resurrect a disabled pack's lessons).
+        await self.user_repository.lock_by_id(user_id)
+        packs = await self._global_packs(user_id=user_id)
         if not packs:
             return
-        await self.user_repository.lock_by_id(user_id)
         curriculum = _build_curriculum(packs)
         pack_by_slug = {_pack_key(pack): pack for pack in packs}
         slug_by_pack_id = {pack.id: _pack_key(pack) for pack in packs}
@@ -350,8 +369,14 @@ class PathService:
     # ------------------------------------------------------------------ #
     # Shared helpers.
     # ------------------------------------------------------------------ #
-    async def _global_packs(self) -> list[Pack]:
-        return await self.pack_repository.list_global_with_content()
+    async def _global_packs(self, *, user_id: uuid.UUID) -> list[Pack]:
+        """The user's curriculum packs: enabled global packs, in order.
+
+        Enablement (the lazy ``user_pack_settings`` overlay) makes the
+        curriculum per-user; an empty enabled set simply yields an empty
+        batch. Owned packs stay out of the Learning Path.
+        """
+        return await self.pack_repository.list_enabled_with_content(user_id=user_id)
 
     async def _daily_and_streak(
         self, *, user_id: uuid.UUID, today: date

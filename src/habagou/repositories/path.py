@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from habagou.models import (
     ActivityCompletion,
@@ -24,8 +24,11 @@ if TYPE_CHECKING:
 class PathRepository:
     """Data access for the materialized, append-only path item queue.
 
-    Path items are created here and never mutated or deleted; display state is
-    derived at read time from the completion event log.
+    Path items are created here and never mutated; display state is derived at
+    read time from the completion event log. The single deletion exception is
+    :meth:`delete_pending_for_pack`: disabling a library pack prunes its
+    never-completed items (completed items are history and stay, so the
+    completion log is untouched).
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -167,6 +170,31 @@ class PathRepository:
             )
         )
         return list(result.scalars())
+
+    async def delete_pending_for_pack(
+        self, *, user_id: uuid.UUID, pack_id: uuid.UUID
+    ) -> int:
+        """Delete the user's never-completed path items for one pack.
+
+        Called when a library pack is disabled so its lessons leave the queue.
+        Only items without a recorded path completion are removed — deleting a
+        completed item would cascade away its ``activity_completions`` row and
+        corrupt the append-only event log. Positions keep gaps by design; the
+        queue orders by position, not contiguity.
+        """
+        completed = select(ActivityCompletion.path_item_id).where(
+            ActivityCompletion.user_id == user_id,
+            ActivityCompletion.source == CompletionSource.PATH,
+            ActivityCompletion.path_item_id.is_not(None),
+        )
+        result = await self.session.execute(
+            delete(PathItem).where(
+                PathItem.user_id == user_id,
+                PathItem.pack_id == pack_id,
+                PathItem.id.not_in(completed),
+            )
+        )
+        return int(cast("Any", result).rowcount)
 
     async def path_completions_ordered(
         self, *, user_id: uuid.UUID

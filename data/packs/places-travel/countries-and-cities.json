@@ -1,0 +1,25 @@
+{
+  "slug": "countries-and-cities",
+  "title": "Countries and cities",
+  "glyph": "国",
+  "color": "#5789b1",
+  "category": "places-travel",
+  "description": "Talk about China, other countries, and big cities.",
+  "starter": false,
+  "sort_order": 503,
+  "characters": [
+    { "hanzi": "国", "pinyin": "guó", "meaning": "country" },
+    { "hanzi": "中", "pinyin": "zhōng", "meaning": "middle; China" },
+    { "hanzi": "美", "pinyin": "měi", "meaning": "beautiful; America" },
+    { "hanzi": "英", "pinyin": "yīng", "meaning": "Britain; hero" },
+    { "hanzi": "法", "pinyin": "fǎ", "meaning": "law; France" },
+    { "hanzi": "京", "pinyin": "jīng", "meaning": "capital" },
+    { "hanzi": "城", "pinyin": "chéng", "meaning": "city; wall" }
+  ],
+  "sentences": [
+    { "hanzi": "我是中国人", "pinyin": "wǒ shì zhōngguó rén", "translation": "I am Chinese" },
+    { "hanzi": "他去美国", "pinyin": "tā qù měiguó", "translation": "He is going to America" },
+    { "hanzi": "北京很大", "pinyin": "běijīng hěn dà", "translation": "Beijing is big" },
+    { "hanzi": "我说英文", "pinyin": "wǒ shuō yīngwén", "translation": "I speak English" }
+  ]
+}

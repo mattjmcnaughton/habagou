@@ -118,13 +118,21 @@ OpenTelemetry provider.
 
 - `characters`: pinned Hanzi Writer stroke JSON imported into Postgres.
 - `packs`: learning packs with nullable `owner_id` and sort order. `owner_id
-  IS NULL` is a global, curated, seed-managed pack visible to everyone;
+  IS NULL` is a global, curated, seed-managed pack listed in the library;
   non-null is a private pack visible only to its owner (created via
   `PackRepository.create(owner_id=...)`, the write path agent pack generation
-  uses). See
+  uses). Global packs carry library catalog metadata (`category_slug`,
+  `description`, `starter`). See
   [ADR 0009](adrs/0009-pack-ownership.md) for why ownership replaced the
   earlier lifecycle status and [ADR 0010](adrs/0010-agent-pack-generation.md)
   for the generation flow.
+- `categories`: ordered library categories; seeded from
+  `data/packs/categories.json`.
+- `user_pack_settings`: lazy per-user enablement overlay for global packs —
+  absence of a row means "use `packs.starter`", rows record explicit
+  enable/disable choices. The bench and the per-user Path curriculum filter
+  on `COALESCE(setting.enabled, packs.starter)`; see
+  [ADR 0012](adrs/0012-pack-library-enablement.md).
 - `pack_characters`: pack-specific pinyin/meaning metadata.
 - `pack_sentences`: sentence activity prompts, including sentence-only Hanzi.
 - `users`: authenticated learner accounts keyed by provider issuer + subject.
@@ -147,9 +155,16 @@ OpenTelemetry provider.
   materialized projection is warranted here despite that default. A unit
   test asserts `replay(events) == table contents`.
 
-The corpus import and seed pipeline validates that every curated pack and
-sentence character exists in `characters`. `scripts/check_invariants.py` repeats
-the production data checks post-deploy or on cron.
+Curated pack content is data, not code: one JSON file per pack under
+`data/packs/<category>/<slug>.json` plus `data/packs/categories.json`.
+`scripts/validate_pack_data.py` (run by `just gate`) checks schema,
+cross-file invariants, and corpus membership of every traced glyph against
+the committed `data/corpus_index.txt` — no database or network needed.
+`scripts/seed.py` loads the files and upserts idempotently by slug; it never
+deletes packs absent from the files. The corpus import and seed pipeline
+additionally validates that every curated pack and sentence character exists
+in `characters`. `scripts/check_invariants.py` repeats the production data
+checks post-deploy or on cron.
 
 ## Frontend
 

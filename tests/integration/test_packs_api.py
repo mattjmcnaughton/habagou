@@ -76,6 +76,8 @@ async def test_list_packs_returns_published_sorted_summaries(
         "char_count": 5,
         "sentence_count": 3,
         "owned": False,
+        "starter": True,
+        "enabled": True,
         "progress": {
             "trace": {
                 "completed": False,

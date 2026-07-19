@@ -1,0 +1,25 @@
+{
+  "slug": "weekend-fun",
+  "title": "Weekend fun",
+  "glyph": "玩",
+  "color": "#8e4243",
+  "category": "daily-life",
+  "description": "Sing, dance, and swim your way through the weekend.",
+  "starter": false,
+  "sort_order": 606,
+  "characters": [
+    { "hanzi": "玩", "pinyin": "wán", "meaning": "play" },
+    { "hanzi": "游", "pinyin": "yóu", "meaning": "swim; travel" },
+    { "hanzi": "泳", "pinyin": "yǒng", "meaning": "swim" },
+    { "hanzi": "唱", "pinyin": "chàng", "meaning": "sing" },
+    { "hanzi": "歌", "pinyin": "gē", "meaning": "song" },
+    { "hanzi": "跳", "pinyin": "tiào", "meaning": "jump" },
+    { "hanzi": "舞", "pinyin": "wǔ", "meaning": "dance" }
+  ],
+  "sentences": [
+    { "hanzi": "我们去玩", "pinyin": "wǒmen qù wán", "translation": "Let's go have fun" },
+    { "hanzi": "我会游泳", "pinyin": "wǒ huì yóuyǒng", "translation": "I can swim" },
+    { "hanzi": "唱歌跳舞", "pinyin": "chàng gē tiào wǔ", "translation": "Sing and dance" },
+    { "hanzi": "一起唱歌", "pinyin": "yìqǐ chàng gē", "translation": "Sing together" }
+  ]
+}

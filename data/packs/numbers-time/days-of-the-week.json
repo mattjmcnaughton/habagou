@@ -1,0 +1,24 @@
+{
+  "slug": "days-of-the-week",
+  "title": "Days of the week",
+  "glyph": "星",
+  "color": "#387d79",
+  "category": "numbers-time",
+  "description": "Name the days of the week and plan your weekend.",
+  "starter": false,
+  "sort_order": 202,
+  "characters": [
+    { "hanzi": "天", "pinyin": "tiān", "meaning": "day; sky" },
+    { "hanzi": "星", "pinyin": "xīng", "meaning": "star" },
+    { "hanzi": "期", "pinyin": "qī", "meaning": "period of time" },
+    { "hanzi": "周", "pinyin": "zhōu", "meaning": "week" },
+    { "hanzi": "末", "pinyin": "mò", "meaning": "end" },
+    { "hanzi": "日", "pinyin": "rì", "meaning": "day; sun" }
+  ],
+  "sentences": [
+    { "hanzi": "今天星期五", "pinyin": "jīntiān xīngqī wǔ", "translation": "Today is Friday" },
+    { "hanzi": "这个周末", "pinyin": "zhè ge zhōumò", "translation": "This weekend" },
+    { "hanzi": "星期天见", "pinyin": "xīngqītiān jiàn", "translation": "See you Sunday" },
+    { "hanzi": "好日子", "pinyin": "hǎo rìzi", "translation": "A good day" }
+  ]
+}

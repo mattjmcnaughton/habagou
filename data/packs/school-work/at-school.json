@@ -1,0 +1,25 @@
+{
+  "slug": "at-school",
+  "title": "At school",
+  "glyph": "学",
+  "color": "#8a6d4c",
+  "category": "school-work",
+  "description": "Step into the classroom with teachers and classmates.",
+  "starter": false,
+  "sort_order": 901,
+  "characters": [
+    { "hanzi": "学", "pinyin": "xué", "meaning": "study" },
+    { "hanzi": "校", "pinyin": "xiào", "meaning": "school" },
+    { "hanzi": "老", "pinyin": "lǎo", "meaning": "old" },
+    { "hanzi": "师", "pinyin": "shī", "meaning": "teacher" },
+    { "hanzi": "同", "pinyin": "tóng", "meaning": "same" },
+    { "hanzi": "课", "pinyin": "kè", "meaning": "class; lesson" },
+    { "hanzi": "班", "pinyin": "bān", "meaning": "class; group" }
+  ],
+  "sentences": [
+    { "hanzi": "我去学校", "pinyin": "wǒ qù xuéxiào", "translation": "I go to school" },
+    { "hanzi": "老师好", "pinyin": "lǎoshī hǎo", "translation": "Hello teacher" },
+    { "hanzi": "上课了", "pinyin": "shàng kè le", "translation": "Class is starting" },
+    { "hanzi": "我的同学", "pinyin": "wǒ de tóngxué", "translation": "My classmate" }
+  ]
+}

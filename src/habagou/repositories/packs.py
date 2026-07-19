@@ -5,10 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import ColumnElement, delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import selectinload
 
-from habagou.models import Character, Pack, PackCharacter, PackSentence
+from habagou.models import (
+    Category,
+    Character,
+    Pack,
+    PackCharacter,
+    PackSentence,
+    UserPackSetting,
+)
 
 if TYPE_CHECKING:
     import uuid
@@ -22,6 +30,16 @@ class PackWithCounts:
     pack: Pack
     character_count: int
     sentence_count: int
+
+
+@dataclass(frozen=True)
+class LibraryPack:
+    """A global pack as listed in the library, with its enablement state."""
+
+    pack: Pack
+    character_count: int
+    sentence_count: int
+    enabled: bool
 
 
 @dataclass(frozen=True)
@@ -42,27 +60,52 @@ class PackSentenceInput:
     translation: str
 
 
+_CHARACTER_COUNT = (
+    select(func.count(PackCharacter.character_id))
+    .where(PackCharacter.pack_id == Pack.id)
+    .correlate(Pack)
+    .scalar_subquery()
+)
+_SENTENCE_COUNT = (
+    select(func.count(PackSentence.id))
+    .where(PackSentence.pack_id == Pack.id)
+    .correlate(Pack)
+    .scalar_subquery()
+)
+
+#: Global packs should always carry a category; sort any stragglers last.
+_UNCATEGORIZED_LAST = 1_000_000
+
+
+def _setting_join(user_id: uuid.UUID) -> ColumnElement[bool]:
+    """Join clause for the calling user's enablement overlay row (if any)."""
+    return (UserPackSetting.pack_id == Pack.id) & (UserPackSetting.user_id == user_id)
+
+
+def _bench_predicate(user_id: uuid.UUID) -> ColumnElement[bool]:
+    """Owned, or global and effectively enabled (requires ``_setting_join``)."""
+    return (Pack.owner_id == user_id) | (
+        Pack.owner_id.is_(None) & func.coalesce(UserPackSetting.enabled, Pack.starter)
+    )
+
+
 class PackRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def list_visible(self, *, user_id: uuid.UUID) -> list[PackWithCounts]:
-        """Packs visible to a user: global (``owner_id IS NULL``) plus own."""
-        character_count = (
-            select(func.count(PackCharacter.character_id))
-            .where(PackCharacter.pack_id == Pack.id)
-            .correlate(Pack)
-            .scalar_subquery()
-        )
-        sentence_count = (
-            select(func.count(PackSentence.id))
-            .where(PackSentence.pack_id == Pack.id)
-            .correlate(Pack)
-            .scalar_subquery()
-        )
+        """Packs on a user's bench: owned plus *enabled* global packs.
+
+        Global-pack enablement is the lazy overlay from ``user_pack_settings``:
+        ``COALESCE(setting.enabled, packs.starter)`` — a missing row falls back
+        to the pack's starter default, so starter packs appear for every user
+        without per-user rows. Disabled global packs stay reachable through
+        :meth:`get_visible` (library preview) and :meth:`list_library`.
+        """
         result = await self.session.execute(
-            select(Pack, character_count, sentence_count)
-            .where((Pack.owner_id.is_(None)) | (Pack.owner_id == user_id))
+            select(Pack, _CHARACTER_COUNT, _SENTENCE_COUNT)
+            .outerjoin(UserPackSetting, _setting_join(user_id))
+            .where(_bench_predicate(user_id))
             .order_by(Pack.sort_order, Pack.id)
         )
         return [
@@ -74,16 +117,92 @@ class PackRepository:
             for row in result.all()
         ]
 
-    async def list_global_with_content(self) -> list[Pack]:
-        """Global packs (``owner_id IS NULL``) in curriculum order, with content.
+    async def list_library(self, *, user_id: uuid.UUID) -> list[LibraryPack]:
+        """Every global pack with counts and the user's enablement state.
 
-        Used to build the scheduler :class:`Curriculum`; characters carry their
-        pinyin/meaning and are ordered by ``position``. The Learning Path is
-        global-only this epic, so owned packs are excluded.
+        One query, no progress aggregates (the library lists hundreds of
+        packs; per-pack progress stays a bench concern). Ordered by category
+        sort order then pack sort order so the service can group in a single
+        pass; categories come from :meth:`list_categories`.
         """
+        enabled = func.coalesce(UserPackSetting.enabled, Pack.starter)
+        result = await self.session.execute(
+            select(Pack, _CHARACTER_COUNT, _SENTENCE_COUNT, enabled)
+            .outerjoin(UserPackSetting, _setting_join(user_id))
+            .outerjoin(Category, Category.slug == Pack.category_slug)
+            .where(Pack.owner_id.is_(None))
+            .order_by(
+                func.coalesce(Category.sort_order, _UNCATEGORIZED_LAST),
+                Pack.sort_order,
+                Pack.id,
+            )
+        )
+        return [
+            LibraryPack(
+                pack=row[0],
+                character_count=row[1],
+                sentence_count=row[2],
+                enabled=row[3],
+            )
+            for row in result.all()
+        ]
+
+    async def list_global(self) -> list[Pack]:
+        """All global packs, no content eager-loading (display metadata only)."""
         result = await self.session.execute(
             select(Pack)
             .where(Pack.owner_id.is_(None))
+            .order_by(Pack.sort_order, Pack.id)
+        )
+        return list(result.scalars())
+
+    async def list_categories(self) -> list[Category]:
+        result = await self.session.execute(
+            select(Category).order_by(Category.sort_order, Category.slug)
+        )
+        return list(result.scalars())
+
+    async def get_setting(
+        self, *, user_id: uuid.UUID, pack_id: uuid.UUID
+    ) -> UserPackSetting | None:
+        result = await self.session.execute(
+            select(UserPackSetting).where(
+                UserPackSetting.user_id == user_id,
+                UserPackSetting.pack_id == pack_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def upsert_setting(
+        self, *, user_id: uuid.UUID, pack_id: uuid.UUID, enabled: bool
+    ) -> None:
+        """Record an explicit enablement choice (idempotent)."""
+        statement = insert(UserPackSetting).values(
+            user_id=user_id, pack_id=pack_id, enabled=enabled
+        )
+        await self.session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[UserPackSetting.user_id, UserPackSetting.pack_id],
+                set_={"enabled": statement.excluded.enabled, "updated_at": func.now()},
+            )
+        )
+
+    async def list_enabled_with_content(self, *, user_id: uuid.UUID) -> list[Pack]:
+        """Enabled global packs in curriculum order, with content.
+
+        Used to build the scheduler :class:`Curriculum` for one user; the
+        enablement overlay (see :meth:`list_visible`) makes the curriculum
+        per-user. Characters carry their pinyin/meaning and are ordered by
+        ``position``. The Learning Path is global-only, so owned packs are
+        excluded even though they are always enabled.
+        """
+        result = await self.session.execute(
+            select(Pack)
+            .outerjoin(UserPackSetting, _setting_join(user_id))
+            .where(
+                Pack.owner_id.is_(None),
+                func.coalesce(UserPackSetting.enabled, Pack.starter),
+            )
             .order_by(Pack.sort_order, Pack.id)
             .options(
                 selectinload(Pack.characters).selectinload(PackCharacter.character),

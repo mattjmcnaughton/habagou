@@ -1,0 +1,25 @@
+{
+  "slug": "animals",
+  "title": "Animals",
+  "glyph": "猫",
+  "color": "#6b9c5b",
+  "category": "nature-weather",
+  "description": "Meet cats, dogs, horses, and the animals around you.",
+  "starter": false,
+  "sort_order": 703,
+  "characters": [
+    { "hanzi": "猫", "pinyin": "māo", "meaning": "cat" },
+    { "hanzi": "狗", "pinyin": "gǒu", "meaning": "dog" },
+    { "hanzi": "鸟", "pinyin": "niǎo", "meaning": "bird" },
+    { "hanzi": "马", "pinyin": "mǎ", "meaning": "horse" },
+    { "hanzi": "虎", "pinyin": "hǔ", "meaning": "tiger" },
+    { "hanzi": "熊", "pinyin": "xióng", "meaning": "bear" },
+    { "hanzi": "猪", "pinyin": "zhū", "meaning": "pig" }
+  ],
+  "sentences": [
+    { "hanzi": "我家有猫", "pinyin": "wǒ jiā yǒu māo", "translation": "We have a cat at home" },
+    { "hanzi": "小狗很可爱", "pinyin": "xiǎo gǒu hěn kě'ài", "translation": "The puppy is cute" },
+    { "hanzi": "骑马", "pinyin": "qí mǎ", "translation": "Ride a horse" },
+    { "hanzi": "鸟在天上飞", "pinyin": "niǎo zài tiān shàng fēi", "translation": "Birds fly in the sky" }
+  ]
+}

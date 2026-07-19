@@ -1,0 +1,25 @@
+{
+  "slug": "come-and-go",
+  "title": "Come and go",
+  "glyph": "来",
+  "color": "#a44a5e",
+  "category": "verbs-in-action",
+  "description": "Come, go, and arrive wherever you're headed.",
+  "starter": false,
+  "sort_order": 1001,
+  "characters": [
+    { "hanzi": "来", "pinyin": "lái", "meaning": "come" },
+    { "hanzi": "去", "pinyin": "qù", "meaning": "go" },
+    { "hanzi": "回", "pinyin": "huí", "meaning": "return" },
+    { "hanzi": "到", "pinyin": "dào", "meaning": "arrive" },
+    { "hanzi": "走", "pinyin": "zǒu", "meaning": "walk; leave" },
+    { "hanzi": "进", "pinyin": "jìn", "meaning": "enter" },
+    { "hanzi": "出", "pinyin": "chū", "meaning": "go out" }
+  ],
+  "sentences": [
+    { "hanzi": "我回家", "pinyin": "wǒ huí jiā", "translation": "I am going home" },
+    { "hanzi": "请进", "pinyin": "qǐng jìn", "translation": "Please come in" },
+    { "hanzi": "他出去了", "pinyin": "tā chūqù le", "translation": "He went out" },
+    { "hanzi": "快来", "pinyin": "kuài lái", "translation": "Come quickly" }
+  ]
+}

@@ -29,6 +29,12 @@ class PackSummaryDTO(BaseModel):
     # True when the current user owns this pack (a private pack they can
     # delete); False for global, curated packs visible to everyone.
     owned: bool
+    # Library catalog flag: enabled by default for every user.
+    starter: bool
+    # Effective enablement for the current user. Always True on the bench
+    # (owned packs and enabled global packs); False only when a global pack
+    # is previewed from the library without being enabled.
+    enabled: bool
     progress: PackProgressDTO
 
 
@@ -47,3 +53,32 @@ class PackSentenceDTO(BaseModel):
 class PackDetailDTO(PackSummaryDTO):
     characters: list[PackCharacterDTO]
     sentences: list[PackSentenceDTO]
+
+
+class PackEnablementUpdateDTO(BaseModel):
+    enabled: bool
+
+
+class LibraryPackDTO(BaseModel):
+    """Slim library card: no progress aggregates (the library lists hundreds
+    of packs; per-pack progress stays a bench concern)."""
+
+    id: uuid.UUID
+    title: str
+    glyph: str
+    color: str
+    description: str | None
+    char_count: int
+    sentence_count: int
+    starter: bool
+    enabled: bool
+
+
+class LibraryCategoryDTO(BaseModel):
+    slug: str
+    title: str
+    packs: list[LibraryPackDTO]
+
+
+class LibraryDTO(BaseModel):
+    categories: list[LibraryCategoryDTO]
