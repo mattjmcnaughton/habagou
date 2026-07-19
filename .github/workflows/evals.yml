@@ -1,0 +1,61 @@
+# Agent eval harness (docs/evals.md, docs/ci.md). Opt-in and never a required
+# check: eval runs call the live OpenRouter provider and cost real money, so
+# they only run when a human dispatches this workflow. Requires the
+# OPENROUTER_API_KEY repository secret; without it the run fails immediately
+# with a clear message from the harness (exit 2).
+#
+# The job fails only on harness errors or the corpus-membership hard floor —
+# soft scores are reported (job summary + artifact), never gated on.
+name: Evals
+
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: >-
+          Comma-separated OpenRouter model ids to evaluate
+          (empty = the configured default generation model)
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      # Minimal env: project deps + the evals group only (no dev toolchain,
+      # no Node, no Postgres, no Keycloak — the harness is DB-free).
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev --group evals
+
+      - name: Run generation evals
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p .artifacts/evals
+          uv run --no-sync python -m evals \
+            --models "${{ inputs.models }}" \
+            --report .artifacts/evals/report.json
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: .artifacts/evals/
+          if-no-files-found: warn

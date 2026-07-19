@@ -46,6 +46,20 @@ dev = [
     "pytest-xdist>=3.6",
     "ruff>=0.8",
     "ty>=0.0.54",
+    # Dev environments include the eval harness deps so `just gate` (ruff, ty,
+    # unit tests) can see `evals/` without a separate sync. Eval *runs* stay
+    # opt-in (`just evals`); only the deps ride along here.
+    { include-group = "evals" },
+]
+# Agent eval harness (evals/, docs/evals.md). A separate group so the evals CI
+# job can install a minimal env (`uv sync --no-dev --group evals`); the exact
+# version is pinned by uv.lock. The floor stays at 2.9.0 (not the locked
+# version): [tool.uv] exclude-newer caps fresh resolutions at week-old
+# releases, and CI's implicit `uv run` re-resolve must stay satisfiable under
+# that window. The harness is tested against both 2.9.x and the locked
+# version.
+evals = [
+    "pydantic-evals>=2.9.0",
 ]
 
 [tool.ruff]

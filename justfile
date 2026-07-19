@@ -146,6 +146,10 @@ smoke BASE_URL_ARG="":
 test-external:
     HABAGOU_ALLOW_EXTERNAL_MODEL_REQUESTS=1 uv run pytest -m external
 
+# Run the agent eval harness (needs OPENROUTER_API_KEY; `--smoke` for offline). See docs/evals.md
+evals *ARGS:
+    uv run python -m evals {{ARGS}}
+
 # Export the committed OpenAPI artifact
 openapi-export:
     {{_env}} && uv run python scripts/export_openapi.py
