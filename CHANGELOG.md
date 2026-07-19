@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/mattjmcnaughton/habagou/compare/v1.9.0...v1.10.0) (2026-07-19)
+
+
+### Features
+
+* add curated pack library with per-user enablement ([9c04bce](https://github.com/mattjmcnaughton/habagou/commit/9c04bce6b8533f2f53ed7cffefdbfe7a9933cce9))
+
 # [1.9.0](https://github.com/mattjmcnaughton/habagou/compare/v1.8.0...v1.9.0) (2026-07-18)
 
 
