@@ -31,6 +31,29 @@ invalid sessions return the standard error envelope with HTTP 401:
 | POST | `/auth/logout` | Clear the local session cookie |
 | GET | `/api/v1/auth/session` | Probe the current session; always returns 200 with `authenticated`, `provider`, and optional `user` |
 
+The authenticated `user` object includes `feature_flags`: the user's resolved
+feature-flag map (every code-registered flag key with its effective on/off
+state). See [Feature Flags](#feature-flags).
+
+### Feature Flags
+
+Feature flags are defined in code (`services/feature_flags.py`) with a default
+per flag; the `FEATURE_FLAG_DEFAULTS` setting can flip a default globally
+without a deploy of code (comma-separated `key:on` / `key:off` entries), and
+the endpoints below manage per-user database overrides, which win over both —
+note this means a settings flip changes the default but does not force the
+flag for users holding an override. All three endpoints are admin-only (403
+for regular users).
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/v1/admin/feature-flags` | List every registered flag with its effective default and per-user override count |
+| PUT | `/api/v1/admin/feature-flags/{flag_key}/users/{user_id}` | Set (upsert) one user's override; body `{"enabled": bool}` |
+| DELETE | `/api/v1/admin/feature-flags/{flag_key}/users/{user_id}` | Clear one user's override (idempotent 204) |
+
+`PUT` and `DELETE` return 404 for a `flag_key` not registered in code; `PUT`
+also returns 404 when the target user does not exist.
+
 ### Packs
 
 | Method | Path | Description |

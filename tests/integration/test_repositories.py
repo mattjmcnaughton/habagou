@@ -18,6 +18,7 @@ from habagou.models import (
 )
 from habagou.repositories import (
     CharacterRepository,
+    FeatureFlagRepository,
     PackCharacterInput,
     PackRepository,
     PackSentenceInput,
@@ -697,6 +698,41 @@ async def test_catalog_ordering_breaks_ties_by_pack_id() -> None:
 
     assert visible_ids == expected
     assert enabled_ids == expected
+
+
+@pytest.mark.workflow("WF-ADMIN-FLAGS")
+@pytest.mark.anyio
+async def test_feature_flag_repository_upserts_counts_and_deletes() -> None:
+    async with db.async_session() as session:
+        user = await create_user(session, username="flag-repo-user")
+        other = await create_user(session, username="flag-repo-other", email=None)
+        await session.flush()
+        repository = FeatureFlagRepository(session)
+
+        assert await repository.overrides_for_user(user_id=user.id) == {}
+        assert await repository.override_counts() == {}
+
+        await repository.set_override(user_id=user.id, flag_key="alpha", enabled=True)
+        await repository.set_override(user_id=user.id, flag_key="beta", enabled=False)
+        await repository.set_override(user_id=other.id, flag_key="alpha", enabled=True)
+
+        assert await repository.overrides_for_user(user_id=user.id) == {
+            "alpha": True,
+            "beta": False,
+        }
+        assert await repository.override_counts() == {"alpha": 2, "beta": 1}
+
+        # The composite key makes a repeat write an in-place upsert.
+        await repository.set_override(user_id=user.id, flag_key="alpha", enabled=False)
+        assert await repository.overrides_for_user(user_id=user.id) == {
+            "alpha": False,
+            "beta": False,
+        }
+        assert await repository.override_counts() == {"alpha": 2, "beta": 1}
+
+        assert await repository.delete_override(user_id=user.id, flag_key="alpha")
+        assert not await repository.delete_override(user_id=user.id, flag_key="alpha")
+        assert await repository.overrides_for_user(user_id=user.id) == {"beta": False}
 
 
 def _seed_slugs() -> set[str]:

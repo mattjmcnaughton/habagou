@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     # listed; see ``generation_model_ids`` / ``practice_model_ids``.
     admin_chat_models: str = "anthropic/claude-sonnet-5,minimax/minimax-m3"
 
+    # Flips the code-defined feature-flag defaults
+    # (``services.feature_flags.FLAG_DEFAULTS``) globally without a deploy of
+    # code: comma-separated ``key:on`` / ``key:off`` entries. Unknown keys and
+    # malformed entries are ignored. Note per-user database overrides (admin
+    # API) still win over these defaults — this changes the default, it does
+    # not force the flag for users holding an override.
+    feature_flag_defaults: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @field_validator("database_url")
@@ -115,6 +123,17 @@ class Settings(BaseSettings):
             for domain in self.admin_email_domains.split(",")
             if domain.strip()
         )
+
+    @property
+    def feature_flag_default_map(self) -> dict[str, bool]:
+        """Parsed ``feature_flag_defaults``: malformed entries dropped."""
+        parsed: dict[str, bool] = {}
+        for entry in self.feature_flag_defaults.split(","):
+            key, separator, state = entry.strip().partition(":")
+            key, state = key.strip(), state.strip().lower()
+            if separator and key and state in ("on", "off"):
+                parsed[key] = state == "on"
+        return parsed
 
     def _selectable_model_ids(self, default: str) -> tuple[str, ...]:
         """The admin-selectable model ids for a feature: default first, deduped."""

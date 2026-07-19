@@ -32,6 +32,8 @@ export const authenticatedSession: AuthSession = {
     // The default mock session is a non-admin, matching the null model-picker
     // fields the default status handlers return.
     is_admin: false,
+    // No flags are registered in code yet, so the resolved map is empty.
+    feature_flags: {},
   },
 };
 

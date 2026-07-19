@@ -147,6 +147,83 @@
         "title": "DailyGoalDTO",
         "type": "object"
       },
+      "FeatureFlagDTO": {
+        "description": "One code-defined flag: its effective default and per-user override count.",
+        "properties": {
+          "enabled_default": {
+            "title": "Enabled Default",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "override_count": {
+            "title": "Override Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "enabled_default",
+          "override_count"
+        ],
+        "title": "FeatureFlagDTO",
+        "type": "object"
+      },
+      "FeatureFlagListDTO": {
+        "properties": {
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureFlagDTO"
+            },
+            "title": "Flags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "flags"
+        ],
+        "title": "FeatureFlagListDTO",
+        "type": "object"
+      },
+      "FeatureFlagOverrideDTO": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "flag_key": {
+            "title": "Flag Key",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flag_key",
+          "user_id",
+          "enabled"
+        ],
+        "title": "FeatureFlagOverrideDTO",
+        "type": "object"
+      },
+      "FeatureFlagOverrideSetDTO": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "FeatureFlagOverrideSetDTO",
+        "type": "object"
+      },
       "GenerationDraftRequestDTO": {
         "description": "Request to draft (or refine) a pack from a topic.\n\n``history`` is the opaque JSON message history returned by a prior draft\nturn (see :class:`GenerationDraftResponseDTO`); replaying it lets a\nrefinement turn keep the model's context. It is ``None`` on the first turn.",
         "properties": {
@@ -1303,6 +1380,14 @@
             ],
             "title": "Email"
           },
+          "feature_flags": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "default": {},
+            "title": "Feature Flags",
+            "type": "object"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1375,6 +1460,138 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/feature-flags": {
+      "get": {
+        "operationId": "list_feature_flags_api_v1_admin_feature_flags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagListDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Feature Flags",
+        "tags": [
+          "feature-flags"
+        ]
+      }
+    },
+    "/api/v1/admin/feature-flags/{flag_key}/users/{user_id}": {
+      "delete": {
+        "operationId": "clear_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_key",
+            "required": true,
+            "schema": {
+              "title": "Flag Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown flag"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Feature Flag Override",
+        "tags": [
+          "feature-flags"
+        ]
+      },
+      "put": {
+        "operationId": "set_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_key",
+            "required": true,
+            "schema": {
+              "title": "Flag Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagOverrideSetDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagOverrideDTO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown flag or user"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Feature Flag Override",
+        "tags": [
+          "feature-flags"
+        ]
+      }
+    },
     "/api/v1/auth/session": {
       "get": {
         "operationId": "get_auth_session_api_v1_auth_session_get",

@@ -20,6 +20,7 @@ from habagou.dependencies import get_optional_current_user
 from habagou.dtos.auth import SessionDTO, UserDTO
 from habagou.events import workflow_event
 from habagou.services.auth import AuthService
+from habagou.services.feature_flags import FeatureFlagService
 
 router = APIRouter(tags=["auth"])
 logger = structlog.get_logger()
@@ -95,5 +96,6 @@ async def get_auth_session(
             display_name=user.display_name,
             email=user.email,
             is_admin=is_admin(user),
+            feature_flags=await FeatureFlagService(session).resolve_for_user(user),
         ),
     )

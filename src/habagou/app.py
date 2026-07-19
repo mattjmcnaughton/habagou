@@ -18,6 +18,7 @@ from habagou.logging import log_request as emit_request_log
 from habagou.routers import auth, health
 from habagou.routers.v1 import (
     characters,
+    feature_flags,
     generation,
     library,
     packs,
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(characters.router)
+    app.include_router(feature_flags.router)
     app.include_router(generation.router)
     app.include_router(library.router)
     app.include_router(packs.router)

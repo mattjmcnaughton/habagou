@@ -35,3 +35,5 @@ workflows:
     title: Sign out
   - id: WF-AUTH-GATE
     title: Gate unauthenticated data access
+  - id: WF-ADMIN-FLAGS
+    title: Manage feature-flag overrides

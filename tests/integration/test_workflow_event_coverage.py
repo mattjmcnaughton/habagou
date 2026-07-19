@@ -107,6 +107,11 @@ EXPECTED_EVENTS: dict[str, tuple[set[str], set[str], str]] = {
     "WF-AUTH-SIGN-IN": ({"auth_signed_in"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-SIGN-OUT": ({"auth_signed_out"}, {"user_id", "provider"}, "ok"),
     "WF-AUTH-GATE": ({"auth_gate_rejected"}, {"path"}, "error"),
+    "WF-ADMIN-FLAGS": (
+        {"feature_flag_override_set", "feature_flag_override_cleared"},
+        {"flag_key", "target_user_id", "admin_user_id"},
+        "ok",
+    ),
 }
 
 
@@ -142,7 +147,13 @@ async def test_all_workflows_emit_verification_events(
             subject="workflow-subject",
             username="workflow-user",
             display_name="Workflow User",
+            # Admin-domain email so the workflow user can drive WF-ADMIN-FLAGS.
+            email="workflow-user@mattjmcnaughton.com",
         ),
+    )
+    # WF-ADMIN-FLAGS needs a registered flag; the real registry starts empty.
+    monkeypatch.setattr(
+        "habagou.services.feature_flags.FLAG_DEFAULTS", {"coverage_flag": False}
     )
 
     emit_bootstrap_completed(SeedResult(chars=20, packs=4, categories=10))
@@ -220,6 +231,21 @@ async def test_all_workflows_emit_verification_events(
                 "/api/v1/practice/turn", json={"message": "ordering food"}
             )
         )
+    # WF-ADMIN-FLAGS: set, then clear, a per-user feature-flag override.
+    session_body = await _json(await client.get("/api/v1/auth/session"))
+    workflow_user_id = session_body["user"]["id"]
+    await _ok(
+        await client.put(
+            f"/api/v1/admin/feature-flags/coverage_flag/users/{workflow_user_id}",
+            json={"enabled": True},
+        )
+    )
+    await _ok(
+        await client.delete(
+            f"/api/v1/admin/feature-flags/coverage_flag/users/{workflow_user_id}"
+        ),
+        status_code=204,
+    )
     await _ok(await client.delete(f"/api/v1/progress/packs/{greetings_id}"))
     # WF-02 library surface: browse the library, then toggle a pack off/on.
     await _ok(await client.get("/api/v1/library"))

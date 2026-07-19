@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/api/v1/admin/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Feature Flags */
+        get: operations["list_feature_flags_api_v1_admin_feature_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/feature-flags/{flag_key}/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Feature Flag Override */
+        put: operations["set_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__put"];
+        post?: never;
+        /** Clear Feature Flag Override */
+        delete: operations["clear_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/session": {
         parameters: {
             query?: never;
@@ -473,6 +508,40 @@ export interface components {
             completed: number;
             /** Target */
             target: number;
+        };
+        /**
+         * FeatureFlagDTO
+         * @description One code-defined flag: its effective default and per-user override count.
+         */
+        FeatureFlagDTO: {
+            /** Enabled Default */
+            enabled_default: boolean;
+            /** Key */
+            key: string;
+            /** Override Count */
+            override_count: number;
+        };
+        /** FeatureFlagListDTO */
+        FeatureFlagListDTO: {
+            /** Flags */
+            flags: components["schemas"]["FeatureFlagDTO"][];
+        };
+        /** FeatureFlagOverrideDTO */
+        FeatureFlagOverrideDTO: {
+            /** Enabled */
+            enabled: boolean;
+            /** Flag Key */
+            flag_key: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** FeatureFlagOverrideSetDTO */
+        FeatureFlagOverrideSetDTO: {
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * GenerationDraftRequestDTO
@@ -950,6 +1019,13 @@ export interface components {
             /** Email */
             email?: string | null;
             /**
+             * Feature Flags
+             * @default {}
+             */
+            feature_flags: {
+                [key: string]: boolean;
+            };
+            /**
              * Id
              * Format: uuid
              */
@@ -984,6 +1060,106 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_feature_flags_api_v1_admin_feature_flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagListDTO"];
+                };
+            };
+        };
+    };
+    set_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_key: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagOverrideSetDTO"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagOverrideDTO"];
+                };
+            };
+            /** @description Unknown flag or user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_feature_flag_override_api_v1_admin_feature_flags__flag_key__users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_key: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown flag */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_auth_session_api_v1_auth_session_get: {
         parameters: {
             query?: never;

@@ -15,6 +15,7 @@ from habagou.models.enums import (
     PathItemKind,
     ReviewUnitType,
 )
+from habagou.models.feature_flags import UserFeatureOverride
 from habagou.models.packs import (
     Category,
     Pack,
@@ -41,5 +42,6 @@ __all__ = [
     "ReviewState",
     "ReviewUnitType",
     "User",
+    "UserFeatureOverride",
     "UserPackSetting",
 ]
