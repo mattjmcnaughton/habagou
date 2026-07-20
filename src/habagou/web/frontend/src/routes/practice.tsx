@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PracticeSegment, PracticeTurn } from "../lib/api";
-import { ModelPicker } from "../components/model-picker";
+import { ModelSelector } from "../components/model-selector";
 import { getPracticeStatus, practiceTurn } from "../lib/api";
 import type { PracticeChatState, PracticeEntry, PracticeFailureKind } from "../lib/practice-chat";
 import {
@@ -195,7 +195,11 @@ function PracticeScreen() {
       onNewConversation={started && !sending ? handleNewConversation : undefined}
       started={started}
     >
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
+      <div
+        className={`flex-1 overflow-y-auto px-4 py-5 ${
+          started ? "space-y-4" : "flex flex-col justify-center"
+        }`}
+      >
         {!started && pickerReady ? <TopicPicker onPick={submitMessage} /> : null}
         {state.entries.map((entry, index) => (
           <ConversationEntry
@@ -217,21 +221,23 @@ function PracticeScreen() {
         {sending ? <ThinkingBubble /> : null}
       </div>
 
-      {showModelPicker ? (
-        <ModelPicker
-          defaultModel={status.data?.default_model ?? null}
-          disabled={sending}
-          models={modelOptions}
-          onSelect={setModel}
-          selected={model}
-        />
-      ) : null}
       <Composer
         disabled={sending || (!started && !pickerReady)}
         inputRef={inputRef}
         onChange={setDraftText}
         onSubmit={() => submitMessage(draftText)}
         started={started}
+        toolbar={
+          showModelPicker ? (
+            <ModelSelector
+              defaultModel={status.data?.default_model ?? null}
+              disabled={sending}
+              models={modelOptions}
+              onSelect={setModel}
+              selected={model}
+            />
+          ) : null
+        }
         value={draftText}
       />
     </PracticeShell>
@@ -481,6 +487,7 @@ function Composer({
   onChange,
   onSubmit,
   started,
+  toolbar,
   value,
 }: {
   disabled: boolean;
@@ -488,6 +495,7 @@ function Composer({
   onChange: (value: string) => void;
   onSubmit: () => void;
   started: boolean;
+  toolbar?: React.ReactNode;
   value: string;
 }) {
   const placeholder = disabled
@@ -503,23 +511,28 @@ function Composer({
         onSubmit();
       }}
     >
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-panel px-3 py-2">
-        <input
-          className="flex-1 bg-transparent text-porcelain placeholder:text-mist focus:outline-none disabled:opacity-60"
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          ref={inputRef}
-          value={value}
-        />
-        <button
-          aria-label="Send"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-jade text-ink transition-colors hover:bg-jade-bright disabled:opacity-40"
-          disabled={disabled || value.trim().length === 0}
-          type="submit"
-        >
-          <span aria-hidden="true">↑</span>
-        </button>
+      {/* The model pill (when present) rides in the composer's own toolbar row,
+          where model choice belongs — not as a separate menu floating above it. */}
+      <div className="rounded-xl border border-white/10 bg-panel">
+        {toolbar ? <div className="flex items-center px-2 pt-2">{toolbar}</div> : null}
+        <div className="flex items-center gap-2 px-3 py-2">
+          <input
+            className="flex-1 bg-transparent text-porcelain placeholder:text-mist focus:outline-none disabled:opacity-60"
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            ref={inputRef}
+            value={value}
+          />
+          <button
+            aria-label="Send"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-jade text-ink transition-colors hover:bg-jade-bright disabled:opacity-40"
+            disabled={disabled || value.trim().length === 0}
+            type="submit"
+          >
+            <span aria-hidden="true">↑</span>
+          </button>
+        </div>
       </div>
     </form>
   );

@@ -254,7 +254,8 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     renderPractice();
 
     const chip = await screen.findByRole("button", { name: "Ordering food at a restaurant" });
-    expect(screen.queryByText("Model")).toBeNull();
+    // No model pill and no sheet chrome for a non-admin caller.
+    expect(screen.queryByRole("button", { name: /Tutor model:/ })).toBeNull();
     for (const option of chatModelOptions) {
       expect(screen.queryByRole("button", { name: option.label })).toBeNull();
     }
@@ -266,18 +267,27 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     expect(received && "model" in received).toBe(false);
   });
 
-  it("[WF-16] shows the model picker to admins with every label and the default preselected", async () => {
+  it("[WF-16] shows the model pill to admins and preselects the default in the sheet", async () => {
     server.use(practiceStatusAdmin());
     renderPractice();
 
-    // The server default (first entry) is preselected; the rest are not.
-    const defaultChip = await screen.findByRole("button", { name: chatModelOptions[0].label });
-    expect(defaultChip.getAttribute("aria-pressed")).toBe("true");
+    // The pill names the server default (first entry) before any interaction.
+    const pill = await screen.findByRole("button", {
+      name: `Tutor model: ${chatModelOptions[0].label}`,
+    });
+    // Options live in a sheet, hidden until the pill is tapped.
+    expect(screen.queryByRole("button", { name: chatModelOptions[1].label })).toBeNull();
+
+    fireEvent.click(pill);
+
+    // The default option is preselected; the rest are not.
+    const defaultOption = await screen.findByRole("button", { name: chatModelOptions[0].label });
+    expect(defaultOption.getAttribute("aria-pressed")).toBe("true");
     for (const option of chatModelOptions.slice(1)) {
-      const modelChip = screen.getByRole("button", { name: option.label });
-      expect(modelChip.getAttribute("aria-pressed")).toBe("false");
+      const modelOption = screen.getByRole("button", { name: option.label });
+      expect(modelOption.getAttribute("aria-pressed")).toBe("false");
     }
-    expect(screen.getByText("Model")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: /Choose tutor model/i })).toBeTruthy();
   });
 
   it("[WF-16] sends the selected model on a turn and omits it when untouched", async () => {
@@ -296,7 +306,9 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     expect(await screen.findByText(practiceOpeningTurn.segments[0].hanzi)).toBeTruthy();
     expect("model" in receivedBodies[0]).toBe(false);
 
-    // Pick a non-default model, then follow up: the override rides the wire.
+    // Open the sheet and pick a non-default model, then follow up: the override
+    // rides the wire.
+    fireEvent.click(screen.getByRole("button", { name: /Tutor model:/ }));
     fireEvent.click(screen.getByRole("button", { name: "Claude Sonnet 5" }));
     const input = composerInput();
     fireEvent.change(input, { target: { value: "我要吃饭" } });
@@ -326,7 +338,9 @@ describe("Practice — follow-up turns, failures, and reset", () => {
     );
     renderPractice();
 
-    fireEvent.click(await screen.findByRole("button", { name: "MiniMax M3" }));
+    // Open the sheet, choose the override, then start the conversation.
+    fireEvent.click(await screen.findByRole("button", { name: /Tutor model:/ }));
+    fireEvent.click(screen.getByRole("button", { name: "MiniMax M3" }));
     fireEvent.click(screen.getByRole("button", { name: "Meeting someone new" }));
 
     // First attempt fails; the retry must replay the same override, not drop it.
