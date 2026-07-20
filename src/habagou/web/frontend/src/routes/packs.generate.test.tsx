@@ -315,7 +315,8 @@ describe("Create a pack — refinement, save, and failure states", () => {
     renderGenerate();
 
     const input = await findComposerInput();
-    expect(screen.queryByText("Model")).toBeNull();
+    // No model pill and no sheet chrome for a non-admin caller.
+    expect(screen.queryByRole("button", { name: /Tutor model:/ })).toBeNull();
     for (const option of chatModelOptions) {
       expect(screen.queryByRole("button", { name: option.label })).toBeNull();
     }
@@ -328,18 +329,27 @@ describe("Create a pack — refinement, save, and failure states", () => {
     expect(received && "model" in received).toBe(false);
   });
 
-  it("[WF-15] shows the model picker to admins with every label and the default preselected", async () => {
+  it("[WF-15] shows the model pill to admins and preselects the default in the sheet", async () => {
     server.use(generationStatusAdmin());
     renderGenerate();
 
-    // The server default (first entry) is preselected; the rest are not.
-    const defaultChip = await screen.findByRole("button", { name: chatModelOptions[0].label });
-    expect(defaultChip.getAttribute("aria-pressed")).toBe("true");
+    // The pill names the server default (first entry) before any interaction.
+    const pill = await screen.findByRole("button", {
+      name: `Tutor model: ${chatModelOptions[0].label}`,
+    });
+    // Options live in a sheet, hidden until the pill is tapped.
+    expect(screen.queryByRole("button", { name: chatModelOptions[1].label })).toBeNull();
+
+    fireEvent.click(pill);
+
+    // The default option is preselected; the rest are not.
+    const defaultOption = await screen.findByRole("button", { name: chatModelOptions[0].label });
+    expect(defaultOption.getAttribute("aria-pressed")).toBe("true");
     for (const option of chatModelOptions.slice(1)) {
-      const chip = screen.getByRole("button", { name: option.label });
-      expect(chip.getAttribute("aria-pressed")).toBe("false");
+      const modelOption = screen.getByRole("button", { name: option.label });
+      expect(modelOption.getAttribute("aria-pressed")).toBe("false");
     }
-    expect(screen.getByText("Model")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: /Choose tutor model/i })).toBeTruthy();
   });
 
   it("[WF-15] sends the selected model on a draft turn and omits it when untouched", async () => {
@@ -355,13 +365,15 @@ describe("Create a pack — refinement, save, and failure states", () => {
 
     // Untouched picker: the request stays model-free (server default).
     const input = await findComposerInput();
-    await screen.findByRole("button", { name: chatModelOptions[0].label });
+    await screen.findByRole("button", { name: `Tutor model: ${chatModelOptions[0].label}` });
     fireEvent.change(input, { target: { value: "Ordering at a restaurant" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText(packDraft.title)).toBeTruthy();
     expect("model" in receivedBodies[0]).toBe(false);
 
-    // Pick a non-default model, then refine: the override rides the wire.
+    // Open the sheet and pick a non-default model, then refine: the override
+    // rides the wire.
+    fireEvent.click(screen.getByRole("button", { name: /Tutor model:/ }));
     fireEvent.click(screen.getByRole("button", { name: "Claude Sonnet 5" }));
     const refine = composerInput();
     fireEvent.change(refine, { target: { value: "Add some drinks" } });
@@ -391,7 +403,9 @@ describe("Create a pack — refinement, save, and failure states", () => {
     );
     renderGenerate();
 
-    fireEvent.click(await screen.findByRole("button", { name: "MiniMax M3" }));
+    // Open the sheet, choose the override, then submit the topic.
+    fireEvent.click(await screen.findByRole("button", { name: /Tutor model:/ }));
+    fireEvent.click(screen.getByRole("button", { name: "MiniMax M3" }));
     const input = composerInput();
     fireEvent.change(input, { target: { value: "Ordering at a restaurant" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
