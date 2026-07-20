@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatModelOption } from "../lib/api";
 
-// Admin-only tutor-model selector for the Practice chat. Where the shared
-// `ModelPicker` lays every model out as a permanent chip row, this collapses
-// the choice into a single pill that lives in the composer and opens a bottom
-// sheet on demand — model choice is a rarely-touched power-user setting, so it
-// stays quiet until asked for. Rendered only when the status endpoint returned
+// Admin-only tutor-model selector shared by the two AI chats (Practice and
+// pack generation). Rather than lay every model out as a permanent chip row, it
+// collapses the choice into a single pill that lives in the composer and opens a
+// bottom sheet on demand — model choice is a rarely-touched power-user setting,
+// so it stays quiet until asked for. Rendered only when the status endpoint returned
 // a models list with a real choice (>= 2 entries); the server sends that list
 // to admin callers only, so the status response itself gates this UI. A
 // `selected` of undefined means the server default; picking the default clears

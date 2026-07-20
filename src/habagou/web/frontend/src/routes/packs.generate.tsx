@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PackDraft } from "../lib/api";
-import { ModelPicker } from "../components/model-picker";
+import { ModelSelector } from "../components/model-selector";
 import { ApiError, generateDraft, getGenerationStatus, saveGeneratedPack } from "../lib/api";
 import type { ChatEntry, ChatFailureKind, GenerationChatState } from "../lib/generation-chat";
 import {
@@ -227,7 +227,11 @@ function GeneratePack() {
           <span aria-hidden="true" className="w-12" />
         </header>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
+        <div
+          className={`flex-1 overflow-y-auto px-4 py-5 ${
+            state.entries.length === 0 ? "flex flex-col justify-center" : "space-y-4"
+          }`}
+        >
           {state.entries.length === 0 ? <EmptyState onPick={submitTopic} /> : null}
           {state.entries.map((entry, index) => (
             <ConversationEntry
@@ -248,15 +252,6 @@ function GeneratePack() {
           {generating ? <ProgressBubble /> : null}
         </div>
 
-        {showModelPicker ? (
-          <ModelPicker
-            defaultModel={status.data?.default_model ?? null}
-            disabled={busy}
-            models={modelOptions}
-            onSelect={setModel}
-            selected={model}
-          />
-        ) : null}
         <Composer
           disabled={busy}
           hasDraft={state.draftVersion > 0}
@@ -264,6 +259,17 @@ function GeneratePack() {
           onChange={setTopic}
           onSubmit={() => submitTopic(topic)}
           saving={saving}
+          toolbar={
+            showModelPicker ? (
+              <ModelSelector
+                defaultModel={status.data?.default_model ?? null}
+                disabled={busy}
+                models={modelOptions}
+                onSelect={setModel}
+                selected={model}
+              />
+            ) : null
+          }
           value={topic}
         />
       </div>
@@ -629,6 +635,7 @@ function Composer({
   onChange,
   onSubmit,
   saving,
+  toolbar,
   value,
 }: {
   disabled: boolean;
@@ -637,6 +644,7 @@ function Composer({
   onChange: (value: string) => void;
   onSubmit: () => void;
   saving: boolean;
+  toolbar?: React.ReactNode;
   value: string;
 }) {
   // After the first draft the composer becomes the refinement affordance (S5).
@@ -655,23 +663,28 @@ function Composer({
         onSubmit();
       }}
     >
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-panel px-3 py-2">
-        <input
-          className="flex-1 bg-transparent text-porcelain placeholder:text-mist focus:outline-none disabled:opacity-60"
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          ref={inputRef}
-          value={value}
-        />
-        <button
-          aria-label="Send"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-jade text-ink transition-colors hover:bg-jade-bright disabled:opacity-40"
-          disabled={disabled || value.trim().length === 0}
-          type="submit"
-        >
-          <span aria-hidden="true">↑</span>
-        </button>
+      {/* The model pill (when present) rides in the composer's own toolbar row,
+          where model choice belongs — not as a separate menu floating above it. */}
+      <div className="rounded-xl border border-white/10 bg-panel">
+        {toolbar ? <div className="flex items-center px-2 pt-2">{toolbar}</div> : null}
+        <div className="flex items-center gap-2 px-3 py-2">
+          <input
+            className="flex-1 bg-transparent text-porcelain placeholder:text-mist focus:outline-none disabled:opacity-60"
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            ref={inputRef}
+            value={value}
+          />
+          <button
+            aria-label="Send"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-jade text-ink transition-colors hover:bg-jade-bright disabled:opacity-40"
+            disabled={disabled || value.trim().length === 0}
+            type="submit"
+          >
+            <span aria-hidden="true">↑</span>
+          </button>
+        </div>
       </div>
     </form>
   );
