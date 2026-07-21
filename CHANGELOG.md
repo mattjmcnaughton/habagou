@@ -1,3 +1,11 @@
+# [1.13.0](https://github.com/mattjmcnaughton/habagou/compare/v1.12.1...v1.13.0) (2026-07-21)
+
+
+### Features
+
+* add click-to-hear pronunciation for Chinese text ([2cf8b74](https://github.com/mattjmcnaughton/habagou/commit/2cf8b74a8828d022fe5ff5464209a4358fb32a79))
+* gate audio pronunciation behind a flag, on for admins ([23a0581](https://github.com/mattjmcnaughton/habagou/commit/23a05816591e98d36e93988f12b921aa75560e50))
+
 ## [1.12.1](https://github.com/mattjmcnaughton/habagou/compare/v1.12.0...v1.12.1) (2026-07-21)
 
 
