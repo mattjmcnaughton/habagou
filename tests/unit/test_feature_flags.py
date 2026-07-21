@@ -20,6 +20,15 @@ def _user() -> User:
     return User(id=uuid.uuid4(), username="flag-user", display_name="Flag User")
 
 
+def _admin_user() -> User:
+    return User(
+        id=uuid.uuid4(),
+        username="admin-user",
+        display_name="Admin User",
+        email="admin@mattjmcnaughton.com",
+    )
+
+
 def _service(repository: object) -> FeatureFlagService:
     service = FeatureFlagService(cast("AsyncSession", object()))
     service.repository = cast("feature_flags.FeatureFlagRepository", repository)
@@ -81,6 +90,37 @@ async def test_resolve_for_user_prefers_override_and_drops_stale_keys(
     resolved = await service.resolve_for_user(_user())
 
     assert resolved == {"alpha": True, "beta": True}
+
+
+@pytest.mark.anyio
+async def test_resolve_for_user_admin_gets_admin_default_flags_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(feature_flags, "FLAG_DEFAULTS", {"gamma": False, "beta": False})
+    monkeypatch.setattr(feature_flags, "ADMIN_DEFAULT_FLAGS", frozenset({"gamma"}))
+    monkeypatch.setattr(settings, "feature_flag_defaults", "")
+    service = _service(StubFeatureFlagRepository())
+
+    # Admin baseline forces the admin-default flag on; other flags stay off.
+    assert await service.resolve_for_user(_admin_user()) == {
+        "gamma": True,
+        "beta": False,
+    }
+    # A non-admin still sees the global default.
+    assert await service.resolve_for_user(_user()) == {"gamma": False, "beta": False}
+
+
+@pytest.mark.anyio
+async def test_resolve_for_user_admin_override_beats_admin_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(feature_flags, "FLAG_DEFAULTS", {"gamma": False})
+    monkeypatch.setattr(feature_flags, "ADMIN_DEFAULT_FLAGS", frozenset({"gamma"}))
+    monkeypatch.setattr(settings, "feature_flag_defaults", "")
+    service = _service(StubFeatureFlagRepository(overrides={"gamma": False}))
+
+    # An explicit per-user override wins over the admin baseline.
+    assert await service.resolve_for_user(_admin_user()) == {"gamma": False}
 
 
 @pytest.mark.anyio
