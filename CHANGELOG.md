@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/mattjmcnaughton/habagou/compare/v1.13.0...v1.14.0) (2026-07-21)
+
+
+### Features
+
+* ship click-to-hear pronunciation to everyone ([#121](https://github.com/mattjmcnaughton/habagou/issues/121)) ([38e8daf](https://github.com/mattjmcnaughton/habagou/commit/38e8daf36370e3ad4ba41d2193759b807896d979))
+
 # [1.13.0](https://github.com/mattjmcnaughton/habagou/compare/v1.12.1...v1.13.0) (2026-07-21)
 
 
