@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
-import { AUDIO_PRONUNCIATION_FLAG, useFeatureFlag } from "@/lib/feature-flags";
 import { useSpeak } from "@/lib/speech";
 import { SpeakButton } from "./speak-button";
 import {
@@ -33,7 +32,6 @@ export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunner
   const canvasRef = useRef<TraceCanvasHandle | null>(null);
   const onFinishRef = useRef(onFinish);
   const { speak, supported: speechSupported } = useSpeak();
-  const audioEnabled = useFeatureFlag(AUDIO_PRONUNCIATION_FLAG) && speechSupported;
   const [state, dispatch] = useReducer(sentenceReducer, undefined, initialSentenceState);
 
   useEffect(() => {
@@ -104,7 +102,7 @@ export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunner
           <h1 className="text-xl font-semibold text-jade">{sentence.translation}</h1>
           <div className="mt-2 flex items-center justify-center gap-2">
             <p className="text-sm leading-5 text-mist">{sentence.pinyin}</p>
-            {audioEnabled ? (
+            {speechSupported ? (
               <SpeakButton
                 label={`Hear "${sentence.translation}"`}
                 size="sm"
@@ -126,7 +124,7 @@ export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunner
               active ? "border-jade text-porcelain" : "",
             ].join(" ");
             const key = `${state.sentenceIndex}-${sentence.hanzi}-${index}`;
-            if (!audioEnabled) {
+            if (!speechSupported) {
               return (
                 <span className={chipClassName} key={key}>
                   {character}

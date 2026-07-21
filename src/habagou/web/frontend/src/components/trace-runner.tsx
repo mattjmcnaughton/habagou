@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
-import { AUDIO_PRONUNCIATION_FLAG, useFeatureFlag } from "@/lib/feature-flags";
 import { SpeakButton } from "./speak-button";
 import { TraceCanvas, type TraceCanvasHandle } from "./trace-canvas";
 import {
@@ -30,7 +29,6 @@ type TraceRunnerProps = {
 export function TraceRunner({ chars, backLink, onFinish }: TraceRunnerProps) {
   const canvasRef = useRef<TraceCanvasHandle | null>(null);
   const onFinishRef = useRef(onFinish);
-  const audioEnabled = useFeatureFlag(AUDIO_PRONUNCIATION_FLAG);
   const [state, dispatch] = useReducer(traceReducer, undefined, initialTraceState);
 
   useEffect(() => {
@@ -83,9 +81,7 @@ export function TraceRunner({ chars, backLink, onFinish }: TraceRunnerProps) {
         <section className="mt-6 text-center">
           <div className="flex items-center justify-center gap-2">
             <p className="text-xl font-semibold text-jade">{character.pinyin}</p>
-            {audioEnabled ? (
-              <SpeakButton label={`Hear ${character.hanzi}`} size="sm" text={character.hanzi} />
-            ) : null}
+            <SpeakButton label={`Hear ${character.hanzi}`} size="sm" text={character.hanzi} />
           </div>
           <h1 className="mt-1 text-sm leading-5 text-mist">{character.meaning}</h1>
         </section>

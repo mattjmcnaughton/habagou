@@ -32,13 +32,15 @@ test("[WF-16] opens a conversation from a starter topic and taps to reveal Engli
   await expect(page.getByText("你想吃什么")).toBeVisible();
 
   // English is hidden until the segment is tapped, and only for that segment.
+  // Target the reveal button by its full accessible name ("你好 nǐ hǎo") so it is
+  // not confused with the always-on "Hear 你好" speak button beside it.
   await expect(page.getByText("Hello!")).toBeHidden();
-  await page.getByRole("button", { name: /你好/ }).click();
+  await page.getByRole("button", { name: "你好 nǐ hǎo" }).click();
   await expect(page.getByText("Hello!")).toBeVisible();
   await expect(page.getByText("What do you want to eat?")).toBeHidden();
 
   // Tapping again hides it.
-  await page.getByRole("button", { name: /你好/ }).click();
+  await page.getByRole("button", { name: "你好 nǐ hǎo" }).click();
   await expect(page.getByText("Hello!")).toBeHidden();
 });
 

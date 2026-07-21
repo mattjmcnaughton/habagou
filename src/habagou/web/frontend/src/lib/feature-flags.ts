@@ -6,8 +6,6 @@ import { getAuthSession } from "./api";
 // cached session query — no extra request — so any component can gate on a flag
 // without new plumbing. Unknown/absent flags resolve to off.
 
-export const AUDIO_PRONUNCIATION_FLAG = "audio_pronunciation";
-
 export function useFeatureFlag(key: string): boolean {
   const session = useQuery({ queryKey: ["auth", "session"], queryFn: getAuthSession });
   return session.data?.user?.feature_flags?.[key] ?? false;
