@@ -98,6 +98,32 @@ Same justfile targets work in every mode; the app only reads env such as
 - All config is in `pyproject.toml` — no separate config files.
 - Backend: `just dev-be`. Frontend: `just dev-fe`. Both: `just dev`.
 
+## Commit Conventions
+
+**Always use [Conventional Commits](https://www.conventionalcommits.org/) for
+every commit.** Releases are automated with `semantic-release` (see
+`.releaserc.json` and `.github/workflows/release.yml`): the commit type
+determines the next version, and a published release builds the image and
+deploys to Fly.io. Non-conventional commits are ignored by the analyzer, so
+they ship no release and no deploy.
+
+Format: `type(optional-scope): description`
+
+Common types and their release effect:
+
+| Type | Release | Use for |
+| ---- | ------- | ------- |
+| `fix` | patch (x.y.**z**) | Bug fixes — **and any change that should trigger a deploy**, e.g. shipping design/UI changes |
+| `feat` | minor (x.**y**.z) | New features |
+| `perf` | patch | Performance improvements |
+| `docs`, `chore`, `refactor`, `test`, `style`, `ci`, `build` | none | Changes that should not cut a release |
+
+Add `BREAKING CHANGE:` in the commit body (or `!` after the type, e.g.
+`feat!:`) for a major (**x**.y.z) bump.
+
+If a change needs to reach production, commit it as `fix` (or `feat`) so the
+release + deploy pipeline runs — a `chore`/`docs` commit will not deploy.
+
 ## More Information
 
 - `docs/architecture.md` — read before adding new modules or changing project structure
