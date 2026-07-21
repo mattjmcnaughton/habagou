@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/mattjmcnaughton/habagou/compare/v1.12.0...v1.12.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* require conventional commits so releases and deploys trigger ([#119](https://github.com/mattjmcnaughton/habagou/issues/119)) ([59beb6f](https://github.com/mattjmcnaughton/habagou/commit/59beb6f8b1c743d62cef2a5990930b5ca7352a77))
+
 # [1.12.0](https://github.com/mattjmcnaughton/habagou/compare/v1.11.0...v1.12.0) (2026-07-19)
 
 
