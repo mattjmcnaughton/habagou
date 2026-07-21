@@ -14,6 +14,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from habagou.authz import is_admin
 from habagou.config import settings
 from habagou.dtos.feature_flags import FeatureFlagDTO
 from habagou.repositories import FeatureFlagRepository, UserRepository
@@ -27,17 +28,35 @@ if TYPE_CHECKING:
 
 
 class FeatureFlag(StrEnum):
-    """Canonical feature flags; the registry is empty until the first flag."""
+    """Canonical feature flags."""
+
+    # Click-to-hear pronunciation on Chinese text (Web Speech API, frontend).
+    AUDIO_PRONUNCIATION = "audio_pronunciation"
 
 
 # Code defaults per flag. Every FeatureFlag member gets an entry here; a flag
 # missing from this dict does not exist as far as resolution is concerned.
-FLAG_DEFAULTS: dict[FeatureFlag, bool] = {}
+FLAG_DEFAULTS: dict[FeatureFlag, bool] = {
+    FeatureFlag.AUDIO_PRONUNCIATION: False,
+}
+
+
+# Flags that resolve to on for admins even when their global default is off, so
+# a feature can ship dark and be dogfooded by the admin class before a wider
+# rollout. A per-user override still wins for everyone, admins included.
+ADMIN_DEFAULT_FLAGS: frozenset[FeatureFlag] = frozenset(
+    {FeatureFlag.AUDIO_PRONUNCIATION}
+)
 
 
 def known_flag_keys() -> frozenset[str]:
     """The registered flag keys (StrEnum members are their string keys)."""
     return frozenset(str(flag) for flag in FLAG_DEFAULTS)
+
+
+def _admin_default_keys() -> frozenset[str]:
+    """String keys of the flags that default on for admins."""
+    return frozenset(str(flag) for flag in ADMIN_DEFAULT_FLAGS)
 
 
 def effective_defaults() -> dict[str, bool]:
@@ -56,10 +75,20 @@ class FeatureFlagService:
         self.user_repository = UserRepository(session)
 
     async def resolve_for_user(self, user: User) -> dict[str, bool]:
-        """The user's effective flag map: their override where set, else the default."""
+        """The user's effective flag map: their override where set, else the default.
+
+        Admins get :data:`ADMIN_DEFAULT_FLAGS` forced on as their baseline, but a
+        per-user override still takes precedence over that.
+        """
         defaults = effective_defaults()
         if not defaults:
             return {}
+        if is_admin(user):
+            admin_keys = _admin_default_keys()
+            defaults = {
+                key: True if key in admin_keys else enabled
+                for key, enabled in defaults.items()
+            }
         overrides = await self.repository.overrides_for_user(user_id=user.id)
         return {key: overrides.get(key, enabled) for key, enabled in defaults.items()}
 
