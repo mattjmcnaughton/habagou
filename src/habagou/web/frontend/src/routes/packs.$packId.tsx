@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PackDetail } from "../lib/api";
 import { deletePack, getPack, resetPackProgress, setPackEnabled } from "../lib/api";
+import { useSpeak } from "../lib/speech";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
 export const Route = createFileRoute("/packs/$packId")({
@@ -37,6 +38,7 @@ function PackScreen() {
   const { packId } = Route.useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { speak, supported: speechSupported } = useSpeak();
   const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
   useEffect(() => {
     if (pack.data) {
@@ -151,15 +153,30 @@ function PackScreen() {
               ) : null}
 
               <div className="flex flex-wrap gap-2 border-b border-white/10 p-4">
-                {pack.data.characters.map((character) => (
-                  <span
-                    className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 font-hanzi text-xl"
-                    key={character.hanzi}
-                    title={`${character.pinyin} · ${character.meaning}`}
-                  >
-                    {character.hanzi}
-                  </span>
-                ))}
+                {pack.data.characters.map((character) => {
+                  const chipClassName =
+                    "rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 font-hanzi text-xl";
+                  const title = `${character.pinyin} · ${character.meaning}`;
+                  if (!speechSupported) {
+                    return (
+                      <span className={chipClassName} key={character.hanzi} title={title}>
+                        {character.hanzi}
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      aria-label={`Hear ${character.hanzi} (${character.pinyin})`}
+                      className={`${chipClassName} transition-colors hover:border-jade hover:text-jade`}
+                      key={character.hanzi}
+                      onClick={() => speak(character.hanzi)}
+                      title={title}
+                      type="button"
+                    >
+                      {character.hanzi}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="divide-y divide-white/10">

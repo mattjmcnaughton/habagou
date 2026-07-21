@@ -1,5 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
+import { useSpeak } from "@/lib/speech";
+import { SpeakButton } from "./speak-button";
 import {
   currentSentenceStrokeLabel,
   initialSentenceState,
@@ -29,6 +31,7 @@ type SentenceRunnerProps = {
 export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunnerProps) {
   const canvasRef = useRef<TraceCanvasHandle | null>(null);
   const onFinishRef = useRef(onFinish);
+  const { speak, supported: speechSupported } = useSpeak();
   const [state, dispatch] = useReducer(sentenceReducer, undefined, initialSentenceState);
 
   useEffect(() => {
@@ -97,7 +100,10 @@ export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunner
 
         <section className="mt-6 text-center">
           <h1 className="text-xl font-semibold text-jade">{sentence.translation}</h1>
-          <p className="mt-2 text-sm leading-5 text-mist">{sentence.pinyin}</p>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <p className="text-sm leading-5 text-mist">{sentence.pinyin}</p>
+            <SpeakButton label={`Hear "${sentence.translation}"`} size="sm" text={sentence.hanzi} />
+          </div>
         </section>
 
         <section className="mt-5 flex justify-center gap-2">
@@ -106,19 +112,29 @@ export function SentenceRunner({ sentences, backLink, onFinish }: SentenceRunner
               index < state.characterIndex ||
               (index === state.characterIndex && isSentenceComplete);
             const active = index === state.characterIndex && !isSentenceComplete;
+            const chipClassName = [
+              "flex h-11 w-11 items-center justify-center rounded-md border font-hanzi text-2xl",
+              done ? "border-jade/30 bg-jade/10 text-jade" : "border-white/10 bg-panel text-mist",
+              active ? "border-jade text-porcelain" : "",
+            ].join(" ");
+            const key = `${state.sentenceIndex}-${sentence.hanzi}-${index}`;
+            if (!speechSupported) {
+              return (
+                <span className={chipClassName} key={key}>
+                  {character}
+                </span>
+              );
+            }
             return (
-              <span
-                className={[
-                  "flex h-11 w-11 items-center justify-center rounded-md border font-hanzi text-2xl",
-                  done
-                    ? "border-jade/30 bg-jade/10 text-jade"
-                    : "border-white/10 bg-panel text-mist",
-                  active ? "border-jade text-porcelain" : "",
-                ].join(" ")}
-                key={`${state.sentenceIndex}-${sentence.hanzi}-${index}`}
+              <button
+                aria-label={`Hear ${character}`}
+                className={`${chipClassName} transition-colors hover:border-jade`}
+                key={key}
+                onClick={() => speak(character)}
+                type="button"
               >
                 {character}
-              </span>
+              </button>
             );
           })}
         </section>

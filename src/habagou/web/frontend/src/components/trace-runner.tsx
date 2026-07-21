@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
+import { SpeakButton } from "./speak-button";
 import { TraceCanvas, type TraceCanvasHandle } from "./trace-canvas";
 import {
   currentStrokeLabel,
@@ -78,7 +79,10 @@ export function TraceRunner({ chars, backLink, onFinish }: TraceRunnerProps) {
         </div>
 
         <section className="mt-6 text-center">
-          <p className="text-xl font-semibold text-jade">{character.pinyin}</p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-xl font-semibold text-jade">{character.pinyin}</p>
+            <SpeakButton label={`Hear ${character.hanzi}`} size="sm" text={character.hanzi} />
+          </div>
           <h1 className="mt-1 text-sm leading-5 text-mist">{character.meaning}</h1>
         </section>
 
