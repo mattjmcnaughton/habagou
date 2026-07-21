@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { PackDetail } from "../lib/api";
 import { deletePack, getPack, resetPackProgress, setPackEnabled } from "../lib/api";
-import { AUDIO_PRONUNCIATION_FLAG, useFeatureFlag } from "../lib/feature-flags";
 import { useSpeak } from "../lib/speech";
 import { prefetchPackStrokeData } from "../lib/strokes";
 
@@ -40,7 +39,6 @@ function PackScreen() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { speak, supported: speechSupported } = useSpeak();
-  const audioEnabled = useFeatureFlag(AUDIO_PRONUNCIATION_FLAG) && speechSupported;
   const pack = useQuery({ queryKey: ["pack", packId], queryFn: () => getPack(packId) });
   useEffect(() => {
     if (pack.data) {
@@ -159,7 +157,7 @@ function PackScreen() {
                   const chipClassName =
                     "rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 font-hanzi text-xl";
                   const title = `${character.pinyin} · ${character.meaning}`;
-                  if (!audioEnabled) {
+                  if (!speechSupported) {
                     return (
                       <span className={chipClassName} key={character.hanzi} title={title}>
                         {character.hanzi}

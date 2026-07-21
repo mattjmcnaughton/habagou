@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { PracticeSegment, PracticeTurn } from "../lib/api";
 import { ModelSelector } from "../components/model-selector";
 import { SpeakButton } from "../components/speak-button";
-import { AUDIO_PRONUNCIATION_FLAG, useFeatureFlag } from "../lib/feature-flags";
 import { getPracticeStatus, practiceTurn } from "../lib/api";
 import type { PracticeChatState, PracticeEntry, PracticeFailureKind } from "../lib/practice-chat";
 import {
@@ -331,7 +330,6 @@ function TutorBubble({ turn }: { turn: PracticeTurn }) {
 
 function SegmentRow({ segment }: { segment: PracticeSegment }) {
   const [revealed, setRevealed] = useState(false);
-  const audioEnabled = useFeatureFlag(AUDIO_PRONUNCIATION_FLAG);
   return (
     <div className="flex items-start gap-2">
       <button
@@ -347,14 +345,12 @@ function SegmentRow({ segment }: { segment: PracticeSegment }) {
           <span className="mt-0.5 block text-sm text-mist">{segment.english}</span>
         ) : null}
       </button>
-      {audioEnabled ? (
-        <SpeakButton
-          className="mt-0.5"
-          label={`Hear ${segment.hanzi}`}
-          size="sm"
-          text={segment.hanzi}
-        />
-      ) : null}
+      <SpeakButton
+        className="mt-0.5"
+        label={`Hear ${segment.hanzi}`}
+        size="sm"
+        text={segment.hanzi}
+      />
     </div>
   );
 }

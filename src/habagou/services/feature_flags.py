@@ -28,25 +28,22 @@ if TYPE_CHECKING:
 
 
 class FeatureFlag(StrEnum):
-    """Canonical feature flags."""
+    """Canonical feature flags.
 
-    # Click-to-hear pronunciation on Chinese text (Web Speech API, frontend).
-    AUDIO_PRONUNCIATION = "audio_pronunciation"
+    Empty until the next flag is introduced: add a member here and an entry in
+    ``FLAG_DEFAULTS`` to register one.
+    """
 
 
 # Code defaults per flag. Every FeatureFlag member gets an entry here; a flag
 # missing from this dict does not exist as far as resolution is concerned.
-FLAG_DEFAULTS: dict[FeatureFlag, bool] = {
-    FeatureFlag.AUDIO_PRONUNCIATION: False,
-}
+FLAG_DEFAULTS: dict[FeatureFlag, bool] = {}
 
 
 # Flags that resolve to on for admins even when their global default is off, so
 # a feature can ship dark and be dogfooded by the admin class before a wider
 # rollout. A per-user override still wins for everyone, admins included.
-ADMIN_DEFAULT_FLAGS: frozenset[FeatureFlag] = frozenset(
-    {FeatureFlag.AUDIO_PRONUNCIATION}
-)
+ADMIN_DEFAULT_FLAGS: frozenset[FeatureFlag] = frozenset()
 
 
 def known_flag_keys() -> frozenset[str]:

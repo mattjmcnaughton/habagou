@@ -5,11 +5,15 @@ import { describe, expect, it } from "vitest";
 import { authenticatedSession } from "../mocks/handlers";
 import { server } from "../mocks/server";
 import { API_V1_BASE } from "./api";
-import { AUDIO_PRONUNCIATION_FLAG, useFeatureFlag } from "./feature-flags";
+import { useFeatureFlag } from "./feature-flags";
+
+// No flags are registered in code today, so exercise the generic hook with a
+// placeholder key.
+const EXAMPLE_FLAG = "example_flag";
 
 function Probe() {
-  const enabled = useFeatureFlag(AUDIO_PRONUNCIATION_FLAG);
-  return <span>{enabled ? "audio-on" : "audio-off"}</span>;
+  const enabled = useFeatureFlag(EXAMPLE_FLAG);
+  return <span>{enabled ? "flag-on" : "flag-off"}</span>;
 }
 
 function renderProbe() {
@@ -24,7 +28,7 @@ function renderProbe() {
 describe("useFeatureFlag", () => {
   it("resolves to off when the session does not enable the flag", async () => {
     renderProbe();
-    expect(await screen.findByText("audio-off")).toBeTruthy();
+    expect(await screen.findByText("flag-off")).toBeTruthy();
   });
 
   it("resolves to on when the session enables the flag (e.g. an admin)", async () => {
@@ -34,12 +38,12 @@ describe("useFeatureFlag", () => {
           ...authenticatedSession,
           user: {
             ...authenticatedSession.user,
-            feature_flags: { [AUDIO_PRONUNCIATION_FLAG]: true },
+            feature_flags: { [EXAMPLE_FLAG]: true },
           },
         }),
       ),
     );
     renderProbe();
-    expect(await screen.findByText("audio-on")).toBeTruthy();
+    expect(await screen.findByText("flag-on")).toBeTruthy();
   });
 });
