@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PracticeSegment, PracticeTurn } from "../lib/api";
 import { ModelSelector } from "../components/model-selector";
+import { SpeakButton } from "../components/speak-button";
 import { getPracticeStatus, practiceTurn } from "../lib/api";
 import type { PracticeChatState, PracticeEntry, PracticeFailureKind } from "../lib/practice-chat";
 import {
@@ -330,17 +331,27 @@ function TutorBubble({ turn }: { turn: PracticeTurn }) {
 function SegmentRow({ segment }: { segment: PracticeSegment }) {
   const [revealed, setRevealed] = useState(false);
   return (
-    <button
-      aria-pressed={revealed}
-      className="block w-full rounded-lg text-left transition-colors hover:bg-white/[0.04]"
-      onClick={() => setRevealed((current) => !current)}
-      title={revealed ? "Hide translation" : "Show translation"}
-      type="button"
-    >
-      <span className="block font-hanzi text-2xl leading-snug">{segment.hanzi}</span>
-      <span className="mt-0.5 block text-sm text-jade">{segment.pinyin}</span>
-      {revealed ? <span className="mt-0.5 block text-sm text-mist">{segment.english}</span> : null}
-    </button>
+    <div className="flex items-start gap-2">
+      <button
+        aria-pressed={revealed}
+        className="block flex-1 rounded-lg text-left transition-colors hover:bg-white/[0.04]"
+        onClick={() => setRevealed((current) => !current)}
+        title={revealed ? "Hide translation" : "Show translation"}
+        type="button"
+      >
+        <span className="block font-hanzi text-2xl leading-snug">{segment.hanzi}</span>
+        <span className="mt-0.5 block text-sm text-jade">{segment.pinyin}</span>
+        {revealed ? (
+          <span className="mt-0.5 block text-sm text-mist">{segment.english}</span>
+        ) : null}
+      </button>
+      <SpeakButton
+        className="mt-0.5"
+        label={`Hear ${segment.hanzi}`}
+        size="sm"
+        text={segment.hanzi}
+      />
+    </div>
   );
 }
 
