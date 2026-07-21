@@ -158,7 +158,8 @@ async def test_session_probe_reports_authenticated_user(client: AsyncClient) -> 
             "display_name": "Test User",
             "email": "test@example.com",
             "is_admin": False,
-            "feature_flags": {},
+            # A non-admin resolves every registered flag at its global default.
+            "feature_flags": {"audio_pronunciation": False},
         },
     }
 
